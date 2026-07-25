@@ -20,6 +20,10 @@ buildNumber.properties
 .mvn/timing.properties
 .mvn/wrapper/maven-wrapper.jar
 
+# Gradle
+.gradle/
+build/
+
 # IntelliJ IDEA
 .idea/
 *.iws
@@ -69,3 +73,10 @@ log/
 .env.local
 .env.*.local
 *.env
+
+# Node / Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.vite/
+frontend/*.tsbuildinfo
