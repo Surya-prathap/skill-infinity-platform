@@ -192,6 +192,75 @@ services:
       - skill-infinity-network
 
   # ============================================================
+  # Identity Service
+  # ============================================================
+  identity-service:
+    build:
+      context: ../backend
+      dockerfile: identity-service/Dockerfile
+    container_name: skill-infinity-identity-service
+    restart: unless-stopped
+    ports:
+      - "${IDENTITY_SERVICE_PORT:-8081}:8081"
+    environment:
+      - CONFIG_SERVER_URL=http://config-server:8888
+      - IDENTITY_SERVICE_PORT=8081
+      - IDENTITY_DB_HOST=mysql
+      - IDENTITY_DB_NAME=skill_infinity_identity
+      - IDENTITY_DB_USERNAME=root
+      - IDENTITY_DB_PASSWORD=${MYSQL_ROOT_PASSWORD:?err}
+      - JWT_SECRET=${JWT_SECRET:?err}
+      - EUREKA_DEFAULT_ZONE=http://discovery-server:8761/eureka/
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8081/actuator/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+    networks:
+      - skill-infinity-network
+
+  # ============================================================
+  # User Service
+  # ============================================================
+  user-service:
+    build:
+      context: ../backend
+      dockerfile: user-service/Dockerfile
+    container_name: skill-infinity-user-service
+    restart: unless-stopped
+    ports:
+      - "${USER_SERVICE_PORT:-8082}:8082"
+    environment:
+      - CONFIG_SERVER_URL=http://config-server:8888
+      - USER_SERVICE_PORT=8082
+      - USER_DB_HOST=mysql
+      - USER_DB_NAME=skill_infinity_user
+      - USER_DB_USERNAME=root
+      - USER_DB_PASSWORD=${MYSQL_ROOT_PASSWORD:?err}
+      - EUREKA_DEFAULT_ZONE=http://discovery-server:8761/eureka/
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8082/actuator/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+    networks:
+      - skill-infinity-network
+
+  # ============================================================
   # Frontend
   # ============================================================
   frontend:
