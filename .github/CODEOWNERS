@@ -1,0 +1,21 @@
+# Skill Infinity Platform - CODEOWNERS
+
+# Default owners for everything
+* @skillinfinity/core-team
+
+# Backend modules
+/backend/ @skillinfinity/backend-team
+/backend/common/ @skillinfinity/backend-team
+/backend/config-server/ @skillinfinity/backend-team
+/backend/discovery-server/ @skillinfinity/backend-team
+/backend/api-gateway/ @skillinfinity/backend-team
+
+# Frontend
+/frontend/ @skillinfinity/frontend-team
+
+# Infrastructure
+/docker/ @skillinfinity/devops-team
+/.github/ @skillinfinity/devops-team
+
+# Documentation
+/docs/ @skillinfinity/core-team

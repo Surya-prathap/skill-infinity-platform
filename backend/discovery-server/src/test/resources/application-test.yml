@@ -1,0 +1,16 @@
+spring:
+  cloud:
+    config:
+      enabled: false
+  application:
+    name: discovery-server
+
+server:
+  port: 8761
+
+eureka:
+  client:
+    register-with-eureka: false
+    fetch-registry: false
+  server:
+    enable-self-preservation: false
