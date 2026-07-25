@@ -1,0 +1,143 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  config:
+    import: configserver:http://localhost:8888
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      routes:
+        - id: identity-service
+          uri: lb://identity-service
+          predicates:
+            - Path=/api/v1/auth/**
+          filters:
+            - StripPrefix=0
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+
+        - id: user-service
+          uri: lb://user-service
+          predicates:
+            - Path=/api/v1/users/**
+          filters:
+            - StripPrefix=0
+
+        - id: mentor-service
+          uri: lb://mentor-service
+          predicates:
+            - Path=/api/v1/mentors/**
+          filters:
+            - StripPrefix=0
+
+        - id: session-service
+          uri: lb://session-service
+          predicates:
+            - Path=/api/v1/sessions/**
+          filters:
+            - StripPrefix=0
+
+        - id: wallet-service
+          uri: lb://wallet-service
+          predicates:
+            - Path=/api/v1/wallet/**
+          filters:
+            - StripPrefix=0
+
+        - id: payment-service
+          uri: lb://payment-service
+          predicates:
+            - Path=/api/v1/payments/**
+          filters:
+            - StripPrefix=0
+
+        - id: community-service
+          uri: lb://community-service
+          predicates:
+            - Path=/api/v1/community/**
+          filters:
+            - StripPrefix=0
+
+        - id: communication-service
+          uri: lb://communication-service
+          predicates:
+            - Path=/api/v1/communication/**
+          filters:
+            - StripPrefix=0
+
+        - id: review-service
+          uri: lb://review-service
+          predicates:
+            - Path=/api/v1/reviews/**
+          filters:
+            - StripPrefix=0
+
+        - id: admin-service
+          uri: lb://admin-service
+          predicates:
+            - Path=/api/v1/admin/**
+          filters:
+            - StripPrefix=0
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.skillinfinity: INFO
+    org.springframework.cloud.gateway: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    config-url: /v3/api-docs/swagger-config
+    urls:
+      - name: Identity Service
+        url: /identity-service/v3/api-docs
+      - name: User Service
+        url: /user-service/v3/api-docs
+      - name: Mentor Service
+        url: /mentor-service/v3/api-docs
+      - name: Session Service
+        url: /session-service/v3/api-docs
+      - name: Wallet Service
+        url: /wallet-service/v3/api-docs
+      - name: Payment Service
+        url: /payment-service/v3/api-docs
+      - name: Community Service
+        url: /community-service/v3/api-docs
+      - name: Review Service
+        url: /review-service/v3/api-docs
+      - name: Admin Service
+        url: /admin-service/v3/api-docs
