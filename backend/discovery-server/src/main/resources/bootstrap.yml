@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: discovery-server
+  cloud:
+    config:
+      uri: ${CONFIG_SERVER_URL:http://localhost:8888}
+      fail-fast: ${CONFIG_SERVER_FAIL_FAST:false}
+      retry:
+        initial-interval: 1000
+        max-attempts: 5
+        multiplier: 1.5

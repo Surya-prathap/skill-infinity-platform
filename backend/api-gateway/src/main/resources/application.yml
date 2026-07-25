@@ -1,11 +1,11 @@
 server:
-  port: 8080
+  port: ${API_GATEWAY_PORT:8080}
 
 spring:
   application:
     name: api-gateway
-  config:
-    import: configserver:http://localhost:8888
+  main:
+    web-application-type: reactive
   cloud:
     gateway:
       discovery:
@@ -19,10 +19,6 @@ spring:
             - Path=/api/v1/auth/**
           filters:
             - StripPrefix=0
-            - name: RequestRateLimiter
-              args:
-                redis-rate-limiter.replenishRate: 10
-                redis-rate-limiter.burstCapacity: 20
 
         - id: user-service
           uri: lb://user-service
@@ -87,57 +83,49 @@ spring:
           filters:
             - StripPrefix=0
 
-  data:
-    redis:
-      host: localhost
-      port: 6379
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin
 
 eureka:
   instance:
-    prefer-ip-address: true
+    prefer-ip-address: ${EUREKA_PREFER_IP:true}
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: ${EUREKA_DEFAULT_ZONE:http://localhost:8761/eureka/}
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,gateway
+        include: health,info,metrics,gateway
   endpoint:
     health:
       show-details: always
+      probes:
+        enabled: true
+  info:
+    env:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+info:
+  app:
+    name: ${spring.application.name}
+    description: Skill Infinity API Gateway
+    version: @project.version@
 
 logging:
   level:
     com.skillinfinity: INFO
     org.springframework.cloud.gateway: INFO
+    org.springframework.cloud.gateway.route: INFO
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
-
-springdoc:
-  api-docs:
-    enabled: true
-  swagger-ui:
-    enabled: true
-    path: /swagger-ui.html
-    config-url: /v3/api-docs/swagger-config
-    urls:
-      - name: Identity Service
-        url: /identity-service/v3/api-docs
-      - name: User Service
-        url: /user-service/v3/api-docs
-      - name: Mentor Service
-        url: /mentor-service/v3/api-docs
-      - name: Session Service
-        url: /session-service/v3/api-docs
-      - name: Wallet Service
-        url: /wallet-service/v3/api-docs
-      - name: Payment Service
-        url: /payment-service/v3/api-docs
-      - name: Community Service
-        url: /community-service/v3/api-docs
-      - name: Review Service
-        url: /review-service/v3/api-docs
-      - name: Admin Service
-        url: /admin-service/v3/api-docs
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %highlight(%-5level) %logger{36} - %msg%n"
+  file:
+    name: ${API_GATEWAY_LOG_DIR:logs}/${spring.application.name}.log
+  logback:
+    rollingpolicy:
+      max-file-size: 10MB
+      max-history: 7
