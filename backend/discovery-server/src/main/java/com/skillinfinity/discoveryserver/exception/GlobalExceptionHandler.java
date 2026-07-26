@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -27,10 +28,35 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGenericException(
-            Exception ex, HttpServletRequest request) {
-        log.error("Unexpected error in Discovery Server: {}", ex.getMessage(), ex);
-        return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-                "An unexpected error occurred. Please try again later.", request);
+            Exception ex,
+            HttpServletRequest request) {
+
+        log.error("Unexpected error in Discovery Server", ex);
+
+        return buildErrorResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "An unexpected error occurred. Please try again later.",
+                request
+        );
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleNoResourceFound(
+            NoResourceFoundException ex,
+            HttpServletRequest request) {
+
+        // Ignore browser favicon request
+        if (request.getRequestURI().equals("/favicon.ico")) {
+            return ResponseEntity.notFound().build();
+        }
+
+        log.warn("Resource not found: {}", request.getRequestURI());
+
+        return buildErrorResponse(
+                HttpStatus.NOT_FOUND,
+                "Requested resource not found.",
+                request
+        );
     }
 
     private ResponseEntity<Map<String, Object>> buildErrorResponse(
