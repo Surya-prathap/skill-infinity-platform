@@ -42,9 +42,9 @@ info:
 
 logging:
   level:
-    com.skillinfinity: INFO
-    com.netflix.eureka: INFO
-    com.netflix.discovery: INFO
+    com.skillinfinity: WARN
+    com.netflix.eureka: WARN
+    com.netflix.discovery: WARN
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %highlight(%-5level) %logger{36} - %msg%n"
   file:

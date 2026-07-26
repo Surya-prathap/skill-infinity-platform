@@ -9,6 +9,8 @@ spring:
       server:
         native:
           search-locations: classpath:/config
+  profiles:
+    active: native
 
 management:
   endpoints:
@@ -49,21 +51,5 @@ logging:
       max-history: 7
 
 ---
-spring:
-  config:
-    activate:
-      on-profile: git
-  cloud:
-    config:
-      server:
-        git:
-          uri: ${CONFIG_REPO_URI}
-          default-label: ${CONFIG_REPO_DEFAULT_BRANCH:main}
-          clone-on-start: ${CONFIG_REPO_CLONE_ON_START:true}
-          force-pull: ${CONFIG_REPO_FORCE_PULL:true}
-          timeout: ${CONFIG_REPO_TIMEOUT:10}
-          basedir: ${CONFIG_REPO_BASEDIR:${java.io.tmpdir}/config-repo}
-          search-paths: '{application}'
-          username: ${CONFIG_REPO_USERNAME:}
-          password: ${CONFIG_REPO_PASSWORD:}
-        bootstrap: true
+
+
