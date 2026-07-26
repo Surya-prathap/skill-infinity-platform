@@ -4,6 +4,8 @@ server:
 spring:
   application:
     name: user-service
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
   datasource:
     url: jdbc:mysql://${USER_DB_HOST:localhost}:${USER_DB_PORT:3306}/${USER_DB_NAME:user_db}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
     username: ${USER_DB_USERNAME:root}
