@@ -1,5 +1,5 @@
 server:
-  port: 8083
+  port: ${MENTOR_SERVICE_PORT:8083}
 
 spring:
   application:
@@ -16,7 +16,7 @@ spring:
       connection-timeout: 30000
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     show-sql: false
     properties:
       hibernate:
@@ -41,6 +41,7 @@ spring:
     connection-timeout: 5000
     template:
       exchange: mentor.exchange
+      routing-key: mentor.routing.key
     listener:
       direct:
         retry:
