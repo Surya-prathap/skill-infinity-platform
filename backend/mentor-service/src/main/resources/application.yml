@@ -4,6 +4,8 @@ server:
 spring:
   application:
     name: mentor-service
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
   datasource:
     url: jdbc:mysql://${MENTOR_DB_HOST:localhost}:${MENTOR_DB_PORT:3306}/${MENTOR_DB_NAME:skill_infinity_mentor}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
     username: ${MENTOR_DB_USERNAME:root}

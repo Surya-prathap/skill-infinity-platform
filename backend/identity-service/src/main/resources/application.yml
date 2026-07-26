@@ -4,6 +4,8 @@ server:
 spring:
   application:
     name: identity-service
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
   datasource:
     url: jdbc:mysql://${IDENTITY_DB_HOST:localhost}:${IDENTITY_DB_PORT:3306}/${IDENTITY_DB_NAME:identity_db}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
     username: ${IDENTITY_DB_USERNAME:root}
