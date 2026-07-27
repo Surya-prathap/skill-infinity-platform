@@ -381,6 +381,46 @@ services:
       - skill-infinity-network
 
   # ============================================================
+  # Payment Service
+  # ============================================================
+  payment-service:
+    build:
+      context: ../backend
+      dockerfile: payment-service/Dockerfile
+    container_name: skill-infinity-payment-service
+    restart: unless-stopped
+    ports:
+      - "${PAYMENT_SERVICE_PORT:-8086}:8086"
+    environment:
+      - CONFIG_SERVER_URL=http://config-server:8888
+      - PAYMENT_SERVICE_PORT=8086
+      - PAYMENT_DB_HOST=mysql
+      - PAYMENT_DB_NAME=skill_infinity_payment
+      - PAYMENT_DB_USERNAME=root
+      - PAYMENT_DB_PASSWORD=${MYSQL_ROOT_PASSWORD:?err}
+      - REDIS_HOST=redis
+      - RABBITMQ_HOST=rabbitmq
+      - EUREKA_DEFAULT_ZONE=http://discovery-server:8761/eureka/
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8086/actuator/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - skill-infinity-network
+
+  # ============================================================
   # Frontend
   # ============================================================
   frontend:

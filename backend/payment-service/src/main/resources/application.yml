@@ -1,9 +1,11 @@
 server:
-  port: 8086
+  port: ${PAYMENT_SERVICE_PORT:8086}
 
 spring:
   application:
     name: payment-service
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
   datasource:
     url: jdbc:mysql://${PAYMENT_DB_HOST:localhost}:${PAYMENT_DB_PORT:3306}/${PAYMENT_DB_NAME:skill_infinity_payment}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
     username: ${PAYMENT_DB_USERNAME:root}
@@ -16,7 +18,7 @@ spring:
       connection-timeout: 30000
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     show-sql: false
     properties:
       hibernate:
@@ -91,13 +93,6 @@ logging:
     rollingpolicy:
       max-file-size: 10MB
       max-history: 7
-
-springdoc:
-  api-docs:
-    path: /payment-service/v3/api-docs
-  swagger-ui:
-    path: /payment-service/swagger-ui.html
-    enabled: true
 
 payment:
   cache:
