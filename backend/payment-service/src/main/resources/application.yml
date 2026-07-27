@@ -79,7 +79,6 @@ info:
   app:
     name: ${spring.application.name}
     description: Skill Infinity Payment Service
-    version: @project.version@
 
 logging:
   level:
