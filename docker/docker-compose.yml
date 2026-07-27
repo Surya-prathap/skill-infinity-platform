@@ -301,6 +301,46 @@ services:
       - skill-infinity-network
 
   # ============================================================
+  # Session Service
+  # ============================================================
+  session-service:
+    build:
+      context: ../backend
+      dockerfile: session-service/Dockerfile
+    container_name: skill-infinity-session-service
+    restart: unless-stopped
+    ports:
+      - "${SESSION_SERVICE_PORT:-8084}:8084"
+    environment:
+      - CONFIG_SERVER_URL=http://config-server:8888
+      - SESSION_SERVICE_PORT=8084
+      - SESSION_DB_HOST=mysql
+      - SESSION_DB_NAME=skill_infinity_session
+      - SESSION_DB_USERNAME=root
+      - SESSION_DB_PASSWORD=${MYSQL_ROOT_PASSWORD:?err}
+      - REDIS_HOST=redis
+      - RABBITMQ_HOST=rabbitmq
+      - EUREKA_DEFAULT_ZONE=http://discovery-server:8761/eureka/
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8084/actuator/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - skill-infinity-network
+
+  # ============================================================
   # Frontend
   # ============================================================
   frontend:
