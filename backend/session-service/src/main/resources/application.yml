@@ -1,9 +1,11 @@
 server:
-  port: 8084
+  port: ${SESSION_SERVICE_PORT:8084}
 
 spring:
   application:
     name: session-service
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
   datasource:
     url: jdbc:mysql://${SESSION_DB_HOST:localhost}:${SESSION_DB_PORT:3306}/${SESSION_DB_NAME:skill_infinity_session}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
     username: ${SESSION_DB_USERNAME:root}
@@ -16,7 +18,7 @@ spring:
       connection-timeout: 30000
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     show-sql: false
     properties:
       hibernate:
