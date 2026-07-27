@@ -1,0 +1,18 @@
+package com.skillinfinity.wallet.enumeration;
+
+public enum TransactionType {
+    CREDIT_PURCHASE,
+    CREDIT_CONSUMPTION,
+    CREDIT_REFUND,
+    CREDIT_TRANSFER,
+    CREDIT_EXPIRATION,
+    PROMOTIONAL_CREDIT,
+    REWARD_CREDIT,
+    BONUS_CREDIT,
+    SESSION_PAYMENT,
+    REFERRAL_REWARD,
+    COUPON_REDEMPTION,
+    FREEZE,
+    RELEASE,
+    ADJUSTMENT
+}
