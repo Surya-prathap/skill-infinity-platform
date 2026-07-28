@@ -44,7 +44,12 @@ spring:
     template:
       exchange: communication.exchange
     listener:
+      simple:
+        auto-startup: false
+
       direct:
+        auto-startup: false
+
         retry:
           enabled: true
           max-attempts: 3
@@ -94,7 +99,6 @@ info:
   app:
     name: ${spring.application.name}
     description: Skill Infinity Communication Service
-    version: @project.version@
 
 logging:
   level:
