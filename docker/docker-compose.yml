@@ -421,6 +421,47 @@ services:
       - skill-infinity-network
 
   # ============================================================
+  # Communication Service
+  # ============================================================
+  communication-service:
+    build:
+      context: ../backend
+      dockerfile: communication-service/Dockerfile
+    container_name: skill-infinity-communication-service
+    restart: unless-stopped
+    ports:
+      - "${COMMUNICATION_SERVICE_PORT:-8087}:8087"
+    environment:
+      - CONFIG_SERVER_URL=http://config-server:8888
+      - COMMUNICATION_SERVICE_PORT=8087
+      - COMMUNICATION_DB_HOST=mysql
+      - COMMUNICATION_DB_NAME=skill_infinity_communication
+      - COMMUNICATION_DB_USERNAME=root
+      - COMMUNICATION_DB_PASSWORD=${MYSQL_ROOT_PASSWORD:?err}
+      - REDIS_HOST=redis
+      - RABBITMQ_HOST=rabbitmq
+      - MINIO_URL=http://minio:9000
+      - EUREKA_DEFAULT_ZONE=http://discovery-server:8761/eureka/
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8087/actuator/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - skill-infinity-network
+
+  # ============================================================
   # Frontend
   # ============================================================
   frontend:
