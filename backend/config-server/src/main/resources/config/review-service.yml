@@ -5,13 +5,13 @@ spring:
   application:
     name: review-service
   datasource:
-    url: jdbc:mysql://localhost:3306/skill_infinity_review?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-    username: root
-    password: root
+    url: jdbc:mysql://${REVIEW_DB_HOST:localhost}:${REVIEW_DB_PORT:3306}/${REVIEW_DB_NAME:skill_infinity_review}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: ${REVIEW_DB_USERNAME:root}
+    password: ${REVIEW_DB_PASSWORD:Surya@2003}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     show-sql: false
     properties:
       hibernate:
@@ -34,7 +34,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,prometheus
   endpoint:
     health:
       show-details: always
