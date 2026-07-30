@@ -22,9 +22,10 @@ import java.util.regex.Pattern;
 @Component
 public class RequestValidationFilter implements GlobalFilter, Ordered {
 
-    private static final Pattern SQL_INJECTION_PATTERN =
-            Pattern.compile(".*([';\\\\--\\b]|(--)|(\\b(OR|AND)\\b\\s*[\\s\\w]*\\s*[=\\'\"])|(\\bUNION\\b\\s+\\bSELECT\\b)).*",
-                    Pattern.CASE_INSENSITIVE);
+    private static final Pattern SQL_INJECTION_PATTERN = Pattern.compile(
+            ".*((')|(--)|(;)|(\\b(OR|AND)\\b\\s+\\w+\\s*=)|(\\bUNION\\b\\s+\\bSELECT\\b)).*",
+            Pattern.CASE_INSENSITIVE
+    );
 
     private static final Pattern XSS_PATTERN =
             Pattern.compile(".*(<script|<iframe|<object|<embed|<svg|onerror|onload|onclick|javascript:).*",
