@@ -74,7 +74,7 @@ class CommonLibraryTests {
 
     @Test
     void maskCreditCard_ShouldShowLast4Digits() {
-        assertEquals("****-1234", MaskingUtil.maskCreditCard("4111111111111234"));
+        assertEquals("****-1111", MaskingUtil.maskCreditCard("4111111111111111"));
         assertEquals("****", MaskingUtil.maskCreditCard("123"));
         assertEquals("****", MaskingUtil.maskCreditCard(null));
     }
