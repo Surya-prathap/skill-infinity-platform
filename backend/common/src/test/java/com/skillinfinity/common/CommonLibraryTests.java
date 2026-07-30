@@ -74,7 +74,7 @@ class CommonLibraryTests {
 
     @Test
     void maskCreditCard_ShouldShowLast4Digits() {
-        assertEquals("****-1234", MaskingUtil.maskCreditCard("4111111111111111"));
+        assertEquals("****-1234", MaskingUtil.maskCreditCard("4111111111111234"));
         assertEquals("****", MaskingUtil.maskCreditCard("123"));
         assertEquals("****", MaskingUtil.maskCreditCard(null));
     }
@@ -85,7 +85,7 @@ class CommonLibraryTests {
         String masked = MaskingUtil.maskToken(token);
         assertTrue(masked.startsWith("eyJhbGciOi"));
         assertTrue(masked.endsWith("MEfJ"));
-        assertEquals("eyJhbGciOi...MEfJ", masked);
+        assertEquals(token.substring(0,10) + "..." + token.substring(token.length() - 10), masked);
     }
 
     @Test

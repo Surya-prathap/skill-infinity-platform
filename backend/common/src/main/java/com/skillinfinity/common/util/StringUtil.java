@@ -62,6 +62,10 @@ public final class StringUtil {
         if (value == null) {
             return null;
         }
-        return value.trim();
+        return value
+                .replaceAll("<[^>]*>", "")
+                .replace("'", "")
+                .replace("\"", "")
+                .trim();
     }
 }
