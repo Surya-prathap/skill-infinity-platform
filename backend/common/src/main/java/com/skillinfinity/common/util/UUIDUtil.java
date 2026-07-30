@@ -33,4 +33,8 @@ public final class UUIDUtil {
         if (!isValid(uuid)) return null;
         return UUID.fromString(uuid);
     }
+
+    public static String generateString() {
+        return generateAsString();
+    }
 }

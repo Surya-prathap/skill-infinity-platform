@@ -33,4 +33,10 @@ public final class SecurityConstants {
             "/v3/api-docs/**",
             "/swagger-resources/**"
     };
+
+    public static final String JWT_PREFIX = TOKEN_PREFIX;
+
+    public static final String HEADER_STRING = AUTHORIZATION_HEADER;
+
+    public static final String ROLE_PREFIX = "ROLE_";
 }

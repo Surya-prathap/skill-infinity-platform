@@ -43,4 +43,12 @@ public final class DateTimeUtil {
     public static boolean isBeforeNow(LocalDateTime dateTime) {
         return dateTime != null && dateTime.isBefore(nowUtc());
     }
+
+    public static LocalDateTime now() {
+        return nowUtc();
+    }
+
+    public static String formatDefault(LocalDateTime dateTime) {
+        return formatIso(dateTime);
+    }
 }

@@ -57,4 +57,11 @@ public final class StringUtil {
         int maskLength = value.length() - visibleChars;
         return "*".repeat(maskLength) + value.substring(value.length() - visibleChars);
     }
+
+    public static String sanitize(String value) {
+        if (value == null) {
+            return null;
+        }
+        return value.trim();
+    }
 }
