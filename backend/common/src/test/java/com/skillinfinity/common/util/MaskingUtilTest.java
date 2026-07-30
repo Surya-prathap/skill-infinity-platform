@@ -62,7 +62,7 @@ class MaskingUtilTest {
 
         @Test
         void maskCreditCard_ShouldShowLast4Digits() {
-            assertEquals("****-1234", MaskingUtil.maskCreditCard("4111111111111111"));
+            assertEquals("****-1111", MaskingUtil.maskCreditCard("4111111111111111"));
         }
 
         @Test
