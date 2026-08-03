@@ -299,10 +299,10 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Resolve Maven dependencies
+      - name: Install backend modules
         run: |
           cd backend
-          mvn -B dependency:resolve
+          mvn -B clean install -DskipTests
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
