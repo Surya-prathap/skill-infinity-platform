@@ -7,7 +7,15 @@ import { CalendarSlot } from './CalendarSlot';
 import { DAY_SHORT_LABELS } from '@/features/mentor/constants';
 import type { MentorAvailability } from '@/types';
 
-const DAY_ORDER = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'] as const;
+const DAY_ORDER = [
+  'MONDAY',
+  'TUESDAY',
+  'WEDNESDAY',
+  'THURSDAY',
+  'FRIDAY',
+  'SATURDAY',
+  'SUNDAY',
+] as const;
 
 const to12h = (time: string): string => (time ? dayjs(`2000-01-01T${time}`).format('h:mm A') : '');
 
@@ -24,6 +32,8 @@ interface AvailabilityCalendarProps {
   /** Called while dragging over a day column (passes null on leave). */
   onHoverDay?: (dayOfWeek: string | null) => void;
   dropDay?: string | null;
+  /** Id of the slot currently being dragged — dims the source slot for feedback. */
+  draggingId?: string | null;
 }
 
 export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
@@ -37,6 +47,7 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
   onDropOnDay,
   onHoverDay,
   dropDay = null,
+  draggingId = null,
 }) => {
   const isDropTarget = Boolean(onDropOnDay);
 
@@ -73,10 +84,14 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                   : undefined
               }
               onDragLeave={isDropTarget ? () => onHoverDay?.(null) : undefined}
-              onDrop={isDropTarget ? (event) => {
-                event.preventDefault();
-                onDropOnDay?.(day);
-              } : undefined}
+              onDrop={
+                isDropTarget
+                  ? (event) => {
+                      event.preventDefault();
+                      onDropOnDay?.(day);
+                    }
+                  : undefined
+              }
               sx={{
                 borderRadius: 3,
                 border: 1,
@@ -85,7 +100,8 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                 minHeight: 220,
                 display: 'flex',
                 flexDirection: 'column',
-                transition: 'border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease',
+                transition:
+                  'border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease',
                 '&:hover': {
                   borderColor: isWeekend ? 'warning.main' : 'primary.main',
                   boxShadow: '0 8px 24px rgba(15,23,42,0.08)',
@@ -118,7 +134,9 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                   {DAY_SHORT_LABELS[day]}
                 </Typography>
                 <Typography variant="caption" fontWeight={700} color="text.secondary">
-                  {daySlots.length > 0 ? `${daySlots.length} slot${daySlots.length > 1 ? 's' : ''}` : '—'}
+                  {daySlots.length > 0
+                    ? `${daySlots.length} slot${daySlots.length > 1 ? 's' : ''}`
+                    : '—'}
                 </Typography>
               </Box>
 
@@ -126,20 +144,31 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
               <Box sx={{ p: 1.25, display: 'flex', flexDirection: 'column', gap: 1, flexGrow: 1 }}>
                 {daySlots.map((slot) => {
                   const active = slot.active !== false;
+                  const isDragging = draggingId != null && slot.id === draggingId;
                   return (
-                    <CalendarSlot
+                    <Box
                       key={slot.id ?? `${slot.dayOfWeek}-${slot.startTime}-${slot.endTime}`}
-                      label={`${to12h(slot.startTime)} – ${to12h(slot.endTime)}`}
-                      sublabel={
-                        slot.recurring ? 'Every week' : slot.specificDate ? `On ${dayjs(slot.specificDate).format('MMM D')}` : 'One-off'
-                      }
-                      active={active}
-                      onClick={onToggleSlot && !readOnly ? () => onToggleSlot(slot) : undefined}
-                      onRemove={onRemoveSlot && !readOnly ? () => onRemoveSlot(slot) : undefined}
-                      draggable={Boolean(onDragStartSlot && slot.id)}
-                      onDragStart={onDragStartSlot && slot.id ? () => onDragStartSlot(slot) : undefined}
-                      onDragEnd={onDragEndSlot}
-                    />
+                      sx={{ opacity: isDragging ? 0.4 : 1, transition: 'opacity 0.15s ease' }}
+                    >
+                      <CalendarSlot
+                        label={`${to12h(slot.startTime)} – ${to12h(slot.endTime)}`}
+                        sublabel={
+                          slot.recurring
+                            ? 'Every week'
+                            : slot.specificDate
+                              ? `On ${dayjs(slot.specificDate).format('MMM D')}`
+                              : 'One-off'
+                        }
+                        active={active}
+                        onClick={onToggleSlot && !readOnly ? () => onToggleSlot(slot) : undefined}
+                        onRemove={onRemoveSlot && !readOnly ? () => onRemoveSlot(slot) : undefined}
+                        draggable={Boolean(onDragStartSlot && slot.id)}
+                        onDragStart={
+                          onDragStartSlot && slot.id ? () => onDragStartSlot(slot) : undefined
+                        }
+                        onDragEnd={onDragEndSlot}
+                      />
+                    </Box>
                   );
                 })}
 
@@ -167,9 +196,17 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                       gap: 0.5,
                       cursor: 'pointer',
                       color: 'text.disabled',
-                      transition: 'border-color 0.15s ease, color 0.15s ease, background 0.15s ease',
-                      '&:hover': { borderColor: 'primary.main', color: 'primary.main', bgcolor: 'action.hover' },
-                      '&:focus-visible': { outline: '3px solid rgba(109,93,246,0.3)', outlineOffset: 1 },
+                      transition:
+                        'border-color 0.15s ease, color 0.15s ease, background 0.15s ease',
+                      '&:hover': {
+                        borderColor: 'primary.main',
+                        color: 'primary.main',
+                        bgcolor: 'action.hover',
+                      },
+                      '&:focus-visible': {
+                        outline: '3px solid rgba(109,93,246,0.3)',
+                        outlineOffset: 1,
+                      },
                     }}
                   >
                     <AddOutlinedIcon sx={{ fontSize: 18 }} />
@@ -180,7 +217,14 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
                 )}
 
                 {daySlots.length === 0 && readOnly && (
-                  <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Box
+                    sx={{
+                      flexGrow: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
                     <Typography variant="caption" color="text.disabled">
                       Not available
                     </Typography>

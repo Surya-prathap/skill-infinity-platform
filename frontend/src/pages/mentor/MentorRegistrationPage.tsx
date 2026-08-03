@@ -18,15 +18,10 @@ import dayjs from 'dayjs';
 import { Typography } from '@/components/ui/Typography';
 import { Stack } from '@/components/ui/Stack';
 import { Card } from '@/components/ui/Card';
-import { FormCheckbox, FormInput, FormSelect, FormTextarea } from '@/components';
+import { FormInput, FormSelect, FormTextarea } from '@/components';
 import { UploadArea } from '@/components/ui/UploadArea';
 import { StatusBadge } from '@/components/ui/StatusBadge';
-import {
-  AvailabilityCalendar,
-  GradientCard,
-  MentorCard,
-  WizardStepper,
-} from '@/components/mentor';
+import { AvailabilityCalendar, GradientCard, MentorCard, WizardStepper } from '@/components/mentor';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { markSubmitted, resetWizard, setStep, updateDraft } from '@/store/slices/mentorSlice';
 import { selectMentorDraft, selectMentorStep } from '@/store/selectors';
@@ -40,9 +35,18 @@ import {
   WIZARD_STEPS,
   type WizardStepId,
 } from '@/features/mentor/constants';
-import { personalSchema, toOptionalNumber, type PersonalFormValues } from '@/features/mentor/schemas';
+import {
+  personalSchema,
+  toOptionalNumber,
+  type PersonalFormValues,
+} from '@/features/mentor/schemas';
 import { useBecomeMentorMutation, useCategoriesQuery } from '@/features/mentor/hooks';
-import { persistDraft, type ExpertiseDraft, type MentorDraft } from '@/features/mentor/storage';
+import {
+  availabilityToDraft,
+  persistDraft,
+  type ExpertiseDraft,
+  type MentorDraft,
+} from '@/features/mentor/storage';
 import {
   AvailabilityEditor,
   CertificationEditor,
@@ -52,9 +56,16 @@ import {
   PricingEditor,
   SkillEditor,
 } from '@/features/mentor/components';
-import type { Mentor, MentorAvailability, MentorCertification, MentorExpertise, MentorPricing } from '@/types';
+import type {
+  Mentor,
+  MentorAvailability,
+  MentorCertification,
+  MentorExpertise,
+  MentorPricing,
+} from '@/types';
 
-const tempId = (prefix: string): string => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+const tempId = (prefix: string): string =>
+  `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
 const SESSION_TYPE_LABEL: Record<string, string> = Object.fromEntries(
   SESSION_TYPES.map((option) => [String(option.value), option.label]),
@@ -92,7 +103,11 @@ export const MentorRegistrationPage: React.FC = () => {
   const becomeMentor = useBecomeMentorMutation();
 
   const [lastSaved, setLastSaved] = useState<string | null>(draft.savedAt);
-  const [verificationFile, setVerificationFile] = useState<{ url: string; name: string; size: number } | null>(null);
+  const [verificationFile, setVerificationFile] = useState<{
+    url: string;
+    name: string;
+    size: number;
+  } | null>(null);
   const [availabilityEditor, setAvailabilityEditor] = useState<{
     open: boolean;
     editing: boolean;
@@ -140,7 +155,6 @@ export const MentorRegistrationPage: React.FC = () => {
 
   const progress = Math.round((completedSteps.length / WIZARD_STEPS.length) * 100);
   const stepConfig = WIZARD_STEPS[step];
-  const isLastStep = step === WIZARD_STEPS.length - 1;
 
   /* ---------------- Draft mutations ---------------- */
   const setDraft = (patch: Partial<MentorDraft>) => dispatch(updateDraft(patch));
@@ -148,37 +162,66 @@ export const MentorRegistrationPage: React.FC = () => {
   const addExperience = (values: Omit<MentorDraft['experiences'][number], 'id'>) =>
     setDraft({ experiences: [...draft.experiences, { id: tempId('exp'), ...values }] });
   const updateExperience = (id: string, values: Omit<MentorDraft['experiences'][number], 'id'>) =>
-    setDraft({ experiences: draft.experiences.map((item) => (item.id === id ? { ...item, ...values } : item)) });
-  const removeExperience = (id: string) => setDraft({ experiences: draft.experiences.filter((item) => item.id !== id) });
+    setDraft({
+      experiences: draft.experiences.map((item) =>
+        item.id === id ? { ...item, ...values } : item,
+      ),
+    });
+  const removeExperience = (id: string) =>
+    setDraft({ experiences: draft.experiences.filter((item) => item.id !== id) });
 
   const addSkill = (values: Omit<MentorDraft['skills'][number], 'id'>) =>
     setDraft({ skills: [...draft.skills, { id: tempId('skill'), ...values }] });
   const updateSkill = (id: string, values: Omit<MentorDraft['skills'][number], 'id'>) =>
-    setDraft({ skills: draft.skills.map((item) => (item.id === id ? { ...item, ...values } : item)) });
-  const removeSkill = (id: string) => setDraft({ skills: draft.skills.filter((item) => item.id !== id) });
+    setDraft({
+      skills: draft.skills.map((item) => (item.id === id ? { ...item, ...values } : item)),
+    });
+  const removeSkill = (id: string) =>
+    setDraft({ skills: draft.skills.filter((item) => item.id !== id) });
 
   const addExpertise = (values: Omit<ExpertiseDraft, 'id'>) =>
     setDraft({ expertise: [...draft.expertise, { id: tempId('exp'), ...values }] });
   const updateExpertise = (id: string, values: Omit<ExpertiseDraft, 'id'>) =>
-    setDraft({ expertise: draft.expertise.map((item) => (item.id === id ? { ...item, ...values } : item)) });
-  const removeExpertise = (id: string) => setDraft({ expertise: draft.expertise.filter((item) => item.id !== id) });
+    setDraft({
+      expertise: draft.expertise.map((item) => (item.id === id ? { ...item, ...values } : item)),
+    });
+  const removeExpertise = (id: string) =>
+    setDraft({ expertise: draft.expertise.filter((item) => item.id !== id) });
 
   const addPricing = (values: Omit<MentorDraft['pricing'][number], 'id'>) =>
     setDraft({ pricing: [...draft.pricing, { id: tempId('price'), ...values }] });
   const updatePricing = (id: string, values: Omit<MentorDraft['pricing'][number], 'id'>) =>
-    setDraft({ pricing: draft.pricing.map((item) => (item.id === id ? { ...item, ...values } : item)) });
-  const removePricing = (id: string) => setDraft({ pricing: draft.pricing.filter((item) => item.id !== id) });
+    setDraft({
+      pricing: draft.pricing.map((item) => (item.id === id ? { ...item, ...values } : item)),
+    });
+  const removePricing = (id: string) =>
+    setDraft({ pricing: draft.pricing.filter((item) => item.id !== id) });
 
   const addAvailability = (values: Omit<MentorDraft['availability'][number], 'id'>) =>
     setDraft({ availability: [...draft.availability, { id: tempId('avail'), ...values }] });
-  const updateAvailability = (id: string, values: Omit<MentorDraft['availability'][number], 'id'>) =>
-    setDraft({ availability: draft.availability.map((item) => (item.id === id ? { ...item, ...values } : item)) });
-  const removeAvailability = (id: string) => setDraft({ availability: draft.availability.filter((item) => item.id !== id) });
+  const updateAvailability = (
+    id: string,
+    values: Omit<MentorDraft['availability'][number], 'id'>,
+  ) =>
+    setDraft({
+      availability: draft.availability.map((item) =>
+        item.id === id ? { ...item, ...values } : item,
+      ),
+    });
+  const removeAvailability = (id: string) =>
+    setDraft({ availability: draft.availability.filter((item) => item.id !== id) });
 
   const addCertification = (values: Omit<MentorDraft['certifications'][number], 'id'>) =>
     setDraft({ certifications: [...draft.certifications, { id: tempId('cert'), ...values }] });
-  const updateCertification = (id: string, values: Omit<MentorDraft['certifications'][number], 'id'>) =>
-    setDraft({ certifications: draft.certifications.map((item) => (item.id === id ? { ...item, ...values } : item)) });
+  const updateCertification = (
+    id: string,
+    values: Omit<MentorDraft['certifications'][number], 'id'>,
+  ) =>
+    setDraft({
+      certifications: draft.certifications.map((item) =>
+        item.id === id ? { ...item, ...values } : item,
+      ),
+    });
   const removeCertification = (id: string) =>
     setDraft({ certifications: draft.certifications.filter((item) => item.id !== id) });
 
@@ -190,12 +233,12 @@ export const MentorRegistrationPage: React.FC = () => {
   };
 
   /* ---------------- Navigation ---------------- */
-  const goTo = (index: number) => dispatch(setStep(Math.min(Math.max(index, 0), WIZARD_STEPS.length - 1)));
+  const goTo = (index: number) =>
+    dispatch(setStep(Math.min(Math.max(index, 0), WIZARD_STEPS.length - 1)));
   const handleBack = () => goTo(step - 1);
   const handleStepClick = (index: number) => {
     if (index <= step) goTo(index);
   };
-
 
   const handleContinue = () => {
     if (STEP_REQUIRED[stepConfig.id] && completedSteps.includes(step)) {
@@ -300,12 +343,15 @@ export const MentorRegistrationPage: React.FC = () => {
     })),
   };
 
-
   return (
     <Box>
       {/* ================= Header ================= */}
       <GradientCard gradient="hero" sx={{ mb: 3, p: { xs: 3, md: 3.5 } }}>
-        <Stack direction={{ xs: 'column', md: 'row' }} sx={{ alignItems: { xs: 'flex-start', md: 'center' } }} gap={2}>
+        <Stack
+          direction={{ xs: 'column', md: 'row' }}
+          sx={{ alignItems: { xs: 'flex-start', md: 'center' } }}
+          gap={2}
+        >
           <Stack direction="row" alignItems="center" gap={1.5} sx={{ flexGrow: 1 }}>
             <Box
               sx={{
@@ -401,21 +447,61 @@ export const MentorRegistrationPage: React.FC = () => {
                 noValidate
               >
                 <Stack spacing={2.5}>
-                  <FormInput name="headline" control={personalForm.control} label="Professional headline" required placeholder="e.g. Senior Staff Engineer · System Design & Cloud" helperText="This is the first thing learners see on your profile." />
+                  <FormInput
+                    name="headline"
+                    control={personalForm.control}
+                    label="Professional headline"
+                    required
+                    placeholder="e.g. Senior Staff Engineer · System Design & Cloud"
+                    helperText="This is the first thing learners see on your profile."
+                  />
                   <Grid container spacing={2}>
                     <Grid size={{ xs: 12, sm: 4 }}>
-                      <FormInput name="country" control={personalForm.control} label="Country" placeholder="e.g. United States" />
+                      <FormInput
+                        name="country"
+                        control={personalForm.control}
+                        label="Country"
+                        placeholder="e.g. United States"
+                      />
                     </Grid>
                     <Grid size={{ xs: 12, sm: 4 }}>
-                      <FormInput name="city" control={personalForm.control} label="City" placeholder="e.g. San Francisco" />
+                      <FormInput
+                        name="city"
+                        control={personalForm.control}
+                        label="City"
+                        placeholder="e.g. San Francisco"
+                      />
                     </Grid>
                     <Grid size={{ xs: 12, sm: 4 }}>
-                      <FormInput name="yearsOfExperience" control={personalForm.control} label="Years of experience" type="number" />
+                      <FormInput
+                        name="yearsOfExperience"
+                        control={personalForm.control}
+                        label="Years of experience"
+                        type="number"
+                      />
                     </Grid>
                   </Grid>
-                  <FormSelect name="timezone" control={personalForm.control} label="Timezone" options={TIMEZONES} placeholder="Select your timezone" />
-                  <FormTextarea name="bio" control={personalForm.control} label="Short bio" rows={3} placeholder="A one-paragraph summary of who you are and what you teach." />
-                  <FormTextarea name="aboutMe" control={personalForm.control} label="About me" rows={5} placeholder="Tell learners about your background, teaching style and philosophy." />
+                  <FormSelect
+                    name="timezone"
+                    control={personalForm.control}
+                    label="Timezone"
+                    options={TIMEZONES}
+                    placeholder="Select your timezone"
+                  />
+                  <FormTextarea
+                    name="bio"
+                    control={personalForm.control}
+                    label="Short bio"
+                    rows={3}
+                    placeholder="A one-paragraph summary of who you are and what you teach."
+                  />
+                  <FormTextarea
+                    name="aboutMe"
+                    control={personalForm.control}
+                    label="About me"
+                    rows={5}
+                    placeholder="Tell learners about your background, teaching style and philosophy."
+                  />
                 </Stack>
                 <StepNav
                   showBack={false}
@@ -474,7 +560,11 @@ export const MentorRegistrationPage: React.FC = () => {
                         {item.name}
                       </Typography>
                     </Box>
-                    <Chip size="small" label={item.proficiencyLevel} sx={{ bgcolor: 'action.selected', color: 'primary.main', fontWeight: 700 }} />
+                    <Chip
+                      size="small"
+                      label={item.proficiencyLevel}
+                      sx={{ bgcolor: 'action.selected', color: 'primary.main', fontWeight: 700 }}
+                    />
                     {item.yearsOfExperience != null && (
                       <Typography variant="caption" color="text.secondary" noWrap>
                         {item.yearsOfExperience} yrs
@@ -507,12 +597,19 @@ export const MentorRegistrationPage: React.FC = () => {
                     <Typography variant="caption" color="text.secondary" noWrap>
                       {item.categoryName}
                       {item.subCategoryName ? ` · ${item.subCategoryName}` : ''} ·{' '}
-                      {item.teachingLevel === 'ALL_LEVELS' ? 'All levels' : item.teachingLevel.toLowerCase()}
+                      {item.teachingLevel === 'ALL_LEVELS'
+                        ? 'All levels'
+                        : item.teachingLevel.toLowerCase()}
                     </Typography>
                   </Box>
                 )}
                 renderEditor={({ initial, onCancel, onSubmit }) => (
-                  <ExpertiseEditor categories={categories} initial={initial} onCancel={onCancel} onSubmit={onSubmit} />
+                  <ExpertiseEditor
+                    categories={categories}
+                    initial={initial}
+                    onCancel={onCancel}
+                    onSubmit={onSubmit}
+                  />
                 )}
               />
             )}
@@ -521,7 +618,8 @@ export const MentorRegistrationPage: React.FC = () => {
             {step === 4 && (
               <Box>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5 }}>
-                  Select the domains you teach. Choosing a category adds it to your profile; specific skills are captured in the expertise step.
+                  Select the domains you teach. Choosing a category adds it to your profile;
+                  specific skills are captured in the expertise step.
                 </Typography>
                 <Grid container spacing={2}>
                   {categories.map((category) => {
@@ -547,12 +645,21 @@ export const MentorRegistrationPage: React.FC = () => {
                             borderColor: selected ? 'primary.main' : 'divider',
                             bgcolor: selected ? 'action.selected' : 'background.paper',
                             cursor: 'pointer',
-                            transition: 'border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease',
+                            transition:
+                              'border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease',
                             '&:hover': { transform: 'translateY(-3px)', boxShadow: 4 },
-                            '&:focus-visible': { outline: '3px solid rgba(109,93,246,0.3)', outlineOffset: 2 },
+                            '&:focus-visible': {
+                              outline: '3px solid rgba(109,93,246,0.3)',
+                              outlineOffset: 2,
+                            },
                           }}
                         >
-                          <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1}>
+                          <Stack
+                            direction="row"
+                            alignItems="center"
+                            justifyContent="space-between"
+                            gap={1}
+                          >
                             <Typography variant="subtitle1" fontWeight={800}>
                               {category.name}
                             </Typography>
@@ -576,13 +683,23 @@ export const MentorRegistrationPage: React.FC = () => {
                             </Box>
                           </Stack>
                           {category.description && (
-                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75, lineHeight: 1.5 }}>
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              sx={{ display: 'block', mt: 0.75, lineHeight: 1.5 }}
+                            >
                               {category.description}
                             </Typography>
                           )}
                           <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 1.5 }}>
                             {category.subCategories.slice(0, 3).map((sub) => (
-                              <Chip key={sub.id} size="small" label={sub.name} variant="outlined" sx={{ fontWeight: 600 }} />
+                              <Chip
+                                key={sub.id}
+                                size="small"
+                                label={sub.name}
+                                variant="outlined"
+                                sx={{ fontWeight: 600 }}
+                              />
                             ))}
                           </Stack>
                         </Box>
@@ -630,7 +747,9 @@ export const MentorRegistrationPage: React.FC = () => {
               (availabilityEditor.open ? (
                 <AvailabilityEditor
                   initial={availabilityEditor.item}
-                  onCancel={() => setAvailabilityEditor({ open: false, editing: false, item: null })}
+                  onCancel={() =>
+                    setAvailabilityEditor({ open: false, editing: false, item: null })
+                  }
                   onSubmit={(values) => {
                     if (availabilityEditor.editing && availabilityEditor.item) {
                       updateAvailability(availabilityEditor.item.id, values);
@@ -643,11 +762,18 @@ export const MentorRegistrationPage: React.FC = () => {
               ) : (
                 <Box>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5 }}>
-                    Add your weekly availability. Tap a slot to edit it, use the × to remove it, or press “Add slot”.
+                    Add your weekly availability. Tap a slot to edit it, use the × to remove it, or
+                    press “Add slot”.
                   </Typography>
                   <AvailabilityCalendar
                     slots={draft.availability}
-                    onToggleSlot={(slot) => setAvailabilityEditor({ open: true, editing: true, item: slot })}
+                    onToggleSlot={(slot) =>
+                      setAvailabilityEditor({
+                        open: true,
+                        editing: true,
+                        item: availabilityToDraft(slot),
+                      })
+                    }
                     onRemoveSlot={(slot) => {
                       if (slot.id) removeAvailability(slot.id);
                     }}
@@ -670,7 +796,13 @@ export const MentorRegistrationPage: React.FC = () => {
                     }
                   />
                   <Stack direction="row" justifyContent="flex-end" sx={{ mt: 2.5 }}>
-                    <MuiButton variant="outlined" startIcon={<CalendarMonthOutlinedIcon />} onClick={() => setAvailabilityEditor({ open: true, editing: false, item: null })}>
+                    <MuiButton
+                      variant="outlined"
+                      startIcon={<CalendarMonthOutlinedIcon />}
+                      onClick={() =>
+                        setAvailabilityEditor({ open: true, editing: false, item: null })
+                      }
+                    >
                       Add slot
                     </MuiButton>
                   </Stack>
@@ -699,7 +831,11 @@ export const MentorRegistrationPage: React.FC = () => {
                         {item.issueDate ? ` · ${formatDate(item.issueDate)}` : ''}
                       </Typography>
                     </Box>
-                    <StatusBadge label={item.doesNotExpire ? 'No expiry' : 'Expires'} color={item.doesNotExpire ? 'success' : 'warning'} withDot={false} />
+                    <StatusBadge
+                      label={item.doesNotExpire ? 'No expiry' : 'Expires'}
+                      color={item.doesNotExpire ? 'success' : 'warning'}
+                      withDot={false}
+                    />
                   </Stack>
                 )}
                 renderEditor={({ initial, onCancel, onSubmit }) => (
@@ -712,7 +848,8 @@ export const MentorRegistrationPage: React.FC = () => {
             {step === 8 && (
               <Stack spacing={3}>
                 <Alert severity="info" sx={{ borderRadius: 2.5 }}>
-                  Your identity is verified once — it unlocks the verified badge on your public profile. Documents are encrypted and never shared.
+                  Your identity is verified once — it unlocks the verified badge on your public
+                  profile. Documents are encrypted and never shared.
                 </Alert>
                 <Box>
                   <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.5 }}>
@@ -720,7 +857,9 @@ export const MentorRegistrationPage: React.FC = () => {
                   </Typography>
                   <VerificationDocumentPicker
                     documentType={draft.verification.documentType}
-                    onChange={(documentType) => setDraft({ verification: { ...draft.verification, documentType } })}
+                    onChange={(documentType) =>
+                      setDraft({ verification: { ...draft.verification, documentType } })
+                    }
                   />
                 </Box>
                 <Box>
@@ -736,7 +875,9 @@ export const MentorRegistrationPage: React.FC = () => {
                     value={verificationFile?.url}
                     fileName={verificationFile?.name}
                     fileSize={verificationFile?.size}
-                    onChange={(url, meta) => setVerificationFile({ url, name: meta.name, size: meta.size })}
+                    onChange={(url, meta) =>
+                      setVerificationFile({ url, name: meta.name, size: meta.size })
+                    }
                     onRemove={() => setVerificationFile(null)}
                   />
                 </Box>
@@ -744,11 +885,23 @@ export const MentorRegistrationPage: React.FC = () => {
                   role="checkbox"
                   aria-checked={draft.verification.agreedToTerms}
                   tabIndex={0}
-                  onClick={() => setDraft({ verification: { ...draft.verification, agreedToTerms: !draft.verification.agreedToTerms } })}
+                  onClick={() =>
+                    setDraft({
+                      verification: {
+                        ...draft.verification,
+                        agreedToTerms: !draft.verification.agreedToTerms,
+                      },
+                    })
+                  }
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') {
                       event.preventDefault();
-                      setDraft({ verification: { ...draft.verification, agreedToTerms: !draft.verification.agreedToTerms } });
+                      setDraft({
+                        verification: {
+                          ...draft.verification,
+                          agreedToTerms: !draft.verification.agreedToTerms,
+                        },
+                      });
                     }
                   }}
                   sx={{
@@ -759,7 +912,10 @@ export const MentorRegistrationPage: React.FC = () => {
                     bgcolor: draft.verification.agreedToTerms ? 'success.light' : 'transparent',
                     cursor: 'pointer',
                     transition: 'all 0.2s ease',
-                    '&:focus-visible': { outline: '3px solid rgba(16,185,129,0.3)', outlineOffset: 2 },
+                    '&:focus-visible': {
+                      outline: '3px solid rgba(16,185,129,0.3)',
+                      outlineOffset: 2,
+                    },
                   }}
                 >
                   <Stack direction="row" alignItems="center" gap={1.5}>
@@ -781,7 +937,8 @@ export const MentorRegistrationPage: React.FC = () => {
                       {draft.verification.agreedToTerms && '✓'}
                     </Box>
                     <Typography variant="body2" fontWeight={600}>
-                      I confirm the information provided is accurate and agree to Skill Infinity's mentor verification terms.
+                      I confirm the information provided is accurate and agree to Skill Infinity's
+                      mentor verification terms.
                     </Typography>
                   </Stack>
                 </Box>
@@ -796,23 +953,57 @@ export const MentorRegistrationPage: React.FC = () => {
                 </Alert>
                 <Grid container spacing={3}>
                   <Grid size={{ xs: 12, md: 5 }}>
-                    <MentorCard mentor={previewMentor} name={`${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim() || user?.username} featured />
+                    <MentorCard
+                      mentor={previewMentor}
+                      name={
+                        `${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim() || user?.username
+                      }
+                      featured
+                    />
                   </Grid>
                   <Grid size={{ xs: 12, md: 7 }}>
                     <Stack spacing={2}>
-                      <PreviewSection title="Experience" count={draft.experiences.length} icon={<WorkOutlineOutlinedIcon />} color="#3B82F6">
+                      <PreviewSection
+                        title="Experience"
+                        count={draft.experiences.length}
+                        icon={<WorkOutlineOutlinedIcon />}
+                        color="#3B82F6"
+                      >
                         {draft.experiences.map((item) => (
-                          <PreviewRow key={item.id} title={item.title} subtitle={`${item.company}${item.location ? ` · ${item.location}` : ''}`} />
+                          <PreviewRow
+                            key={item.id}
+                            title={item.title}
+                            subtitle={`${item.company}${item.location ? ` · ${item.location}` : ''}`}
+                          />
                         ))}
                       </PreviewSection>
-                      <PreviewSection title="Skills & Expertise" count={draft.skills.length} icon={<BoltOutlinedIcon />} color="#F59E0B">
+                      <PreviewSection
+                        title="Skills & Expertise"
+                        count={draft.skills.length}
+                        icon={<BoltOutlinedIcon />}
+                        color="#F59E0B"
+                      >
                         <Stack direction="row" flexWrap="wrap" gap={0.75}>
                           {draft.skills.map((skill) => (
-                            <Chip key={skill.id} size="small" label={skill.name} sx={{ bgcolor: 'action.selected', color: 'primary.main', fontWeight: 600 }} />
+                            <Chip
+                              key={skill.id}
+                              size="small"
+                              label={skill.name}
+                              sx={{
+                                bgcolor: 'action.selected',
+                                color: 'primary.main',
+                                fontWeight: 600,
+                              }}
+                            />
                           ))}
                         </Stack>
                       </PreviewSection>
-                      <PreviewSection title="Availability" count={draft.availability.length} icon={<CalendarMonthOutlinedIcon />} color="#EC4899">
+                      <PreviewSection
+                        title="Availability"
+                        count={draft.availability.length}
+                        icon={<CalendarMonthOutlinedIcon />}
+                        color="#EC4899"
+                      >
                         <Stack direction="row" flexWrap="wrap" gap={0.75}>
                           {draft.availability.map((slot) => (
                             <Chip
@@ -825,7 +1016,12 @@ export const MentorRegistrationPage: React.FC = () => {
                           ))}
                         </Stack>
                       </PreviewSection>
-                      <PreviewSection title="Pricing" count={draft.pricing.length} icon={<PriceChangeOutlinedIcon />} color="#14B8A6">
+                      <PreviewSection
+                        title="Pricing"
+                        count={draft.pricing.length}
+                        icon={<PriceChangeOutlinedIcon />}
+                        color="#14B8A6"
+                      >
                         {draft.pricing.map((plan) => (
                           <PreviewRow
                             key={plan.id}
@@ -856,15 +1052,28 @@ export const MentorRegistrationPage: React.FC = () => {
               borderColor: 'divider',
             }}
           >
-            <MuiButton startIcon={<ArrowBackOutlinedIcon />} onClick={handleBack} disabled={becomeMentor.isPending}>
+            <MuiButton
+              startIcon={<ArrowBackOutlinedIcon />}
+              onClick={handleBack}
+              disabled={becomeMentor.isPending}
+            >
               Back
             </MuiButton>
             {step === 8 ? (
-              <MuiButton variant="contained" endIcon={<ArrowForwardOutlinedIcon />} onClick={handleVerificationContinue}>
+              <MuiButton
+                variant="contained"
+                endIcon={<ArrowForwardOutlinedIcon />}
+                onClick={handleVerificationContinue}
+              >
                 Review Application
               </MuiButton>
             ) : (
-              <MuiButton variant="contained" endIcon={<ArrowForwardOutlinedIcon />} onClick={handleContinue} disabled={becomeMentor.isPending}>
+              <MuiButton
+                variant="contained"
+                endIcon={<ArrowForwardOutlinedIcon />}
+                onClick={handleContinue}
+                disabled={becomeMentor.isPending}
+              >
                 Continue
               </MuiButton>
             )}
@@ -884,7 +1093,11 @@ export const MentorRegistrationPage: React.FC = () => {
               borderColor: 'divider',
             }}
           >
-            <MuiButton startIcon={<ArrowBackOutlinedIcon />} onClick={handleBack} disabled={becomeMentor.isPending}>
+            <MuiButton
+              startIcon={<ArrowBackOutlinedIcon />}
+              onClick={handleBack}
+              disabled={becomeMentor.isPending}
+            >
               Back
             </MuiButton>
             <MuiButton
@@ -913,11 +1126,19 @@ export const MentorRegistrationPage: React.FC = () => {
                   width: 8,
                   height: 8,
                   borderRadius: '50%',
-                  bgcolor: done ? 'success.main' : index === step ? 'primary.main' : 'text.disabled',
+                  bgcolor: done
+                    ? 'success.main'
+                    : index === step
+                      ? 'primary.main'
+                      : 'text.disabled',
                   boxShadow: done ? '0 0 0 3px rgba(16,185,129,0.15)' : 'none',
                 }}
               />
-              <Typography variant="caption" fontWeight={600} color={done ? 'success.main' : 'text.secondary'}>
+              <Typography
+                variant="caption"
+                fontWeight={600}
+                color={done ? 'success.main' : 'text.secondary'}
+              >
                 {s.label}
               </Typography>
             </Stack>
@@ -985,7 +1206,10 @@ interface VerificationDocumentPickerProps {
   onChange: (documentType: string) => void;
 }
 
-const VerificationDocumentPicker: React.FC<VerificationDocumentPickerProps> = ({ documentType, onChange }) => {
+const VerificationDocumentPicker: React.FC<VerificationDocumentPickerProps> = ({
+  documentType,
+  onChange,
+}) => {
   const options = [
     { value: 'PASSPORT', label: 'Passport' },
     { value: 'NATIONAL_ID', label: 'National ID' },
@@ -1022,7 +1246,9 @@ interface PreviewSectionProps {
 }
 
 const PreviewSection: React.FC<PreviewSectionProps> = ({ title, count, icon, color, children }) => (
-  <Box sx={{ p: 2, borderRadius: 3, border: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
+  <Box
+    sx={{ p: 2, borderRadius: 3, border: 1, borderColor: 'divider', bgcolor: 'background.paper' }}
+  >
     <Stack direction="row" alignItems="center" gap={1.25} sx={{ mb: 1.5 }}>
       <Box
         sx={{

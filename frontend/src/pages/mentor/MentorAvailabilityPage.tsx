@@ -27,8 +27,13 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useDocumentTitle } from '@/hooks';
 import { getStoredValue, setStoredValue, showSuccess } from '@/utils';
 import { DAY_LABELS, TIMEZONES } from '@/features/mentor/constants';
+import { availabilityToDraft } from '@/features/mentor/storage';
 import { AvailabilityEditor } from '@/features/mentor/components';
-import { useAvailabilityQuery, useMentorProfileQuery, useSaveAvailabilityMutation } from '@/features/mentor/hooks';
+import {
+  useAvailabilityQuery,
+  useMentorProfileQuery,
+  useSaveAvailabilityMutation,
+} from '@/features/mentor/hooks';
 import type { AvailabilityRequest, MentorAvailability } from '@/types';
 
 const BLOCKED_KEY = 'skill_mentor_blocked_dates';
@@ -57,7 +62,11 @@ export const MentorAvailabilityPage: React.FC = () => {
 
   const [slots, setSlots] = useState<MentorAvailability[]>(availabilities);
   const [dirty, setDirty] = useState(false);
-  const [editor, setEditor] = useState<{ open: boolean; editing: boolean; item: MentorAvailability | null }>({
+  const [editor, setEditor] = useState<{
+    open: boolean;
+    editing: boolean;
+    item: MentorAvailability | null;
+  }>({
     open: false,
     editing: false,
     item: null,
@@ -65,7 +74,9 @@ export const MentorAvailabilityPage: React.FC = () => {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropDay, setDropDay] = useState<string | null>(null);
   const [timezone, setTimezone] = useState(mentor?.profile?.timezone ?? '');
-  const [blockedDates, setBlockedDates] = useState<string[]>(() => getStoredValue<string[]>(BLOCKED_KEY, []));
+  const [blockedDates, setBlockedDates] = useState<string[]>(() =>
+    getStoredValue<string[]>(BLOCKED_KEY, []),
+  );
 
   useEffect(() => {
     setSlots(availabilities);
@@ -78,7 +89,11 @@ export const MentorAvailabilityPage: React.FC = () => {
 
   /* ---------------- Slot operations ---------------- */
   const toggleSlot = (slot: MentorAvailability) =>
-    markDirty(slots.map((item) => (item.id === slot.id ? { ...item, active: item.active !== false ? false : true } : item)));
+    markDirty(
+      slots.map((item) =>
+        item.id === slot.id ? { ...item, active: item.active !== false ? false : true } : item,
+      ),
+    );
 
   const removeSlot = (slot: MentorAvailability) => {
     if (!slot.id) return;
@@ -88,10 +103,22 @@ export const MentorAvailabilityPage: React.FC = () => {
   const addOrUpdateSlot = (values: Omit<MentorAvailability, 'id' | 'timeSlots'>) => {
     if (editor.editing && editor.item?.id) {
       markDirty(
-        slots.map((item) => (item.id === editor.item?.id ? { ...item, ...values, timezone: timezone || values.timezone } : item)),
+        slots.map((item) =>
+          item.id === editor.item?.id
+            ? { ...item, ...values, timezone: timezone || values.timezone }
+            : item,
+        ),
       );
     } else {
-      markDirty([...slots, { ...values, id: `avail-${Date.now()}`, active: true, timezone: timezone || values.timezone }]);
+      markDirty([
+        ...slots,
+        {
+          ...values,
+          id: `avail-${Date.now()}`,
+          active: true,
+          timezone: timezone || values.timezone,
+        },
+      ]);
     }
     setEditor({ open: false, editing: false, item: null });
   };
@@ -109,7 +136,9 @@ export const MentorAvailabilityPage: React.FC = () => {
 
   /* ---------------- Blocked dates ---------------- */
   const toggleBlockedDate = (date: string) => {
-    const next = blockedDates.includes(date) ? blockedDates.filter((d) => d !== date) : [...blockedDates, date];
+    const next = blockedDates.includes(date)
+      ? blockedDates.filter((d) => d !== date)
+      : [...blockedDates, date];
     setBlockedDates(next);
     setStoredValue(BLOCKED_KEY, next);
   };
@@ -138,7 +167,11 @@ export const MentorAvailabilityPage: React.FC = () => {
     <Box>
       {/* ================= Header ================= */}
       <GradientCard gradient="brand" sx={{ mb: 3 }}>
-        <Stack direction={{ xs: 'column', md: 'row' }} sx={{ alignItems: { xs: 'flex-start', md: 'center' } }} gap={2}>
+        <Stack
+          direction={{ xs: 'column', md: 'row' }}
+          sx={{ alignItems: { xs: 'flex-start', md: 'center' } }}
+          gap={2}
+        >
           <Stack direction="row" alignItems="center" gap={1.5} sx={{ flexGrow: 1 }}>
             <Box
               sx={{
@@ -159,7 +192,8 @@ export const MentorAvailabilityPage: React.FC = () => {
                 Availability
               </Typography>
               <Typography variant="body2" sx={{ opacity: 0.85 }}>
-                {activeSlotCount} active slot{activeSlotCount === 1 ? '' : 's'} · {blockedDates.length} blocked date{blockedDates.length === 1 ? '' : 's'}
+                {activeSlotCount} active slot{activeSlotCount === 1 ? '' : 's'} ·{' '}
+                {blockedDates.length} blocked date{blockedDates.length === 1 ? '' : 's'}
                 {isOffline ? ' · offline preview' : ''}
               </Typography>
             </Box>
@@ -173,7 +207,11 @@ export const MentorAvailabilityPage: React.FC = () => {
               loading={saveMutation.isPending}
               disabled={!dirty}
               onClick={handleSave}
-              sx={{ bgcolor: '#fff', color: '#5443D4', '&:hover': { bgcolor: 'rgba(255,255,255,0.92)' } }}
+              sx={{
+                bgcolor: '#fff',
+                color: '#5443D4',
+                '&:hover': { bgcolor: 'rgba(255,255,255,0.92)' },
+              }}
             >
               Save changes
             </MuiButton>
@@ -184,7 +222,12 @@ export const MentorAvailabilityPage: React.FC = () => {
       {/* ================= Controls ================= */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid size={{ xs: 12, md: 5 }}>
-          <motion.div initial="hidden" animate="visible" variants={fadeUp} style={{ height: '100%' }}>
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={fadeUp}
+            style={{ height: '100%' }}
+          >
             <Card sx={{ p: 3, height: '100%' }}>
               <Stack direction="row" alignItems="center" gap={1.25} sx={{ mb: 2 }}>
                 <PublicOutlinedIcon sx={{ color: 'primary.main' }} />
@@ -207,8 +250,13 @@ export const MentorAvailabilityPage: React.FC = () => {
                   ))}
                 </Select>
               </FormControl>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5 }}>
-                All slots are displayed and booked in this timezone. New slots inherit it automatically.
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ display: 'block', mt: 1.5 }}
+              >
+                All slots are displayed and booked in this timezone. New slots inherit it
+                automatically.
               </Typography>
               <Stack direction="row" gap={1} sx={{ mt: 2.5 }}>
                 <MuiButton
@@ -223,7 +271,12 @@ export const MentorAvailabilityPage: React.FC = () => {
           </motion.div>
         </Grid>
         <Grid size={{ xs: 12, md: 7 }}>
-          <motion.div initial="hidden" animate="visible" variants={fadeUp} style={{ height: '100%' }}>
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={fadeUp}
+            style={{ height: '100%' }}
+          >
             <Card sx={{ p: 3, height: '100%' }}>
               <Stack direction="row" alignItems="center" gap={1.25} sx={{ mb: 2 }}>
                 <EventBusyOutlinedIcon sx={{ color: 'error.main' }} />
@@ -243,7 +296,17 @@ export const MentorAvailabilityPage: React.FC = () => {
                 }}
               >
                 {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((label, index) => (
-                  <Box key={index} component="span" sx={{ fontSize: '0.65rem', textAlign: 'center', fontWeight: 700, color: 'text.disabled', py: 0.5 }}>
+                  <Box
+                    key={index}
+                    component="span"
+                    sx={{
+                      fontSize: '0.65rem',
+                      textAlign: 'center',
+                      fontWeight: 700,
+                      color: 'text.disabled',
+                      py: 0.5,
+                    }}
+                  >
                     {label}
                   </Box>
                 ))}
@@ -277,9 +340,16 @@ export const MentorAvailabilityPage: React.FC = () => {
                         bgcolor: blocked ? 'error.main' : isPast ? 'action.hover' : 'transparent',
                         transition: 'all 0.15s ease',
                         '&:hover': {
-                          bgcolor: isPast ? 'action.hover' : blocked ? 'error.dark' : 'action.selected',
+                          bgcolor: isPast
+                            ? 'action.hover'
+                            : blocked
+                              ? 'error.dark'
+                              : 'action.selected',
                         },
-                        '&:focus-visible': { outline: '3px solid rgba(239,68,68,0.3)', outlineOffset: 1 },
+                        '&:focus-visible': {
+                          outline: '3px solid rgba(239,68,68,0.3)',
+                          outlineOffset: 1,
+                        },
                       }}
                     >
                       {day.format('D')}
@@ -296,7 +366,7 @@ export const MentorAvailabilityPage: React.FC = () => {
       {editor.open && (
         <Card sx={{ mb: 3, p: { xs: 2.5, md: 3 } }}>
           <AvailabilityEditor
-            initial={editor.item}
+            initial={editor.item ? availabilityToDraft(editor.item) : null}
             onCancel={() => setEditor({ open: false, editing: false, item: null })}
             onSubmit={(values) => addOrUpdateSlot(values)}
           />
@@ -319,7 +389,8 @@ export const MentorAvailabilityPage: React.FC = () => {
       >
         {slots.length === 0 ? (
           <Alert severity="info" sx={{ borderRadius: 2.5 }}>
-            No availability configured yet. Add your first time slot to start receiving booking requests.
+            No availability configured yet. Add your first time slot to start receiving booking
+            requests.
           </Alert>
         ) : (
           <AvailabilityCalendar
@@ -331,7 +402,15 @@ export const MentorAvailabilityPage: React.FC = () => {
               setEditor({
                 open: true,
                 editing: false,
-                item: { id: '', dayOfWeek, startTime: '09:00', endTime: '17:00', slotDurationMinutes: 60, recurring: true, active: true },
+                item: {
+                  id: '',
+                  dayOfWeek,
+                  startTime: '09:00',
+                  endTime: '17:00',
+                  slotDurationMinutes: 60,
+                  recurring: true,
+                  active: true,
+                },
               })
             }
             onDragStartSlot={(slot) => setDraggingId(slot.id ?? null)}
@@ -346,12 +425,26 @@ export const MentorAvailabilityPage: React.FC = () => {
           />
         )}
         <Stack direction="row" flexWrap="wrap" gap={1} sx={{ mt: 2 }}>
-          <Chip size="small" icon={<ScheduleOutlinedIcon sx={{ fontSize: 14 }} />} label="Drag & drop slots between days" variant="outlined" />
-          <Chip size="small" icon={<CalendarMonthOutlinedIcon sx={{ fontSize: 14 }} />} label="Tap a slot to edit" variant="outlined" />
-          <Chip size="small" icon={<EventBusyOutlinedIcon sx={{ fontSize: 14 }} />} label="Blocked dates excluded from bookings" variant="outlined" />
+          <Chip
+            size="small"
+            icon={<ScheduleOutlinedIcon sx={{ fontSize: 14 }} />}
+            label="Drag & drop slots between days"
+            variant="outlined"
+          />
+          <Chip
+            size="small"
+            icon={<CalendarMonthOutlinedIcon sx={{ fontSize: 14 }} />}
+            label="Tap a slot to edit"
+            variant="outlined"
+          />
+          <Chip
+            size="small"
+            icon={<EventBusyOutlinedIcon sx={{ fontSize: 14 }} />}
+            label="Blocked dates excluded from bookings"
+            variant="outlined"
+          />
         </Stack>
       </AnalyticsCard>
-
     </Box>
   );
 };

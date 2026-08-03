@@ -6,7 +6,6 @@ import PriceChangeOutlinedIcon from '@mui/icons-material/PriceChangeOutlined';
 import MonetizationOnOutlinedIcon from '@mui/icons-material/MonetizationOnOutlined';
 import AccessTimeOutlinedIcon from '@mui/icons-material/AccessTimeOutlined';
 import PercentOutlinedIcon from '@mui/icons-material/PercentOutlined';
-import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import CloseOutlinedIcon from '@mui/icons-material/CloseOutlined';
 import { Typography } from '@/components/ui/Typography';
 import { Stack } from '@/components/ui/Stack';
@@ -24,7 +23,8 @@ import {
   useMentorProfileQuery,
   usePricingQuery,
 } from '@/features/mentor/hooks';
-import type { MentorPricing } from '@/types';
+import type { MentorPricing, PricingRequest } from '@/types';
+import type { PricingDraft } from '@/features/mentor/storage';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 22 },
@@ -53,7 +53,9 @@ export const MentorPricingPage: React.FC = () => {
     ? Math.round(paidPlans.reduce((sum, plan) => sum + plan.price, 0) / paidPlans.length)
     : 0;
   const cheapest = paidPlans.length ? Math.min(...paidPlans.map((plan) => plan.price)) : 0;
-  const discounts = activePlans.filter((plan) => plan.discountPercentage && plan.discountPercentage > 0).length;
+  const discounts = activePlans.filter(
+    (plan) => plan.discountPercentage && plan.discountPercentage > 0,
+  ).length;
 
   const openCreate = () => {
     setEditing(null);
@@ -65,32 +67,66 @@ export const MentorPricingPage: React.FC = () => {
     setEditorOpen(true);
   };
 
-  const handleSubmit = (values: Omit<MentorPricing, 'id' | 'active'>) => {
+  const handleSubmit = (values: Omit<PricingDraft, 'id'>) => {
+    const payload: PricingRequest = {
+      sessionType: values.sessionType,
+      price: values.price,
+      originalPrice: values.originalPrice ?? undefined,
+      currency: values.currency,
+      discountPercentage: values.discountPercentage ?? undefined,
+      durationMinutes: values.durationMinutes,
+      isFree: values.isFree,
+      description: values.description || undefined,
+    };
     if (editing?.id) {
       // Edit: replace then delete the temp copy — simplest robust flow is
       // delete + recreate for the demo backend.
       void deleteMutation.mutateAsync(editing.id).then(() => {
-        addMutation.mutate(values);
+        addMutation.mutate(payload);
       });
     } else {
-      addMutation.mutate(values);
+      addMutation.mutate(payload);
     }
     setEditorOpen(false);
     setEditing(null);
   };
 
   const stats = [
-    { label: 'Active plans', value: `${activePlans.length}`, icon: <PriceChangeOutlinedIcon />, color: '#6D5DF6' },
-    { label: 'Avg. price', value: averagePrice ? formatCurrency(averagePrice, currency) : '—', icon: <MonetizationOnOutlinedIcon />, color: '#10B981' },
-    { label: 'From', value: cheapest ? formatCurrency(cheapest, currency) : '—', icon: <AccessTimeOutlinedIcon />, color: '#14B8A6' },
-    { label: 'Discounts active', value: `${discounts}`, icon: <PercentOutlinedIcon />, color: '#F59E0B' },
+    {
+      label: 'Active plans',
+      value: `${activePlans.length}`,
+      icon: <PriceChangeOutlinedIcon />,
+      color: '#6D5DF6',
+    },
+    {
+      label: 'Avg. price',
+      value: averagePrice ? formatCurrency(averagePrice, currency) : '—',
+      icon: <MonetizationOnOutlinedIcon />,
+      color: '#10B981',
+    },
+    {
+      label: 'From',
+      value: cheapest ? formatCurrency(cheapest, currency) : '—',
+      icon: <AccessTimeOutlinedIcon />,
+      color: '#14B8A6',
+    },
+    {
+      label: 'Discounts active',
+      value: `${discounts}`,
+      icon: <PercentOutlinedIcon />,
+      color: '#F59E0B',
+    },
   ];
 
   return (
     <Box>
       {/* ================= Header ================= */}
       <GradientCard gradient="brandWarm" sx={{ mb: 3 }}>
-        <Stack direction={{ xs: 'column', md: 'row' }} sx={{ alignItems: { xs: 'flex-start', md: 'center' } }} gap={2}>
+        <Stack
+          direction={{ xs: 'column', md: 'row' }}
+          sx={{ alignItems: { xs: 'flex-start', md: 'center' } }}
+          gap={2}
+        >
           <Stack direction="row" alignItems="center" gap={1.5} sx={{ flexGrow: 1 }}>
             <Box
               sx={{
@@ -134,7 +170,13 @@ export const MentorPricingPage: React.FC = () => {
       <Grid container spacing={3} sx={{ mb: 3 }}>
         {stats.map((stat, index) => (
           <Grid key={stat.label} size={{ xs: 12, sm: 6, lg: 3 }}>
-            <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={index} style={{ height: '100%' }}>
+            <motion.div
+              initial="hidden"
+              animate="visible"
+              variants={fadeUp}
+              custom={index}
+              style={{ height: '100%' }}
+            >
               <AnalyticsCard title={stat.label} icon={stat.icon} iconColor={stat.color}>
                 <Typography variant="h3" fontWeight={800} sx={{ letterSpacing: '-0.03em' }}>
                   {stat.value}
@@ -153,7 +195,11 @@ export const MentorPricingPage: React.FC = () => {
               {editing ? `Edit ${sessionTypeLabel(editing.sessionType)}` : 'Add a pricing plan'}
             </Typography>
             <Tooltip title="Close">
-              <IconButton size="small" aria-label="Close editor" onClick={() => setEditorOpen(false)}>
+              <IconButton
+                size="small"
+                aria-label="Close editor"
+                onClick={() => setEditorOpen(false)}
+              >
                 <CloseOutlinedIcon />
               </IconButton>
             </Tooltip>
@@ -213,7 +259,10 @@ export const MentorPricingPage: React.FC = () => {
               background: 'linear-gradient(135deg, #6D5DF6, #5443D4)',
               boxShadow: '0 6px 16px rgba(109,93,246,0.3)',
               transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-              '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 10px 24px rgba(109,93,246,0.4)' },
+              '&:hover': {
+                transform: 'translateY(-2px)',
+                boxShadow: '0 10px 24px rgba(109,93,246,0.4)',
+              },
               '&:focus-visible': { outline: '3px solid rgba(109,93,246,0.4)', outlineOffset: 2 },
             }}
           >
@@ -224,7 +273,8 @@ export const MentorPricingPage: React.FC = () => {
       >
         {activePlans.length === 0 ? (
           <Alert severity="info" sx={{ borderRadius: 2.5 }}>
-            No pricing plans yet. Add your first plan to start charging for sessions — or offer free intro sessions.
+            No pricing plans yet. Add your first plan to start charging for sessions — or offer free
+            intro sessions.
           </Alert>
         ) : (
           <Grid container spacing={2.5}>
@@ -254,7 +304,7 @@ export const MentorPricingPage: React.FC = () => {
         badge={activePlans.length ? 'Live' : 'Empty'}
         badgeColor={activePlans.length ? 'success' : 'default'}
       >
-        <Grid container spacing={2.5} alignItems="stretch">
+        <Grid container spacing={2.5} sx={{ alignItems: 'stretch' }}>
           <Grid size={{ xs: 12, md: 4 }}>
             <PricingCard
               plan={
@@ -281,14 +331,34 @@ export const MentorPricingPage: React.FC = () => {
                 </Typography>
               </Stack>
               <Stack direction="row" flexWrap="wrap" gap={1}>
-                <Chip size="small" label="20% launch discount" sx={{ bgcolor: 'success.light', color: 'success.contrastText', fontWeight: 700 }} />
-                <Chip size="small" label="Original price strikethrough" variant="outlined" sx={{ fontWeight: 600 }} />
-                <Chip size="small" label="Free intro sessions" variant="outlined" sx={{ fontWeight: 600 }} />
-                <Chip size="small" label="7 payout currencies" variant="outlined" sx={{ fontWeight: 600 }} />
+                <Chip
+                  size="small"
+                  label="20% launch discount"
+                  sx={{ bgcolor: 'success.light', color: 'success.contrastText', fontWeight: 700 }}
+                />
+                <Chip
+                  size="small"
+                  label="Original price strikethrough"
+                  variant="outlined"
+                  sx={{ fontWeight: 600 }}
+                />
+                <Chip
+                  size="small"
+                  label="Free intro sessions"
+                  variant="outlined"
+                  sx={{ fontWeight: 600 }}
+                />
+                <Chip
+                  size="small"
+                  label="7 payout currencies"
+                  variant="outlined"
+                  sx={{ fontWeight: 600 }}
+                />
               </Stack>
               <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7 }}>
-                Learners see the discounted price with the original crossed out, the session duration, and your
-                description. The featured plan is shown first — set your strongest offer as the default.
+                Learners see the discounted price with the original crossed out, the session
+                duration, and your description. The featured plan is shown first — set your
+                strongest offer as the default.
               </Typography>
             </Stack>
           </Grid>
