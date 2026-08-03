@@ -6,7 +6,6 @@ export { ForgotPasswordPage } from './ForgotPasswordPage';
 export { ResetPasswordPage } from './ResetPasswordPage';
 export { EmailVerificationPage } from './EmailVerificationPage';
 export { DashboardPage } from './DashboardPage';
-export { ProfilePage } from './ProfilePage';
 export { MentorDashboardPage } from './MentorDashboardPage';
 export { CommunityPage } from './CommunityPage';
 export { WalletPage } from './WalletPage';

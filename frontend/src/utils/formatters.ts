@@ -26,6 +26,18 @@ export const formatNumber = (value: number, locale = 'en-US'): string =>
 export const formatCompactNumber = (value: number, locale = 'en-US'): string =>
   new Intl.NumberFormat(locale, { notation: 'compact', maximumFractionDigits: 1 }).format(value);
 
+export const formatFileSize = (bytes: number): string => {
+  if (bytes < 1024) return `${bytes} B`;
+  const units = ['KB', 'MB', 'GB'];
+  let size = bytes / 1024;
+  let unitIndex = 0;
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex += 1;
+  }
+  return `${size.toFixed(size >= 100 ? 0 : 1)} ${units[unitIndex]}`;
+};
+
 export const truncate = (value: string, maxLength = 60): string =>
   value.length > maxLength ? `${value.slice(0, maxLength - 3)}…` : value;
 

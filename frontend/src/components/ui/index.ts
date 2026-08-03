@@ -1,6 +1,15 @@
 export { Button } from './Button';
 export { Card } from './Card';
+export { GlassCard } from './GlassCard';
 export { Avatar } from './Avatar';
+export { AnimatedNumber } from './AnimatedNumber';
+export { AvatarStack } from './AvatarStack';
+export { InfoCard } from './InfoCard';
+export { MetricCard } from './MetricCard';
+export { ProfileCompletionRing } from './ProfileCompletionRing';
+export { SectionHeader } from './SectionHeader';
+export { Timeline } from './Timeline';
+export { UploadArea } from './UploadArea';
 export { StatusBadge } from './StatusBadge';
 export { Modal } from './Modal';
 export { AppDrawer } from './AppDrawer';
