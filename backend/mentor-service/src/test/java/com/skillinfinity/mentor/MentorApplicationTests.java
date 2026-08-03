@@ -45,8 +45,9 @@ class MentorApplicationTests {
         @Primary
         public RedisConnectionFactory redisConnectionFactory() {
             LettuceConnectionFactory factory = new LettuceConnectionFactory("localhost", 6379);
-            factory.setTimeout(java.time.Duration.ofMillis(100));
+            factory.setTimeout(100L);
             return factory;
         }
     }
 }
+

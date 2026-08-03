@@ -1,0 +1,158 @@
+# ============================================================
+# Resilience4j Default Configuration
+# ============================================================
+# This configuration is shared via config server import.
+# Each service can override these values in its own config.
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        register-health-indicator: true
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+        wait-duration-in-open-state: 10s
+        failure-rate-threshold: 50
+        slow-call-rate-threshold: 50
+        slow-call-duration-threshold: 5s
+        writable-stack-trace-enabled: false
+    instances:
+      identity-service:
+        base-config: default
+      user-service:
+        base-config: default
+      mentor-service:
+        base-config: default
+      session-service:
+        base-config: default
+      wallet-service:
+        base-config: default
+      payment-service:
+        base-config: default
+      communication-service:
+        base-config: default
+      community-service:
+        base-config: default
+      review-service:
+        base-config: default
+      admin-service:
+        base-config: default
+
+  retry:
+    configs:
+      default:
+        max-attempts: 3
+        wait-duration: 500ms
+        retry-exceptions:
+          - java.net.ConnectException
+          - java.net.SocketTimeoutException
+          - java.util.concurrent.TimeoutException
+          - org.springframework.dao.DataAccessException
+          - org.springframework.web.client.ResourceAccessException
+    instances:
+      identity-service:
+        base-config: default
+      user-service:
+        base-config: default
+      mentor-service:
+        base-config: default
+      session-service:
+        base-config: default
+      wallet-service:
+        base-config: default
+      payment-service:
+        base-config: default
+      communication-service:
+        base-config: default
+      community-service:
+        base-config: default
+      review-service:
+        base-config: default
+      admin-service:
+        base-config: default
+
+  ratelimiter:
+    configs:
+      default:
+        register-health-indicator: true
+        limit-for-period: 100
+        limit-refresh-period: 1s
+        timeout-duration: 500ms
+    instances:
+      identity-service:
+        base-config: default
+      user-service:
+        base-config: default
+      mentor-service:
+        base-config: default
+      session-service:
+        base-config: default
+      wallet-service:
+        base-config: default
+      payment-service:
+        base-config: default
+      communication-service:
+        base-config: default
+      community-service:
+        base-config: default
+      review-service:
+        base-config: default
+      admin-service:
+        base-config: default
+
+  bulkhead:
+    configs:
+      default:
+        max-concurrent-calls: 20
+        max-wait-duration: 500ms
+    instances:
+      identity-service:
+        base-config: default
+      user-service:
+        base-config: default
+      mentor-service:
+        base-config: default
+      session-service:
+        base-config: default
+      wallet-service:
+        base-config: default
+      payment-service:
+        base-config: default
+      communication-service:
+        base-config: default
+      community-service:
+        base-config: default
+      review-service:
+        base-config: default
+      admin-service:
+        base-config: default
+
+  timelimiter:
+    configs:
+      default:
+        timeout-duration: 10s
+        cancel-running-future: true
+    instances:
+      identity-service:
+        base-config: default
+      user-service:
+        base-config: default
+      mentor-service:
+        base-config: default
+      session-service:
+        base-config: default
+      wallet-service:
+        base-config: default
+      payment-service:
+        base-config: default
+      communication-service:
+        base-config: default
+      community-service:
+        base-config: default
+      review-service:
+        base-config: default
+      admin-service:
+        base-config: default

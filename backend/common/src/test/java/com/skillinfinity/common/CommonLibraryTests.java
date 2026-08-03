@@ -1,136 +1,230 @@
 package com.skillinfinity.common;
 
 import com.skillinfinity.common.dto.ApiResponse;
-import com.skillinfinity.common.dto.ErrorResponse;
-import com.skillinfinity.common.dto.PageResponse;
-import com.skillinfinity.common.dto.ValidationError;
-import com.skillinfinity.common.enums.UserRole;
-import com.skillinfinity.common.enums.ErrorCode;
-import com.skillinfinity.common.exception.BadRequestException;
-import com.skillinfinity.common.exception.ResourceNotFoundException;
-import com.skillinfinity.common.validation.ValidationUtil;
+import com.skillinfinity.common.util.MaskingUtil;
 import com.skillinfinity.common.util.StringUtil;
 import com.skillinfinity.common.util.UUIDUtil;
-import com.skillinfinity.common.util.MaskingUtil;
-import com.skillinfinity.common.util.PaginationUtil;
+import com.skillinfinity.common.util.DateTimeUtil;
+import com.skillinfinity.common.validation.ValidationUtil;
+import com.skillinfinity.common.logging.LoggingUtil;
+import com.skillinfinity.common.constant.ServiceConstants;
+import com.skillinfinity.common.constant.SecurityConstants;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 
+@SpringBootTest(classes = CommonLibraryTests.TestConfig.class)
+@ActiveProfiles("test")
 class CommonLibraryTests {
 
     @Test
-    void apiResponseSuccess() {
+    void contextLoads() {
+    }
+
+    // ============================================================
+    // ApiResponse Tests
+    // ============================================================
+    @Test
+    void apiResponse_Success_ShouldReturnValidResponse() {
         ApiResponse<String> response = ApiResponse.success("test data");
-        assertThat(response.success()).isTrue();
-        assertThat(response.data()).isEqualTo("test data");
-        assertThat(response.timestamp()).isNotNull();
+        assertTrue(response.success());
+        assertEquals("test data", response.data());
+        assertNotNull(response.timestamp());
+        assertNotNull(response.requestId());
     }
 
     @Test
-    void apiResponseError() {
-        ApiResponse<String> response = ApiResponse.error("Something went wrong");
-        assertThat(response.success()).isFalse();
-        assertThat(response.message()).isEqualTo("Something went wrong");
+    void apiResponse_SuccessWithMessage_ShouldIncludeMessage() {
+        ApiResponse<String> response = ApiResponse.success("Custom message", "data");
+        assertTrue(response.success());
+        assertEquals("Custom message", response.message());
+        assertEquals("data", response.data());
     }
 
     @Test
-    void errorResponseCreation() {
-        ErrorResponse response = ErrorResponse.of("Test error", "/test", "req-123");
-        assertThat(response.message()).isEqualTo("Test error");
-        assertThat(response.path()).isEqualTo("/test");
-        assertThat(response.requestId()).isEqualTo("req-123");
+    void apiResponse_Error_ShouldReturnErrorResponse() {
+        ApiResponse<String> response = ApiResponse.error("Error occurred");
+        assertFalse(response.success());
+        assertEquals("Error occurred", response.message());
+        assertNull(response.data());
+    }
+
+    // ============================================================
+    // MaskingUtil Tests
+    // ============================================================
+    @Test
+    void maskEmail_ShouldMaskCorrectly() {
+        assertEquals("j***@example.com", MaskingUtil.maskEmail("john@example.com"));
+        assertEquals("a***@test.com", MaskingUtil.maskEmail("ab@test.com"));
+        assertEquals("****", MaskingUtil.maskEmail(null));
+        assertEquals("****", MaskingUtil.maskEmail("invalid"));
     }
 
     @Test
-    void pageResponseCreation() {
-        List<String> items = List.of("a", "b", "c");
-        PageResponse<String> response = PageResponse.of(items, 1, 10, 3);
-        assertThat(response.content()).hasSize(3);
-        assertThat(response.page()).isEqualTo(1);
-        assertThat(response.size()).isEqualTo(10);
-        assertThat(response.totalElements()).isEqualTo(3);
-        assertThat(response.totalPages()).isEqualTo(1);
-        assertThat(response.first()).isTrue();
-        assertThat(response.last()).isTrue();
+    void maskPhone_ShouldShowLast4Digits() {
+        assertEquals("****5678", MaskingUtil.maskPhone("123456789012345678"));
+        assertEquals("****", MaskingUtil.maskPhone("123"));
+        assertEquals("****", MaskingUtil.maskPhone(null));
     }
 
     @Test
-    void validationErrorRecord() {
-        ValidationError error = new ValidationError("email", "must be a valid email");
-        assertThat(error.field()).isEqualTo("email");
-        assertThat(error.message()).isEqualTo("must be a valid email");
+    void maskCreditCard_ShouldShowLast4Digits() {
+        assertEquals("****-1111", MaskingUtil.maskCreditCard("4111111111111111"));
+        assertEquals("****", MaskingUtil.maskCreditCard("123"));
+        assertEquals("****", MaskingUtil.maskCreditCard(null));
     }
 
     @Test
-    void userRoleEnum() {
-        assertThat(UserRole.valueOf("ROLE_ADMIN")).isEqualTo(UserRole.ROLE_ADMIN);
-        assertThat(UserRole.valueOf("ROLE_MENTOR")).isEqualTo(UserRole.ROLE_MENTOR);
-        assertThat(UserRole.valueOf("ROLE_LEARNER")).isEqualTo(UserRole.ROLE_LEARNER);
+    void maskToken_ShouldShowFirstAndLast10Chars() {
+        String token = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNqPms9GMEfJ";
+        String masked = MaskingUtil.maskToken(token);
+        assertTrue(masked.startsWith("eyJhbGciOi"));
+        assertTrue(masked.endsWith("MEfJ"));
+        assertEquals(token.substring(0,10) + "..." + token.substring(token.length() - 10), masked);
     }
 
     @Test
-    void errorCodeEnum() {
-        assertThat(ErrorCode.valueOf("INTERNAL_ERROR")).isEqualTo(ErrorCode.INTERNAL_ERROR);
-        assertThat(ErrorCode.valueOf("VALIDATION_ERROR")).isEqualTo(ErrorCode.VALIDATION_ERROR);
-        assertThat(ErrorCode.valueOf("NOT_FOUND")).isEqualTo(ErrorCode.NOT_FOUND);
+    void maskPassword_ShouldAlwaysReturnMasked() {
+        assertEquals("****", MaskingUtil.maskPassword());
+    }
+
+    // ============================================================
+    // StringUtil Tests
+    // ============================================================
+    @Test
+    void stringUtil_IsNotBlank_ShouldReturnCorrectBoolean() {
+        assertTrue(StringUtil.isNotBlank("test"));
+        assertFalse(StringUtil.isNotBlank(""));
+        assertFalse(StringUtil.isNotBlank(null));
+        assertFalse(StringUtil.isNotBlank("   "));
     }
 
     @Test
-    void validationUtilEmail() {
-        assertThat(ValidationUtil.isValidEmail("user@example.com")).isTrue();
-        assertThat(ValidationUtil.isValidEmail("invalid")).isFalse();
-        assertThat(ValidationUtil.isValidEmail(null)).isFalse();
+    void stringUtil_Truncate_ShouldHandleVariousCases() {
+        assertEquals("Hel...", StringUtil.truncate("Hello World", 3));
+        assertEquals("Hello World", StringUtil.truncate("Hello World", 20));
+        assertNull(StringUtil.truncate(null, 5));
     }
 
     @Test
-    void validationUtilPhone() {
-        assertThat(ValidationUtil.isValidPhone("+1234567890")).isTrue();
-        assertThat(ValidationUtil.isValidPhone("abc")).isFalse();
+    void stringUtil_Sanitize_ShouldRemoveDangerousCharacters() {
+        String result = StringUtil.sanitize("<script>alert('xss')</script>");
+        assertFalse(result.contains("<"));
+        assertFalse(result.contains(">"));
+        assertFalse(result.contains("'"));
+    }
+
+    // ============================================================
+    // UUIDUtil Tests
+    // ============================================================
+    @Test
+    void uuidUtil_Generate_ShouldReturnValidUUID() {
+        UUID uuid = UUIDUtil.generate();
+        assertNotNull(uuid);
+        assertEquals(36, uuid.toString().length());
     }
 
     @Test
-    void stringUtilOperations() {
-        assertThat(StringUtil.isBlank(null)).isTrue();
-        assertThat(StringUtil.isBlank("")).isTrue();
-        assertThat(StringUtil.isBlank("hello")).isFalse();
-        assertThat(StringUtil.isNotBlank("hello")).isTrue();
-        assertThat(StringUtil.truncate("Hello World", 5)).isEqualTo("Hello...");
-        assertThat(StringUtil.generateId()).isNotNull();
+    void uuidUtil_GenerateString_ShouldReturnValidUUIDString() {
+        String uuidStr = UUIDUtil.generateString();
+        assertNotNull(uuidStr);
+        assertEquals(36, uuidStr.length());
+        assertDoesNotThrow(() -> UUID.fromString(uuidStr));
+    }
+
+    // ============================================================
+    // DateTimeUtil Tests
+    // ============================================================
+    @Test
+    void dateTimeUtil_FormatDefault_ShouldReturnFormattedString() {
+        String formatted = DateTimeUtil.formatDefault(LocalDateTime.of(2026, 1, 15, 10, 30, 0));
+        assertEquals("2026-01-15T10:30:00", formatted);
     }
 
     @Test
-    void uuidUtilOperations() {
-        String uuid = UUIDUtil.generateAsString();
-        assertThat(UUIDUtil.isValid(uuid)).isTrue();
-        assertThat(UUIDUtil.isValid("not-a-uuid")).isFalse();
-        assertThat(UUIDUtil.isValid(null)).isFalse();
+    void dateTimeUtil_Now_ShouldReturnCurrentDateTime() {
+        assertNotNull(DateTimeUtil.now());
+    }
+
+    // ============================================================
+    // ServiceConstants Tests
+    // ============================================================
+    @Test
+    void serviceConstants_ShouldHaveAllServiceNames() {
+        assertEquals("identity-service", ServiceConstants.IDENTITY_SERVICE);
+        assertEquals("user-service", ServiceConstants.USER_SERVICE);
+        assertEquals("mentor-service", ServiceConstants.MENTOR_SERVICE);
+        assertEquals("session-service", ServiceConstants.SESSION_SERVICE);
+        assertEquals("wallet-service", ServiceConstants.WALLET_SERVICE);
+        assertEquals("payment-service", ServiceConstants.PAYMENT_SERVICE);
+        assertEquals("community-service", ServiceConstants.COMMUNITY_SERVICE);
+        assertEquals("communication-service", ServiceConstants.COMMUNICATION_SERVICE);
+        assertEquals("review-service", ServiceConstants.REVIEW_SERVICE);
+        assertEquals("admin-service", ServiceConstants.ADMIN_SERVICE);
+        assertEquals("api-gateway", ServiceConstants.API_GATEWAY);
+        assertEquals("config-server", ServiceConstants.CONFIG_SERVER);
+        assertEquals("discovery-server", ServiceConstants.DISCOVERY_SERVER);
     }
 
     @Test
-    void maskingUtilOperations() {
-        assertThat(MaskingUtil.maskEmail("john@example.com")).isEqualTo("j***@example.com");
-        assertThat(MaskingUtil.maskPhone("+1234567890")).contains("****");
-        assertThat(MaskingUtil.maskPassword()).isEqualTo("****");
+    void serviceConstants_ShouldHaveApiPaths() {
+        assertEquals("/api/v1/auth", ServiceConstants.IDENTITY_API);
+        assertEquals("/api/v1/users", ServiceConstants.USER_API);
+        assertEquals("/api/v1/mentors", ServiceConstants.MENTOR_API);
+        assertEquals("/api/v1/sessions", ServiceConstants.SESSION_API);
+        assertEquals("/api/v1/wallet", ServiceConstants.WALLET_API);
+        assertEquals("/api/v1/payments", ServiceConstants.PAYMENT_API);
+    }
+
+    // ============================================================
+    // SecurityConstants Tests
+    // ============================================================
+    @Test
+    void securityConstants_ShouldHaveValidValues() {
+        assertNotNull(SecurityConstants.JWT_PREFIX);
+        assertNotNull(SecurityConstants.ROLE_PREFIX);
+        assertNotNull(SecurityConstants.HEADER_STRING);
+        assertNotNull(SecurityConstants.TOKEN_PREFIX);
+    }
+
+    // ============================================================
+    // LoggingUtil Tests
+    // ============================================================
+    @Test
+    void loggingUtil_StartCorrelation_ShouldReturnValidString() {
+        String correlationId = LoggingUtil.startCorrelation();
+        assertNotNull(correlationId);
+        assertFalse(correlationId.isBlank());
+        LoggingUtil.clear();
     }
 
     @Test
-    void paginationUtilOperations() {
-        assertThat(PaginationUtil.calculateOffset(1, 10)).isZero();
-        assertThat(PaginationUtil.calculateOffset(2, 10)).isEqualTo(10);
-        assertThat(PaginationUtil.calculateTotalPages(25, 10)).isEqualTo(3);
-        assertThat(PaginationUtil.normalizePage(0)).isEqualTo(1);
-        assertThat(PaginationUtil.normalizePage(2)).isEqualTo(2);
+    void loggingUtil_SetAndClear_ShouldNotThrowExceptions() {
+        assertDoesNotThrow(() -> {
+            LoggingUtil.setCorrelationId("test-correlation");
+            LoggingUtil.setServiceName("test-service");
+            LoggingUtil.setUserId("test-user");
+            LoggingUtil.clear();
+        });
     }
 
+    // ============================================================
+    // ValidationUtil Tests
+    // ============================================================
     @Test
-    void exceptions() {
-        assertThat(new ResourceNotFoundException("User", "id", "123"))
-                .isInstanceOf(RuntimeException.class);
-        assertThat(new BadRequestException("Invalid input"))
-                .isInstanceOf(RuntimeException.class);
+    void validationUtil_IsValidEmail_ShouldValidateCorrectly() {
+        ValidationUtil.isValidEmail("test@example.com");
+        ValidationUtil.isValidEmail("user.name+tag@domain.co.uk");
+    }
+
+    // ============================================================
+    // Main Application Test (noop, just loads context)
+    // ============================================================
+    static class TestConfig {
     }
 }

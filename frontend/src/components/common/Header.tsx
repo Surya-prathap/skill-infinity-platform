@@ -1,26 +1,16 @@
-import React, { useState } from 'react';
-import {
-  AppBar,
-  Box,
-  Toolbar,
-  Typography,
-  Button,
-  IconButton,
-  Container,
-  Menu,
-  MenuItem,
-  useMediaQuery,
-  useTheme,
-  Drawer,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemText,
-  Divider,
-} from '@mui/material';
+import { useState } from 'react';
+import { AppBar, Box, Button, Container, Drawer, IconButton, List, ListItem, ListItemButton, ListItemText, Toolbar, Tooltip, useMediaQuery, useTheme } from '@mui/material';
+import { Stack } from '@/components/ui/Stack';
 import MenuIcon from '@mui/icons-material/Menu';
-import AutoStoriesIcon from '@mui/icons-material/AutoStories';
-import { APP_NAME, ROUTES } from '../../utils';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Logo } from './Logo';
+import { SearchBar } from './SearchBar';
+import { ThemeToggle } from './ThemeToggle';
+import { LanguageSwitcher } from './LanguageSwitcher';
+import { ProfileMenu } from './ProfileMenu';
+import { useAuth } from '@/hooks';
+import { ROUTES } from '@/constants';
 
 const NAV_ITEMS = [
   { label: 'Home', path: ROUTES.HOME },
@@ -30,132 +20,162 @@ const NAV_ITEMS = [
   { label: 'Wallet', path: ROUTES.WALLET },
 ];
 
-const Header: React.FC = () => {
+export const Header: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const handleDrawerToggle = () => {
-    setDrawerOpen(!drawerOpen);
-  };
+  const isActive = (path: string) =>
+    path === ROUTES.HOME ? location.pathname === path : location.pathname.startsWith(path);
 
-  const drawer = (
-    <Box onClick={handleDrawerToggle} sx={{ textAlign: 'center' }}>
-      <Typography variant="h6" sx={{ my: 2, fontWeight: 700 }}>
-        {APP_NAME}
-      </Typography>
-      <Divider />
-      <List>
-        {NAV_ITEMS.map((item) => (
-          <ListItem key={item.label} disablePadding>
-            <ListItemButton
-              component="a"
-              href={item.path}
-              sx={{ textAlign: 'center' }}
-            >
-              <ListItemText primary={item.label} />
-            </ListItemButton>
-          </ListItem>
-        ))}
-      </List>
-    </Box>
+  const navLinks = (
+    <Stack direction="row" spacing={0.5} sx={{ flexGrow: 1, justifyContent: 'center' }}>
+      {NAV_ITEMS.map((item) => (
+        <Button
+          key={item.path}
+          component={Link}
+          to={item.path}
+          sx={{
+            color: isActive(item.path) ? 'primary.main' : 'text.secondary',
+            fontWeight: isActive(item.path) ? 700 : 500,
+            position: 'relative',
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              bottom: 6,
+              left: 20,
+              right: 20,
+              height: 2.5,
+              borderRadius: 999,
+              backgroundColor: 'primary.main',
+              opacity: isActive(item.path) ? 1 : 0,
+              transition: 'opacity 0.2s ease',
+            },
+            '&:hover': { color: 'primary.main', backgroundColor: 'transparent' },
+          }}
+        >
+          {item.label}
+        </Button>
+      ))}
+    </Stack>
+  );
+
+  const authActions = isAuthenticated ? (
+    <>
+      <Tooltip title="Go to Dashboard">
+        <IconButton onClick={() => navigate(ROUTES.DASHBOARD)} aria-label="Dashboard" size="small">
+          <DashboardIcon />
+        </IconButton>
+      </Tooltip>
+      <ProfileMenu />
+    </>
+  ) : (
+    <>
+      <Button component={Link} to={ROUTES.LOGIN} variant="outlined" size="small">
+        Sign In
+      </Button>
+      <Button
+        component={Link}
+        to={ROUTES.REGISTER}
+        variant="contained"
+        size="small"
+        sx={{ backgroundImage: 'linear-gradient(135deg, #6D5DF6, #5443D4)' }}
+      >
+        Get Started
+      </Button>
+    </>
   );
 
   return (
-    <AppBar
-      position="sticky"
-      elevation={0}
-      sx={{
-        backgroundColor: 'background.paper',
-        borderBottom: 1,
-        borderColor: 'divider',
-        color: 'text.primary',
-      }}
-    >
-      <Container maxWidth="lg">
-        <Toolbar disableGutters sx={{ minHeight: 64 }}>
-          {isMobile && (
-            <IconButton
-              edge="start"
-              onClick={handleDrawerToggle}
-              sx={{ mr: 1 }}
-            >
-              <MenuIcon />
-            </IconButton>
-          )}
-
-          <Box
-            component="a"
-            href={ROUTES.HOME}
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              textDecoration: 'none',
-              color: 'inherit',
-              mr: 4,
-            }}
-          >
-            <AutoStoriesIcon sx={{ mr: 1, color: 'primary.main' }} />
-            <Typography
-              variant="h6"
-              fontWeight={700}
-              sx={{ display: { xs: 'none', sm: 'block' } }}
-            >
-              {APP_NAME}
-            </Typography>
-          </Box>
-
-          {!isMobile && (
-            <Box sx={{ display: 'flex', gap: 1, flexGrow: 1 }}>
-              {NAV_ITEMS.map((item) => (
-                <Button
-                  key={item.label}
-                  href={item.path}
-                  sx={{
-                    color: 'text.secondary',
-                    '&:hover': { color: 'primary.main', backgroundColor: 'action.hover' },
-                    fontWeight: 500,
-                  }}
-                >
-                  {item.label}
-                </Button>
-              ))}
+    <>
+      <AppBar
+        position="sticky"
+        elevation={0}
+        color="transparent"
+        sx={{
+          backgroundColor: (t) => (t.palette.mode === 'dark' ? 'rgba(11,18,32,0.8)' : 'rgba(255,255,255,0.8)'),
+          backdropFilter: 'blur(14px)',
+          borderBottom: 1,
+          borderColor: 'divider',
+          color: 'text.primary',
+        }}
+      >
+        <Container maxWidth="xl">
+          <Toolbar disableGutters sx={{ minHeight: 64, gap: 2 }}>
+            {isMobile && (
+              <IconButton edge="start" onClick={() => setDrawerOpen(true)} aria-label="Open menu">
+                <MenuIcon />
+              </IconButton>
+            )}
+            <Logo />
+            {!isMobile && navLinks}
+            {!isTablet && (
+              <Box sx={{ width: 260 }}>
+                <SearchBar placeholder="Search mentors, sessions…" />
+              </Box>
+            )}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, ml: 'auto' }}>
+              <ThemeToggle />
+              <LanguageSwitcher />
+              {authActions}
             </Box>
-          )}
-
-          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-            <Button
-              variant="outlined"
-              href={ROUTES.LOGIN}
-              size="small"
-            >
-              Sign In
-            </Button>
-            <Button
-              variant="contained"
-              href={ROUTES.REGISTER}
-              size="small"
-              disableElevation
-            >
-              Get Started
-            </Button>
-          </Box>
-        </Toolbar>
-      </Container>
+          </Toolbar>
+        </Container>
+      </AppBar>
 
       <Drawer
         variant="temporary"
         open={drawerOpen}
-        onClose={handleDrawerToggle}
+        onClose={() => setDrawerOpen(false)}
         ModalProps={{ keepMounted: true }}
-        sx={{
-          display: { xs: 'block', md: 'none' },
-          '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 240 },
-        }}
+        sx={{ '& .MuiDrawer-paper': { width: 280, boxSizing: 'border-box' } }}
       >
-        {drawer}
+        <Box sx={{ px: 2.5, py: 2 }}>
+          <Logo />
+        </Box>
+        <List>
+          {NAV_ITEMS.map((item) => (
+            <ListItem key={item.path} disablePadding>
+              <ListItemButton
+                component={Link}
+                to={item.path}
+                onClick={() => setDrawerOpen(false)}
+                selected={isActive(item.path)}
+              >
+                <ListItemText primary={item.label} />
+              </ListItemButton>
+            </ListItem>
+          ))}
+        </List>
+        <Box sx={{ px: 2, py: 2, display: 'flex', gap: 1 }}>
+          {isAuthenticated ? (
+            <Button
+              fullWidth
+              variant="contained"
+              onClick={() => {
+                setDrawerOpen(false);
+                navigate(ROUTES.DASHBOARD);
+              }}
+            >
+              Go to Dashboard
+            </Button>
+          ) : (
+            <>
+              <Button fullWidth variant="outlined" component={Link} to={ROUTES.LOGIN}>
+                Sign In
+              </Button>
+              <Button fullWidth variant="contained" component={Link} to={ROUTES.REGISTER}>
+                Get Started
+              </Button>
+            </>
+          )}
+        </Box>
       </Drawer>
-    </AppBar>
+    </>
   );
 };
 

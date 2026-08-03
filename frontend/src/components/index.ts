@@ -1,2 +1,4 @@
-export { default as Header } from './common/Header';
-export { default as Footer } from './common/Footer';
+export * from './common';
+export * from './ui';
+export * from './feedback';
+export * from './form';

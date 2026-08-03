@@ -1,12 +1,17 @@
-import React from 'react';
-import { ThemeContextProvider } from './contexts';
-import { AppRouter } from './routes';
+import { AppProviders } from '@/providers';
+import { AppRouter } from '@/routes';
+import { AppToaster, GlobalLoadingBar } from '@/components/feedback';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 
 const App: React.FC = () => {
   return (
-    <ThemeContextProvider>
-      <AppRouter />
-    </ThemeContextProvider>
+    <ErrorBoundary>
+      <AppProviders>
+        <GlobalLoadingBar />
+        <AppRouter />
+        <AppToaster />
+      </AppProviders>
+    </ErrorBoundary>
   );
 };
 
