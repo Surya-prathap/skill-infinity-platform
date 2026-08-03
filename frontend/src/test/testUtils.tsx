@@ -4,11 +4,11 @@ import { Provider } from 'react-redux';
 import { MemoryRouter } from 'react-router-dom';
 import { configureStore } from '@reduxjs/toolkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { authReducer } from '@/store/slices';
+import { authReducer, mentorReducer } from '@/store/slices';
 
 export const createTestStore = () =>
   configureStore({
-    reducer: { auth: authReducer },
+    reducer: { auth: authReducer, mentor: mentorReducer },
   });
 
 export const createTestQueryClient = () =>

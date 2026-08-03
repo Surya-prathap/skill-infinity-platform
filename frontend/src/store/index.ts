@@ -25,6 +25,7 @@ import {
   notificationsReducer,
   settingsReducer,
   loadingReducer,
+  mentorReducer,
   type AuthState,
 } from './slices';
 
@@ -35,6 +36,7 @@ const rootReducer = combineReducers({
   notifications: notificationsReducer,
   settings: settingsReducer,
   loading: loadingReducer,
+  mentor: mentorReducer,
 });
 
 const resetAuthState: AuthState = {

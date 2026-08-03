@@ -13,6 +13,10 @@ const LandingPage = lazyPage(async () => {
   const module = await import('@/pages/LandingPage');
   return { default: module.LandingPage };
 });
+const BecomeMentorPage = lazyPage(async () => {
+  const module = await import('@/pages/mentor/BecomeMentorPage');
+  return { default: module.BecomeMentorPage };
+});
 const MentorsPage = lazyPage(async () => {
   const module = await import('@/pages/MentorsPage');
   return { default: module.MentorsPage };
@@ -78,8 +82,20 @@ const ResumePage = lazyPage(async () => {
   return { default: module.ResumePage };
 });
 const MentorDashboardPage = lazyPage(async () => {
-  const module = await import('@/pages/MentorDashboardPage');
+  const module = await import('@/pages/mentor/MentorDashboardPage');
   return { default: module.MentorDashboardPage };
+});
+const MentorRegistrationPage = lazyPage(async () => {
+  const module = await import('@/pages/mentor/MentorRegistrationPage');
+  return { default: module.MentorRegistrationPage };
+});
+const MentorAvailabilityPage = lazyPage(async () => {
+  const module = await import('@/pages/mentor/MentorAvailabilityPage');
+  return { default: module.MentorAvailabilityPage };
+});
+const MentorPricingPage = lazyPage(async () => {
+  const module = await import('@/pages/mentor/MentorPricingPage');
+  return { default: module.MentorPricingPage };
 });
 const CommunityPage = lazyPage(async () => {
   const module = await import('@/pages/CommunityPage');
@@ -139,6 +155,14 @@ export const AppRouter: React.FC = () => {
             element={
               <Suspense fallback={<RouteFallback />}>
                 <MentorsPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.BECOME_MENTOR}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <BecomeMentorPage />
               </Suspense>
             }
           />
@@ -328,11 +352,39 @@ export const AppRouter: React.FC = () => {
             }
           />
           <Route
+            path={ROUTES.MENTOR_REGISTRATION}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <MentorRegistrationPage />
+              </Suspense>
+            }
+          />
+          <Route
             path={ROUTES.MENTOR_DASHBOARD}
             element={
               <RoleGuard roles={[ROLES.MENTOR]}>
                 <Suspense fallback={<RouteFallback />}>
                   <MentorDashboardPage />
+                </Suspense>
+              </RoleGuard>
+            }
+          />
+          <Route
+            path={ROUTES.MENTOR_AVAILABILITY}
+            element={
+              <RoleGuard roles={[ROLES.MENTOR]}>
+                <Suspense fallback={<RouteFallback />}>
+                  <MentorAvailabilityPage />
+                </Suspense>
+              </RoleGuard>
+            }
+          />
+          <Route
+            path={ROUTES.MENTOR_PRICING}
+            element={
+              <RoleGuard roles={[ROLES.MENTOR]}>
+                <Suspense fallback={<RouteFallback />}>
+                  <MentorPricingPage />
                 </Suspense>
               </RoleGuard>
             }

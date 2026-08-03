@@ -6,6 +6,8 @@ export const STORAGE_KEYS = {
   LANGUAGE: 'skill_language',
   REMEMBER_ME: 'skill_remember_me',
   PROFILE: 'skill_profile',
+  MENTOR_DRAFT: 'skill_mentor_draft',
+  MENTOR_PROFILE: 'skill_mentor_profile',
 } as const;
 
 export const PERSIST_KEYS = {

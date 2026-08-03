@@ -53,6 +53,11 @@ export const selectSettings = (state: RootState) => state.settings;
 export const selectLanguage = (state: RootState) => state.settings.language;
 export const selectTimezone = (state: RootState) => state.settings.timezone;
 
+/* ---------------- Mentor wizard ---------------- */
+export const selectMentorStep = (state: RootState) => state.mentor.step;
+export const selectMentorDraft = (state: RootState) => state.mentor.draft;
+export const selectMentorSubmitted = (state: RootState) => state.mentor.submitted;
+
 /* ---------------- Loading ---------------- */
 export const selectGlobalLoading = (state: RootState) => state.loading.pendingRequests > 0;
 export const selectPageLoading = (state: RootState) => state.loading.pageLoading;
