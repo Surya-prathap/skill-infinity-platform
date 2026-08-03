@@ -282,4 +282,9 @@ export interface PricingRequest {
 
 export type CertificationRequest = Omit<MentorCertification, 'id' | 'verificationStatus'>;
 
-export type ExpertiseRequest = Omit<MentorExpertise, 'id' | 'categoryName' | 'subCategoryName' | 'skillName'>;
+export type AchievementRequest = Omit<MentorAchievement, 'id'>;
+
+export type ExpertiseRequest = Omit<
+  MentorExpertise,
+  'id' | 'categoryName' | 'subCategoryName' | 'skillName'
+>;

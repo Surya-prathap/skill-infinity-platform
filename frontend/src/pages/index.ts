@@ -21,3 +21,7 @@ export { BecomeMentorPage } from './mentor/BecomeMentorPage';
 export { MentorRegistrationPage } from './mentor/MentorRegistrationPage';
 export { MentorAvailabilityPage } from './mentor/MentorAvailabilityPage';
 export { MentorPricingPage } from './mentor/MentorPricingPage';
+export { MentorAnalyticsPage } from './mentor/MentorAnalyticsPage';
+export { MentorCertificatesPage } from './mentor/MentorCertificatesPage';
+export { MentorAchievementsPage } from './mentor/MentorAchievementsPage';
+export { MentorSettingsPage } from './mentor/MentorSettingsPage';

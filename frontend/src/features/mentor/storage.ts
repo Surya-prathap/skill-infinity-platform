@@ -1,5 +1,5 @@
 import { STORAGE_KEYS } from '@/constants';
-import type { Mentor, MentorAvailability } from '@/types';
+import type { Mentor, MentorAvailability, MentorCertification } from '@/types';
 import { getStoredValue, setStoredValue, removeStoredValue } from '@/utils/storage';
 import { seedMentor } from './data';
 
@@ -124,7 +124,8 @@ export const emptyDraft = (): MentorDraft => ({
   savedAt: null,
 });
 
-export const loadDraft = (): MentorDraft => getStoredValue<MentorDraft>(STORAGE_KEYS.MENTOR_DRAFT, emptyDraft());
+export const loadDraft = (): MentorDraft =>
+  getStoredValue<MentorDraft>(STORAGE_KEYS.MENTOR_DRAFT, emptyDraft());
 
 export const persistDraft = (draft: MentorDraft): void => {
   setStoredValue(STORAGE_KEYS.MENTOR_DRAFT, { ...draft, savedAt: new Date().toISOString() });
@@ -138,7 +139,8 @@ export const clearDraft = (): void => {
    Cached mentor profile — keeps the mentor UI usable offline.
    ============================================================ */
 
-export const loadCachedMentor = (): Mentor => getStoredValue<Mentor>(STORAGE_KEYS.MENTOR_PROFILE, seedMentor);
+export const loadCachedMentor = (): Mentor =>
+  getStoredValue<Mentor>(STORAGE_KEYS.MENTOR_PROFILE, seedMentor);
 
 export const cacheMentor = (mentor: Mentor): void => {
   setStoredValue(STORAGE_KEYS.MENTOR_PROFILE, mentor);
@@ -155,4 +157,16 @@ export const availabilityToDraft = (slot: MentorAvailability): AvailabilityDraft
   slotDurationMinutes: slot.slotDurationMinutes ?? 60,
   recurring: slot.recurring,
   timezone: slot.timezone ?? '',
+});
+
+/** Normalizes a server certification into the editor draft shape. */
+export const certificationToDraft = (certification: MentorCertification): CertificationDraft => ({
+  id: certification.id ?? '',
+  title: certification.title,
+  issuingOrganization: certification.issuingOrganization,
+  credentialId: certification.credentialId ?? '',
+  credentialUrl: certification.credentialUrl ?? '',
+  issueDate: certification.issueDate ?? '',
+  doesNotExpire: certification.doesNotExpire,
+  description: certification.description ?? '',
 });

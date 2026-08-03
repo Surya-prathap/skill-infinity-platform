@@ -7,3 +7,4 @@ export { ExpertiseEditor, CUSTOM_CATEGORY_VALUE } from './ExpertiseEditor';
 export { PricingEditor } from './PricingEditor';
 export { AvailabilityEditor } from './AvailabilityEditor';
 export { CertificationEditor } from './CertificationEditor';
+export { AchievementEditor } from './AchievementEditor';
