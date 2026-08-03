@@ -97,6 +97,22 @@ const MentorPricingPage = lazyPage(async () => {
   const module = await import('@/pages/mentor/MentorPricingPage');
   return { default: module.MentorPricingPage };
 });
+const MentorAnalyticsPage = lazyPage(async () => {
+  const module = await import('@/pages/mentor/MentorAnalyticsPage');
+  return { default: module.MentorAnalyticsPage };
+});
+const MentorCertificatesPage = lazyPage(async () => {
+  const module = await import('@/pages/mentor/MentorCertificatesPage');
+  return { default: module.MentorCertificatesPage };
+});
+const MentorAchievementsPage = lazyPage(async () => {
+  const module = await import('@/pages/mentor/MentorAchievementsPage');
+  return { default: module.MentorAchievementsPage };
+});
+const MentorSettingsPage = lazyPage(async () => {
+  const module = await import('@/pages/mentor/MentorSettingsPage');
+  return { default: module.MentorSettingsPage };
+});
 const CommunityPage = lazyPage(async () => {
   const module = await import('@/pages/CommunityPage');
   return { default: module.CommunityPage };
@@ -385,6 +401,46 @@ export const AppRouter: React.FC = () => {
               <RoleGuard roles={[ROLES.MENTOR]}>
                 <Suspense fallback={<RouteFallback />}>
                   <MentorPricingPage />
+                </Suspense>
+              </RoleGuard>
+            }
+          />
+          <Route
+            path={ROUTES.MENTOR_ANALYTICS}
+            element={
+              <RoleGuard roles={[ROLES.MENTOR]}>
+                <Suspense fallback={<RouteFallback />}>
+                  <MentorAnalyticsPage />
+                </Suspense>
+              </RoleGuard>
+            }
+          />
+          <Route
+            path={ROUTES.MENTOR_CERTIFICATES}
+            element={
+              <RoleGuard roles={[ROLES.MENTOR]}>
+                <Suspense fallback={<RouteFallback />}>
+                  <MentorCertificatesPage />
+                </Suspense>
+              </RoleGuard>
+            }
+          />
+          <Route
+            path={ROUTES.MENTOR_ACHIEVEMENTS}
+            element={
+              <RoleGuard roles={[ROLES.MENTOR]}>
+                <Suspense fallback={<RouteFallback />}>
+                  <MentorAchievementsPage />
+                </Suspense>
+              </RoleGuard>
+            }
+          />
+          <Route
+            path={ROUTES.MENTOR_SETTINGS}
+            element={
+              <RoleGuard roles={[ROLES.MENTOR]}>
+                <Suspense fallback={<RouteFallback />}>
+                  <MentorSettingsPage />
                 </Suspense>
               </RoleGuard>
             }

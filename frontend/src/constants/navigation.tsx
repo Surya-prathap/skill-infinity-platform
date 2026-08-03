@@ -9,6 +9,9 @@ import WorkspacePremiumOutlinedIcon from '@mui/icons-material/WorkspacePremiumOu
 import AdminPanelSettingsOutlinedIcon from '@mui/icons-material/AdminPanelSettingsOutlined';
 import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
 import PriceChangeOutlinedIcon from '@mui/icons-material/PriceChangeOutlined';
+import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
+import EmojiEventsOutlinedIcon from '@mui/icons-material/EmojiEventsOutlined';
+import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import type { NavItem } from '@/types';
 import { ROLES, ROUTES } from '@/constants';
 
@@ -35,9 +38,26 @@ export const MENTOR_NAV: NavItem[] = [
     icon: <WorkspacePremiumOutlinedIcon />,
     roles: [ROLES.MENTOR],
     children: [
-      { label: 'Dashboard', path: ROUTES.MENTOR_DASHBOARD, icon: <DashboardOutlinedIcon />, end: true },
-      { label: 'Availability', path: ROUTES.MENTOR_AVAILABILITY, icon: <CalendarMonthOutlinedIcon /> },
+      {
+        label: 'Dashboard',
+        path: ROUTES.MENTOR_DASHBOARD,
+        icon: <DashboardOutlinedIcon />,
+        end: true,
+      },
+      { label: 'Analytics', path: ROUTES.MENTOR_ANALYTICS, icon: <InsightsOutlinedIcon /> },
+      { label: 'Certificates', path: ROUTES.MENTOR_CERTIFICATES, icon: <BadgeOutlinedIcon /> },
+      {
+        label: 'Achievements',
+        path: ROUTES.MENTOR_ACHIEVEMENTS,
+        icon: <EmojiEventsOutlinedIcon />,
+      },
+      {
+        label: 'Availability',
+        path: ROUTES.MENTOR_AVAILABILITY,
+        icon: <CalendarMonthOutlinedIcon />,
+      },
       { label: 'Pricing', path: ROUTES.MENTOR_PRICING, icon: <PriceChangeOutlinedIcon /> },
+      { label: 'Settings', path: ROUTES.MENTOR_SETTINGS, icon: <SettingsOutlinedIcon /> },
       { label: 'My Profile', path: ROUTES.PROFILE, icon: <PersonOutlineOutlinedIcon /> },
     ],
   },

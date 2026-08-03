@@ -30,6 +30,10 @@ export const ROUTES = {
   MENTOR_DASHBOARD: '/mentor/dashboard',
   MENTOR_AVAILABILITY: '/mentor/availability',
   MENTOR_PRICING: '/mentor/pricing',
+  MENTOR_ANALYTICS: '/mentor/analytics',
+  MENTOR_CERTIFICATES: '/mentor/certificates',
+  MENTOR_ACHIEVEMENTS: '/mentor/achievements',
+  MENTOR_SETTINGS: '/mentor/settings',
 
   // Admin
   ADMIN: '/admin',

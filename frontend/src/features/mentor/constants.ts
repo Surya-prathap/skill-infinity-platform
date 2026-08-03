@@ -89,6 +89,15 @@ export const SESSION_TYPES: SelectOption[] = [
   { label: 'Project Support', value: 'PROJECT_SUPPORT' },
 ];
 
+/* ---------------- Achievement types ---------------- */
+
+export const ACHIEVEMENT_TYPES: SelectOption[] = [
+  { label: 'Badge', value: 'BADGE' },
+  { label: 'Award', value: 'AWARD' },
+  { label: 'Milestone', value: 'MILESTONE' },
+  { label: 'Highlight', value: 'HIGHLIGHT' },
+];
+
 /* ---------------- Skill suggestions ---------------- */
 
 export const SKILL_SUGGESTIONS = [

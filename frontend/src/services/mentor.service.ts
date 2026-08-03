@@ -1,6 +1,7 @@
 import { apiClient } from '@/api';
 import { API_ENDPOINTS } from '@/constants';
 import type {
+  AchievementRequest,
   ApiResponse,
   AvailabilityRequest,
   BecomeMentorRequest,
@@ -9,6 +10,7 @@ import type {
   DashboardData,
   ExpertiseRequest,
   Mentor,
+  MentorAchievement,
   MentorAvailability,
   MentorCertification,
   MentorExpertise,
@@ -19,10 +21,7 @@ import type {
 } from '@/types';
 
 const resolve = (template: string, params: Record<string, string>): string =>
-  Object.entries(params).reduce(
-    (url, [key, value]) => url.replace(`{${key}}`, value),
-    template,
-  );
+  Object.entries(params).reduce((url, [key, value]) => url.replace(`{${key}}`, value), template);
 
 /**
  * mentor-service endpoints. Self-service routes (/profile, /availability,
@@ -38,10 +37,7 @@ export const mentorService = {
   getMyProfile: () => apiClient.get<ApiResponse<Mentor>>(API_ENDPOINTS.MENTORS.PROFILE),
 
   updateProfile: (mentorId: string, payload: UpdateMentorProfileRequest) =>
-    apiClient.put<ApiResponse<Mentor>>(
-      `${API_ENDPOINTS.MENTORS.BASE}/${mentorId}`,
-      payload,
-    ),
+    apiClient.put<ApiResponse<Mentor>>(`${API_ENDPOINTS.MENTORS.BASE}/${mentorId}`, payload),
 
   /* ---------------- Dashboard ---------------- */
 
@@ -81,10 +77,7 @@ export const mentorService = {
     apiClient.get<ApiResponse<MentorAvailability[]>>(API_ENDPOINTS.MENTORS.AVAILABILITY),
 
   saveMyAvailability: (requests: AvailabilityRequest[]) =>
-    apiClient.put<ApiResponse<MentorAvailability[]>>(
-      API_ENDPOINTS.MENTORS.AVAILABILITY,
-      requests,
-    ),
+    apiClient.put<ApiResponse<MentorAvailability[]>>(API_ENDPOINTS.MENTORS.AVAILABILITY, requests),
 
   generateTimeSlots: (mentorId: string, startDate: string, endDate: string) =>
     apiClient.get<ApiResponse<TimeSlot[]>>(
@@ -120,8 +113,38 @@ export const mentorService = {
   addMyCertification: (payload: CertificationRequest) =>
     apiClient.post<ApiResponse<MentorCertification>>(API_ENDPOINTS.MENTORS.CERTIFICATIONS, payload),
 
+  updateMyCertification: (certificationId: string, payload: CertificationRequest) =>
+    apiClient.put<ApiResponse<MentorCertification>>(
+      resolve(API_ENDPOINTS.MENTORS.CERTIFICATION_ITEM, { certificationId }),
+      payload,
+    ),
+
   deleteMyCertification: (certificationId: string) =>
     apiClient.delete<ApiResponse<null>>(
       `${API_ENDPOINTS.MENTORS.CERTIFICATIONS}/${certificationId}`,
+    ),
+
+  /* ---------------- Achievements ---------------- */
+
+  getAchievements: (mentorId: string) =>
+    apiClient.get<ApiResponse<MentorAchievement[]>>(
+      resolve(API_ENDPOINTS.MENTORS.ACHIEVEMENTS, { mentorId }),
+    ),
+
+  addAchievement: (mentorId: string, payload: AchievementRequest) =>
+    apiClient.post<ApiResponse<MentorAchievement>>(
+      resolve(API_ENDPOINTS.MENTORS.ACHIEVEMENTS, { mentorId }),
+      payload,
+    ),
+
+  updateAchievement: (mentorId: string, achievementId: string, payload: AchievementRequest) =>
+    apiClient.put<ApiResponse<MentorAchievement>>(
+      resolve(API_ENDPOINTS.MENTORS.ACHIEVEMENTS_ITEM, { mentorId, achievementId }),
+      payload,
+    ),
+
+  deleteAchievement: (mentorId: string, achievementId: string) =>
+    apiClient.delete<ApiResponse<null>>(
+      resolve(API_ENDPOINTS.MENTORS.ACHIEVEMENTS_ITEM, { mentorId, achievementId }),
     ),
 };

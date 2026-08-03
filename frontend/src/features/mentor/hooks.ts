@@ -3,17 +3,30 @@ import type { AxiosError } from 'axios';
 import { mentorService } from '@/services';
 import { getErrorMessage, showError, showSuccess } from '@/utils';
 import type {
+  AchievementRequest,
   AvailabilityRequest,
   Category,
+  CertificationRequest,
   DashboardData,
   Mentor,
+  MentorAchievement,
   MentorAvailability,
   MentorCertification,
+  MentorPreference,
   MentorPricing,
   PricingRequest,
+  UpdateMentorProfileRequest,
 } from '@/types';
 import { mentorKeys } from './queryKeys';
-import { FALLBACK_CATEGORIES, seedAvailability, seedDashboard, seedMentor, seedPricing } from './data';
+import {
+  FALLBACK_CATEGORIES,
+  seedAchievements,
+  seedAvailability,
+  seedDashboard,
+  seedMentor,
+  seedPreferences,
+  seedPricing,
+} from './data';
 import { cacheMentor, clearDraft, loadCachedMentor, type MentorDraft } from './storage';
 
 const isNetworkError = (error: unknown): boolean =>
@@ -294,7 +307,9 @@ export const useDeletePricingMutation = (mentorId?: string) => {
   return useMutation({
     mutationFn: (pricingId: string) => {
       if (!mentorId) return Promise.reject(new Error('Mentor profile not found'));
-      return mentorService.deletePricing(mentorId, pricingId).then((response) => response.data.data);
+      return mentorService
+        .deletePricing(mentorId, pricingId)
+        .then((response) => response.data.data);
     },
     onMutate: async (pricingId) => {
       const key = mentorKeys.pricing(mentorId ?? 'none');
@@ -381,6 +396,248 @@ export const useDeleteCertificationMutation = () => {
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: mentorKeys.profile() });
     },
+  });
+};
+
+/* ============================================================
+   Profile — optimistic update of mentor profile fields
+   ============================================================ */
+
+export const useUpdateMentorProfileMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: UpdateMentorProfileRequest) => {
+      const mentor = loadCachedMentor();
+      if (!mentor.id) return Promise.reject(new Error('Mentor profile not found'));
+      return mentorService.updateProfile(mentor.id, payload).then((response) => response.data.data);
+    },
+    onMutate: async (payload) => {
+      await queryClient.cancelQueries({ queryKey: mentorKeys.profile() });
+      const previous = queryClient.getQueryData<Mentor>(mentorKeys.profile());
+      const mentor = previous ?? loadCachedMentor();
+      const next: Mentor = { ...mentor, profile: { ...mentor.profile, ...payload } };
+      queryClient.setQueryData<Mentor>(mentorKeys.profile(), next);
+      cacheMentor(next);
+      return { previous };
+    },
+    onError: (error, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(mentorKeys.profile(), context.previous);
+      }
+      showError(getErrorMessage(error));
+    },
+    onSuccess: () => showSuccess('Profile updated'),
+  });
+};
+
+/* ============================================================
+   Certifications — update (replace) on the profile cache
+   ============================================================ */
+
+export const useUpdateCertificationMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      certificationId,
+      payload,
+    }: {
+      certificationId: string;
+      payload: CertificationRequest;
+    }) =>
+      mentorService
+        .updateMyCertification(certificationId, payload)
+        .then((response) => response.data.data),
+    onMutate: async ({ certificationId, payload }) => {
+      await queryClient.cancelQueries({ queryKey: mentorKeys.profile() });
+      const previous = queryClient.getQueryData<Mentor>(mentorKeys.profile());
+      const mentor = previous ?? loadCachedMentor();
+      queryClient.setQueryData<Mentor>(mentorKeys.profile(), {
+        ...mentor,
+        certifications: (mentor.certifications ?? []).map((cert) =>
+          cert.id === certificationId ? { ...cert, ...payload, id: certificationId } : cert,
+        ),
+      });
+      return { previous };
+    },
+    onError: (error, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(mentorKeys.profile(), context.previous);
+      }
+      showError(getErrorMessage(error));
+    },
+    onSuccess: () => showSuccess('Certification updated'),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: mentorKeys.profile() });
+    },
+  });
+};
+
+/* ============================================================
+   Achievements — fetch + optimistic add / update / delete
+   ============================================================ */
+
+const cachedAchievements = (): MentorAchievement[] =>
+  loadCachedMentor().achievements ?? seedAchievements;
+
+export const useAchievementsQuery = (mentorId?: string) => {
+  const query = useQuery({
+    queryKey: mentorKeys.achievements(mentorId ?? 'none'),
+    queryFn: async () => {
+      if (!mentorId) return cachedAchievements();
+      const response = await mentorService.getAchievements(mentorId);
+      return response.data.data;
+    },
+    placeholderData: cachedAchievements,
+    retry: 1,
+  });
+
+  const achievements = (query.data ?? cachedAchievements()) as MentorAchievement[];
+
+  return { ...query, achievements, isOffline: query.isError };
+};
+
+export const useAddAchievementMutation = (mentorId?: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: AchievementRequest) => {
+      if (!mentorId) return Promise.reject(new Error('Mentor profile not found'));
+      return mentorService.addAchievement(mentorId, payload).then((response) => response.data.data);
+    },
+    onMutate: async (payload) => {
+      const key = mentorKeys.achievements(mentorId ?? 'none');
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<MentorAchievement[]>(key);
+      queryClient.setQueryData<MentorAchievement[]>(key, [
+        ...(previous ?? cachedAchievements()),
+        { ...payload, id: `temp-${Date.now()}` },
+      ]);
+      return { previous };
+    },
+    onError: (error, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(mentorKeys.achievements(mentorId ?? 'none'), context.previous);
+      }
+      showError(getErrorMessage(error));
+    },
+    onSuccess: () => showSuccess('Achievement added'),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: mentorKeys.achievements(mentorId ?? 'none') });
+    },
+  });
+};
+
+export const useUpdateAchievementMutation = (mentorId?: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      achievementId,
+      payload,
+    }: {
+      achievementId: string;
+      payload: AchievementRequest;
+    }) => {
+      if (!mentorId) return Promise.reject(new Error('Mentor profile not found'));
+      return mentorService
+        .updateAchievement(mentorId, achievementId, payload)
+        .then((response) => response.data.data);
+    },
+    onMutate: async ({ achievementId, payload }) => {
+      const key = mentorKeys.achievements(mentorId ?? 'none');
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<MentorAchievement[]>(key);
+      queryClient.setQueryData<MentorAchievement[]>(
+        key,
+        (previous ?? cachedAchievements()).map((item) =>
+          item.id === achievementId ? { ...item, ...payload, id: achievementId } : item,
+        ),
+      );
+      return { previous };
+    },
+    onError: (error, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(mentorKeys.achievements(mentorId ?? 'none'), context.previous);
+      }
+      showError(getErrorMessage(error));
+    },
+    onSuccess: () => showSuccess('Achievement updated'),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: mentorKeys.achievements(mentorId ?? 'none') });
+    },
+  });
+};
+
+export const useDeleteAchievementMutation = (mentorId?: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (achievementId: string) => {
+      if (!mentorId) return Promise.reject(new Error('Mentor profile not found'));
+      return mentorService
+        .deleteAchievement(mentorId, achievementId)
+        .then((response) => response.data.data);
+    },
+    onMutate: async (achievementId) => {
+      const key = mentorKeys.achievements(mentorId ?? 'none');
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<MentorAchievement[]>(key);
+      queryClient.setQueryData<MentorAchievement[]>(
+        key,
+        (previous ?? cachedAchievements()).filter((item) => item.id !== achievementId),
+      );
+      return { previous };
+    },
+    onError: (error, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(mentorKeys.achievements(mentorId ?? 'none'), context.previous);
+      }
+      showError(getErrorMessage(error));
+    },
+    onSuccess: () => showSuccess('Achievement removed'),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: mentorKeys.achievements(mentorId ?? 'none') });
+    },
+  });
+};
+
+/* ============================================================
+   Preferences — read from profile, optimistic local updates.
+   The mentor-service exposes preferences embedded in the mentor
+   profile, so updates are applied to the cached profile.
+   ============================================================ */
+
+export const useMentorPreferencesQuery = () => {
+  const { mentor } = useMentorProfileQuery();
+  const preferences = mentor?.preference ?? seedPreferences;
+  return { preferences };
+};
+
+export const useUpdatePreferenceMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: Partial<MentorPreference>) => Promise.resolve(payload),
+    onMutate: async (payload) => {
+      await queryClient.cancelQueries({ queryKey: mentorKeys.profile() });
+      const previous = queryClient.getQueryData<Mentor>(mentorKeys.profile());
+      const mentor = previous ?? loadCachedMentor();
+      queryClient.setQueryData<Mentor>(mentorKeys.profile(), {
+        ...mentor,
+        preference: { ...(mentor.preference ?? seedPreferences), ...payload },
+      });
+      cacheMentor(queryClient.getQueryData<Mentor>(mentorKeys.profile()) ?? mentor);
+      return { previous };
+    },
+    onError: (error, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(mentorKeys.profile(), context.previous);
+      }
+      showError(getErrorMessage(error));
+    },
+    onSuccess: () => showSuccess('Preferences saved'),
   });
 };
 
