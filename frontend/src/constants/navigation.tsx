@@ -1,0 +1,57 @@
+import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
+import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
+import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
+import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
+import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
+import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone';
+import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
+import WorkspacePremiumOutlinedIcon from '@mui/icons-material/WorkspacePremiumOutlined';
+import AdminPanelSettingsOutlinedIcon from '@mui/icons-material/AdminPanelSettingsOutlined';
+import type { NavItem } from '@/types';
+import { ROLES, ROUTES } from '@/constants';
+
+/** Core navigation — visible to every authenticated user. */
+export const CORE_NAV: NavItem[] = [
+  { label: 'Dashboard', path: ROUTES.DASHBOARD, icon: <DashboardOutlinedIcon />, end: true },
+  { label: 'Sessions', path: ROUTES.SESSIONS, icon: <EventAvailableOutlinedIcon /> },
+  { label: 'Wallet', path: ROUTES.WALLET, icon: <AccountBalanceWalletOutlinedIcon /> },
+  { label: 'Community', path: ROUTES.COMMUNITY, icon: <ForumOutlinedIcon /> },
+];
+
+/** Account section navigation. */
+export const ACCOUNT_NAV: NavItem[] = [
+  { label: 'Profile', path: ROUTES.PROFILE, icon: <PersonOutlineOutlinedIcon /> },
+  { label: 'Notifications', path: ROUTES.NOTIFICATIONS, icon: <NotificationsNoneIcon /> },
+  { label: 'Settings', path: ROUTES.SETTINGS, icon: <SettingsOutlinedIcon /> },
+];
+
+/** Mentor-only navigation with a nested section (demonstrates nested nav). */
+export const MENTOR_NAV: NavItem[] = [
+  {
+    label: 'Mentor Studio',
+    path: ROUTES.MENTOR_DASHBOARD,
+    icon: <WorkspacePremiumOutlinedIcon />,
+    roles: [ROLES.MENTOR],
+    children: [
+      { label: 'Mentor Dashboard', path: ROUTES.MENTOR_DASHBOARD, icon: <DashboardOutlinedIcon />, end: true },
+      { label: 'My Profile', path: ROUTES.PROFILE, icon: <PersonOutlineOutlinedIcon /> },
+    ],
+  },
+];
+
+/** Admin-only navigation. */
+export const ADMIN_NAV: NavItem[] = [
+  {
+    label: 'Admin Dashboard',
+    path: ROUTES.ADMIN,
+    icon: <AdminPanelSettingsOutlinedIcon />,
+    end: true,
+    roles: [ROLES.ADMIN],
+  },
+];
+
+/** Standard authenticated sidebar. */
+export const DASHBOARD_NAV: NavItem[] = [...CORE_NAV, ...MENTOR_NAV, ...ACCOUNT_NAV];
+
+/** Admin sidebar. */
+export const ADMIN_SIDEBAR_NAV: NavItem[] = [...ADMIN_NAV, ...CORE_NAV, ...ACCOUNT_NAV];

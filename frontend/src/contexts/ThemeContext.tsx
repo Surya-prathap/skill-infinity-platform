@@ -1,43 +1,63 @@
-import React, { createContext, useContext, useState, useMemo, useCallback, ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, type ReactNode } from 'react';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { getTheme } from '../theme';
-import { STORAGE_KEYS } from '../utils';
+import { getTheme } from '@/theme';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { setThemeMode, toggleThemeMode } from '@/store/slices/themeSlice';
+import { selectResolvedThemeMode, selectThemeMode } from '@/store/selectors';
+import type { ThemeMode } from '@/types';
 
-interface ThemeContextType {
-  mode: 'light' | 'dark';
-  toggleTheme: () => void;
+interface ThemeContextValue {
+  mode: ThemeMode;
+  resolvedMode: 'light' | 'dark';
+  setMode: (mode: ThemeMode) => void;
+  toggleMode: () => void;
 }
 
-const ThemeContext = createContext<ThemeContextType>({
-  mode: 'light',
-  toggleTheme: () => {},
+const ThemeContext = createContext<ThemeContextValue>({
+  mode: 'system',
+  resolvedMode: 'light',
+  setMode: () => {},
+  toggleMode: () => {},
 });
 
-export const useThemeMode = () => useContext(ThemeContext);
+// eslint-disable-next-line react-refresh/only-export-components
+export const useThemeMode = (): ThemeContextValue => useContext(ThemeContext);
 
 interface ThemeContextProviderProps {
   children: ReactNode;
 }
 
 export const ThemeContextProvider: React.FC<ThemeContextProviderProps> = ({ children }) => {
-  const [mode, setMode] = useState<'light' | 'dark'>(() => {
-    const stored = localStorage.getItem(STORAGE_KEYS.THEME);
-    return stored === 'dark' ? 'dark' : 'light';
-  });
+  const dispatch = useAppDispatch();
+  const mode = useAppSelector(selectThemeMode);
+  const resolvedMode = useAppSelector(selectResolvedThemeMode);
 
-  const toggleTheme = useCallback(() => {
-    setMode((prev) => {
-      const next = prev === 'light' ? 'dark' : 'light';
-      localStorage.setItem(STORAGE_KEYS.THEME, next);
-      return next;
-    });
-  }, []);
+  // Reflect the resolved mode on <html> for global CSS hooks.
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', resolvedMode);
+    document.documentElement.style.colorScheme = resolvedMode;
+  }, [resolvedMode]);
 
-  const theme = useMemo(() => getTheme(mode), [mode]);
+  const theme = useMemo(() => getTheme(resolvedMode), [resolvedMode]);
+
+  const setMode = useCallback(
+    (next: ThemeMode) => dispatch(setThemeMode(next)),
+    [dispatch],
+  );
+
+  const toggleMode = useCallback(
+    () => dispatch(toggleThemeMode(resolvedMode)),
+    [dispatch, resolvedMode],
+  );
+
+  const value = useMemo(
+    () => ({ mode, resolvedMode, setMode, toggleMode }),
+    [mode, resolvedMode, setMode, toggleMode],
+  );
 
   return (
-    <ThemeContext.Provider value={{ mode, toggleTheme }}>
+    <ThemeContext.Provider value={value}>
       <ThemeProvider theme={theme}>
         <CssBaseline />
         {children}
