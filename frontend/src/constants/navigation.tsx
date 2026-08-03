@@ -7,6 +7,8 @@ import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import WorkspacePremiumOutlinedIcon from '@mui/icons-material/WorkspacePremiumOutlined';
 import AdminPanelSettingsOutlinedIcon from '@mui/icons-material/AdminPanelSettingsOutlined';
+import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
+import PriceChangeOutlinedIcon from '@mui/icons-material/PriceChangeOutlined';
 import type { NavItem } from '@/types';
 import { ROLES, ROUTES } from '@/constants';
 
@@ -33,7 +35,9 @@ export const MENTOR_NAV: NavItem[] = [
     icon: <WorkspacePremiumOutlinedIcon />,
     roles: [ROLES.MENTOR],
     children: [
-      { label: 'Mentor Dashboard', path: ROUTES.MENTOR_DASHBOARD, icon: <DashboardOutlinedIcon />, end: true },
+      { label: 'Dashboard', path: ROUTES.MENTOR_DASHBOARD, icon: <DashboardOutlinedIcon />, end: true },
+      { label: 'Availability', path: ROUTES.MENTOR_AVAILABILITY, icon: <CalendarMonthOutlinedIcon /> },
+      { label: 'Pricing', path: ROUTES.MENTOR_PRICING, icon: <PriceChangeOutlinedIcon /> },
       { label: 'My Profile', path: ROUTES.PROFILE, icon: <PersonOutlineOutlinedIcon /> },
     ],
   },

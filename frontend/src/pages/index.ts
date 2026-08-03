@@ -15,3 +15,9 @@ export { SettingsPage } from './SettingsPage';
 export { AdminDashboardPage } from './AdminDashboardPage';
 export { NotFoundPage } from './NotFoundPage';
 export { UnauthorizedPage } from './UnauthorizedPage';
+
+/* Mentor portal */
+export { BecomeMentorPage } from './mentor/BecomeMentorPage';
+export { MentorRegistrationPage } from './mentor/MentorRegistrationPage';
+export { MentorAvailabilityPage } from './mentor/MentorAvailabilityPage';
+export { MentorPricingPage } from './mentor/MentorPricingPage';

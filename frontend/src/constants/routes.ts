@@ -25,7 +25,11 @@ export const ROUTES = {
   SETTINGS: '/settings',
 
   // Mentor
+  BECOME_MENTOR: '/become-mentor',
+  MENTOR_REGISTRATION: '/mentor/register',
   MENTOR_DASHBOARD: '/mentor/dashboard',
+  MENTOR_AVAILABILITY: '/mentor/availability',
+  MENTOR_PRICING: '/mentor/pricing',
 
   // Admin
   ADMIN: '/admin',
