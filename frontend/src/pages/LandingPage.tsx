@@ -1,4 +1,4 @@
-import { Box, Button, Chip, Container, Grid, Paper } from '@mui/material';
+import { Accordion, AccordionDetails, AccordionSummary, Box, Button, Chip, Container, Grid, Paper } from '@mui/material';
 import { Stack } from '@/components/ui/Stack';
 import { Typography } from '@/components/ui/Typography';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
@@ -11,9 +11,11 @@ import VerifiedOutlinedIcon from '@mui/icons-material/VerifiedOutlined';
 import ScheduleOutlinedIcon from '@mui/icons-material/ScheduleOutlined';
 import AutoGraphOutlinedIcon from '@mui/icons-material/AutoGraphOutlined';
 import StarIcon from '@mui/icons-material/Star';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { motion } from 'framer-motion';
 import { Link as RouterLink } from 'react-router-dom';
-import { Card, Avatar } from '@/components';
+import { AnimatedNumber, Avatar, Card } from '@/components';
 import { useDocumentTitle } from '@/hooks';
 import { ROUTES } from '@/constants';
 
@@ -69,6 +71,118 @@ const STEPS = [
   { number: '01', title: 'Create your account', description: 'Join free as a learner or apply to become a mentor.' },
   { number: '02', title: 'Find your mentor', description: 'Browse verified mentors, ratings and availability.' },
   { number: '03', title: 'Book & grow', description: 'Book sessions with credits, learn and track your progress.' },
+];
+
+const TOP_MENTORS = [
+  {
+    name: 'Sarah Chen',
+    role: 'Staff Engineer · Ex-Google',
+    topics: ['System Design', 'Coding Interviews'],
+    rating: 5.0,
+    sessions: 420,
+    color: '#6D5DF6',
+  },
+  {
+    name: 'Emily Watson',
+    role: 'Principal Engineer · React Core',
+    topics: ['React', 'Performance'],
+    rating: 4.9,
+    sessions: 356,
+    color: '#14B8A6',
+  },
+  {
+    name: 'David Kim',
+    role: 'Engineering Manager · Meta',
+    topics: ['Leadership', 'Interviews'],
+    rating: 4.9,
+    sessions: 298,
+    color: '#F59E0B',
+  },
+  {
+    name: 'Amara Okafor',
+    role: 'ML Engineer · OpenAI',
+    topics: ['Machine Learning', 'Python'],
+    rating: 5.0,
+    sessions: 231,
+    color: '#EC4899',
+  },
+];
+
+const SUCCESS_STORIES = [
+  {
+    name: 'Jordan Alvarez',
+    result: 'From self-taught to Senior Engineer',
+    story: '12 months of weekly mentoring turned a struggling self-taught developer into a senior frontend engineer at a fintech unicorn.',
+    metric: '2.4x salary increase',
+    color: '#6D5DF6',
+  },
+  {
+    name: 'Mei Lin',
+    result: 'Aced the FAANG interview loop',
+    story: 'With mock interviews and system design coaching, Mei landed offers from three top-tier companies in one hiring cycle.',
+    metric: '3 offers in 8 weeks',
+    color: '#14B8A6',
+  },
+  {
+    name: 'Tomás Rivera',
+    result: 'Career pivot into data science',
+    story: 'A structured 6-month roadmap with a hands-on mentor took Tomás from operations manager to a data analyst role he loves.',
+    metric: 'New career in 6 months',
+    color: '#F59E0B',
+  },
+];
+
+const PRICING_PLANS = [
+  {
+    name: 'Explorer',
+    price: 'Free',
+    period: 'forever',
+    description: 'Start your learning journey.',
+    features: ['Community access', '2 credits / month', 'Browse verified mentors', 'Public profile'],
+    highlighted: false,
+    cta: 'Get Started',
+  },
+  {
+    name: 'Pro',
+    price: '$19',
+    period: '/ month',
+    description: 'For serious learners.',
+    features: ['120 credits / month', 'Unlimited community', 'Priority booking', 'Session recordings', 'Progress analytics'],
+    highlighted: true,
+    cta: 'Start Free Trial',
+  },
+  {
+    name: 'Team',
+    price: '$99',
+    period: '/ month',
+    description: 'For teams & academies.',
+    features: ['1,000 credits / month', 'Admin dashboard', 'Custom onboarding', 'Dedicated support', 'SSO & billing'],
+    highlighted: false,
+    cta: 'Contact Sales',
+  },
+];
+
+const FAQ_ITEMS = [
+  {
+    question: 'How does the credit system work?',
+    answer: 'Every session and premium resource has a credit value. Learners top up or earn credits through referrals and achievements, then spend them on 1:1 sessions, group workshops and courses. Credits never expire while your account is active.',
+  },
+  {
+    question: 'How are mentors verified?',
+    answer: 'Every mentor passes a multi-stage vetting process: identity verification, skills assessment, a live demo session and continuous review by learners. Only mentors above a 4.5 average rating stay featured.',
+  },
+  {
+    question: 'Can I get a refund for unused credits?',
+    answer: 'Yes. Unused credits are fully refundable within 60 days of purchase, no questions asked. Session refunds are handled per the mentor’s cancellation policy shown before booking.',
+  },
+  {
+    question: 'What if I need to reschedule a session?',
+    answer: 'You can reschedule up to 12 hours before a session from the Sessions page at no cost. Late cancellations are credited back minus a small fee to protect mentors’ time.',
+  },
+  {
+    question: 'Do you offer plans for teams or academies?',
+    answer: 'Absolutely. The Team plan adds admin dashboards, learner analytics, custom onboarding and volume credit pricing. Reach out through the pricing section and we will set you up within a day.',
+  },
 ];
 
 const TESTIMONIALS = [
@@ -369,6 +483,199 @@ export const LandingPage: React.FC = () => {
         </Container>
       </Box>
 
+      {/* ============ TOP MENTORS ============ */}
+      <Container maxWidth="lg" sx={{ py: { xs: 8, md: 12 } }}>
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: '-80px' }}
+          variants={fadeUp}
+          custom={0}
+        >
+          <Typography variant="h3" fontWeight={800} textAlign="center" sx={{ letterSpacing: '-0.02em' }}>
+            Learn From the <span className="text-gradient">Top Mentors</span>
+          </Typography>
+          <Typography variant="body1" color="text.secondary" textAlign="center" sx={{ mt: 1.5, mb: 6, maxWidth: 560, mx: 'auto' }}>
+            Hand-picked experts with real industry experience and proven teaching track records.
+          </Typography>
+        </motion.div>
+
+        <Grid container spacing={3}>
+          {TOP_MENTORS.map((mentor, index) => (
+            <Grid key={mentor.name} size={{ xs: 12, sm: 6, lg: 3 }}>
+              <motion.div
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: '-60px' }}
+                variants={fadeUp}
+                custom={index}
+                style={{ height: '100%' }}
+              >
+                <Card hoverable sx={{ height: '100%', p: 3, textAlign: 'center' }}>
+                  <Box sx={{ position: 'relative', width: 88, height: 88, mx: 'auto', mb: 2 }}>
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        inset: -6,
+                        borderRadius: '50%',
+                        background: `conic-gradient(from 180deg, ${mentor.color}, transparent 60%)`,
+                        opacity: 0.6,
+                      }}
+                    />
+                    <Avatar
+                      firstName={mentor.name.split(' ')[0]}
+                      lastName={mentor.name.split(' ').slice(1).join(' ')}
+                      size={88}
+                      sx={{ position: 'relative', border: '3px solid', borderColor: 'background.paper' }}
+                    />
+                  </Box>
+                  <Typography variant="h6" fontWeight={700}>
+                    {mentor.name}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                    {mentor.role}
+                  </Typography>
+                  <Stack direction="row" spacing={0.75} justifyContent="center" flexWrap="wrap" sx={{ mb: 2 }}>
+                    {mentor.topics.map((topic) => (
+                      <Chip key={topic} size="small" label={topic} variant="outlined" />
+                    ))}
+                  </Stack>
+                  <Stack direction="row" spacing={2} justifyContent="center" sx={{ mb: 2 }}>
+                    <Stack alignItems="center" spacing={0.25}>
+                      <Stack direction="row" alignItems="center" gap={0.25} sx={{ color: '#F59E0B' }}>
+                        <StarIcon sx={{ fontSize: 15 }} />
+                        <Typography variant="caption" fontWeight={800}>
+                          {mentor.rating.toFixed(1)}
+                        </Typography>
+                      </Stack>
+                      <Typography variant="caption" color="text.secondary">
+                        Rating
+                      </Typography>
+                    </Stack>
+                    <Box sx={{ width: 1, bgcolor: 'divider' }} />
+                    <Stack alignItems="center" spacing={0.25}>
+                      <Typography variant="caption" fontWeight={800}>
+                        {mentor.sessions}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Sessions
+                      </Typography>
+                    </Stack>
+                  </Stack>
+                  <Button
+                    component={RouterLink}
+                    to={ROUTES.MENTORS}
+                    size="small"
+                    variant="outlined"
+                    fullWidth
+                  >
+                    View Profile
+                  </Button>
+                </Card>
+              </motion.div>
+            </Grid>
+          ))}
+        </Grid>
+      </Container>
+
+      {/* ============ SUCCESS STORIES ============ */}
+      <Box sx={{ bgcolor: 'action.hover', py: { xs: 8, md: 12 } }}>
+        <Container maxWidth="lg">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-80px' }}
+            variants={fadeUp}
+            custom={0}
+          >
+            <Typography variant="h3" fontWeight={800} textAlign="center" sx={{ letterSpacing: '-0.02em' }}>
+              Success Stories
+            </Typography>
+            <Typography variant="body1" color="text.secondary" textAlign="center" sx={{ mt: 1.5, mb: 6 }}>
+              Real outcomes from learners who committed to growth.
+            </Typography>
+          </motion.div>
+          <Grid container spacing={3}>
+            {SUCCESS_STORIES.map((story, index) => (
+              <Grid key={story.name} size={{ xs: 12, md: 4 }}>
+                <motion.div
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true, margin: '-60px' }}
+                  variants={fadeUp}
+                  custom={index}
+                  style={{ height: '100%' }}
+                >
+                  <Card hoverable sx={{ height: '100%', p: 3, display: 'flex', flexDirection: 'column' }}>
+                    <Box
+                      sx={{
+                        alignSelf: 'flex-start',
+                        px: 1.5,
+                        py: 0.75,
+                        mb: 2,
+                        borderRadius: 999,
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        color: '#fff',
+                        background: `linear-gradient(135deg, ${story.color}, ${story.color}BB)`,
+                      }}
+                    >
+                      {story.metric}
+                    </Box>
+                    <Typography variant="h6" fontWeight={700} gutterBottom>
+                      {story.result}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.75, flexGrow: 1 }}>
+                      “{story.story}”
+                    </Typography>
+                    <Stack direction="row" alignItems="center" gap={1.25} sx={{ mt: 2.5 }}>
+                      <Avatar name={story.name} size={40} />
+                      <Typography variant="subtitle2" fontWeight={700}>
+                        {story.name}
+                      </Typography>
+                    </Stack>
+                  </Card>
+                </motion.div>
+              </Grid>
+            ))}
+          </Grid>
+        </Container>
+      </Box>
+
+      {/* ============ STATISTICS ============ */}
+      <Container maxWidth="lg" sx={{ py: { xs: 8, md: 12 } }}>
+        <Grid container spacing={2}>
+          {[
+            { value: 2500, suffix: '+', label: 'Verified mentors' },
+            { value: 48000, suffix: '+', label: 'Active learners' },
+            { value: 120000, suffix: '+', label: 'Sessions booked' },
+            { value: 96, suffix: '%', label: 'Success rate' },
+          ].map((stat, index) => (
+            <Grid key={stat.label} size={{ xs: 6, md: 3 }}>
+              <motion.div
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: '-60px' }}
+                variants={fadeUp}
+                custom={index}
+              >
+                <Box sx={{ textAlign: 'center', py: 2 }}>
+                  <AnimatedNumber
+                    value={stat.value}
+                    suffix={stat.suffix}
+                    variant="h3"
+                    color="primary.main"
+                  />
+                  <Typography variant="body2" color="text.secondary" fontWeight={600} sx={{ mt: 0.5 }}>
+                    {stat.label}
+                  </Typography>
+                </Box>
+              </motion.div>
+            </Grid>
+          ))}
+        </Grid>
+      </Container>
+
       {/* ============ TESTIMONIALS ============ */}
       <Container maxWidth="lg" sx={{ py: { xs: 8, md: 12 } }}>
         <motion.div
@@ -422,6 +729,163 @@ export const LandingPage: React.FC = () => {
           ))}
         </Grid>
       </Container>
+
+      {/* ============ PRICING ============ */}
+      <Container maxWidth="lg" sx={{ py: { xs: 8, md: 12 } }}>
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: '-80px' }}
+          variants={fadeUp}
+          custom={0}
+        >
+          <Typography variant="h3" fontWeight={800} textAlign="center" sx={{ letterSpacing: '-0.02em' }}>
+            Simple, Transparent Pricing
+          </Typography>
+          <Typography variant="body1" color="text.secondary" textAlign="center" sx={{ mt: 1.5, mb: 6, maxWidth: 560, mx: 'auto' }}>
+            Start free, upgrade when you are ready. Cancel anytime.
+          </Typography>
+        </motion.div>
+
+        <Grid container spacing={3} sx={{ alignItems: 'stretch' }}>
+          {PRICING_PLANS.map((plan, index) => (
+            <Grid key={plan.name} size={{ xs: 12, md: 4 }}>
+              <motion.div
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: '-60px' }}
+                variants={fadeUp}
+                custom={index}
+                style={{ height: '100%' }}
+              >
+                <Card
+                  hoverable
+                  sx={{
+                    height: '100%',
+                    p: 3.5,
+                    position: 'relative',
+                    overflow: 'hidden',
+                    ...(plan.highlighted
+                      ? {
+                          background: 'linear-gradient(160deg, #6D5DF6 0%, #7C3AED 100%)',
+                          color: '#FFFFFF',
+                          border: 'none',
+                          boxShadow: '0 20px 52px rgba(109,93,246,0.4)',
+                        }
+                      : {}),
+                  }}
+                >
+                  {plan.highlighted && (
+                    <Chip
+                      label="Most Popular"
+                      size="small"
+                      sx={{
+                        position: 'absolute',
+                        top: 16,
+                        right: 16,
+                        bgcolor: 'rgba(255,255,255,0.2)',
+                        color: '#fff',
+                        fontWeight: 800,
+                        backdropFilter: 'blur(8px)',
+                      }}
+                    />
+                  )}
+                  <Typography
+                    variant="h6"
+                    fontWeight={800}
+                    color={plan.highlighted ? undefined : 'primary.main'}
+                  >
+                    {plan.name}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color={plan.highlighted ? 'rgba(255,255,255,0.85)' : 'text.secondary'}
+                    sx={{ mt: 0.5, mb: 2 }}
+                  >
+                    {plan.description}
+                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, mb: 2.5 }}>
+                    <Typography variant="h3" fontWeight={900} sx={{ letterSpacing: '-0.02em' }}>
+                      {plan.price}
+                    </Typography>
+                    <Typography variant="body2" sx={{ opacity: 0.8 }}>
+                      {plan.period}
+                    </Typography>
+                  </Box>
+                  <Stack spacing={1.25} sx={{ mb: 3, minHeight: 168 }}>
+                    {plan.features.map((feature) => (
+                      <Stack key={feature} direction="row" alignItems="center" gap={1}>
+                        <CheckCircleIcon sx={{ fontSize: 17, color: plan.highlighted ? '#5EEAD4' : 'success.main' }} />
+                        <Typography
+                          variant="body2"
+                          color={plan.highlighted ? 'rgba(255,255,255,0.92)' : 'text.primary'}
+                        >
+                          {feature}
+                        </Typography>
+                      </Stack>
+                    ))}
+                  </Stack>
+                  <Button
+                    component={RouterLink}
+                    to={ROUTES.REGISTER}
+                    variant={plan.highlighted ? 'contained' : 'outlined'}
+                    fullWidth
+                    size="large"
+                    sx={
+                      plan.highlighted
+                        ? { bgcolor: '#fff', color: '#5443D4', '&:hover': { bgcolor: 'rgba(255,255,255,0.92)' } }
+                        : undefined
+                    }
+                  >
+                    {plan.cta}
+                  </Button>
+                </Card>
+              </motion.div>
+            </Grid>
+          ))}
+        </Grid>
+      </Container>
+
+      {/* ============ FAQ ============ */}
+      <Box sx={{ bgcolor: 'action.hover', py: { xs: 8, md: 12 } }}>
+        <Container maxWidth="md">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-80px' }}
+            variants={fadeUp}
+            custom={0}
+          >
+            <Typography variant="h3" fontWeight={800} textAlign="center" sx={{ letterSpacing: '-0.02em', mb: 6 }}>
+              Frequently Asked Questions
+            </Typography>
+          </motion.div>
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-40px' }}
+            variants={fadeUp}
+            custom={1}
+          >
+            <Stack spacing={1.5}>
+              {FAQ_ITEMS.map((item) => (
+                <Accordion key={item.question}>
+                  <AccordionSummary expandIcon={<ExpandMoreIcon />} aria-label={item.question}>
+                    <Typography variant="subtitle1" fontWeight={700}>
+                      {item.question}
+                    </Typography>
+                  </AccordionSummary>
+                  <AccordionDetails>
+                    <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.8 }}>
+                      {item.answer}
+                    </Typography>
+                  </AccordionDetails>
+                </Accordion>
+              ))}
+            </Stack>
+          </motion.div>
+        </Container>
+      </Box>
 
       {/* ============ CTA ============ */}
       <Box

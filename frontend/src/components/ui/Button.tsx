@@ -7,6 +7,10 @@ export interface ButtonProps extends MuiButtonProps {
   loading?: boolean;
   /** Convenience leading icon (rendered before the label). */
   icon?: ReactNode;
+  /** Renders the button as an anchor when provided. */
+  href?: string;
+  target?: string;
+  rel?: string;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -15,12 +19,16 @@ export const Button: React.FC<ButtonProps> = ({
   disabled,
   children,
   startIcon,
+  href,
+  target,
+  rel,
   ...rest
 }) => {
   return (
     <MuiButton
       disabled={disabled || loading}
       startIcon={loading ? <CircularProgress size={18} thickness={5} color="inherit" /> : (startIcon ?? icon)}
+      {...(href !== undefined ? { component: 'a' as const, href, target, rel } : {})}
       {...rest}
     >
       {children}

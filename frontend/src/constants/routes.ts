@@ -11,6 +11,13 @@ export const ROUTES = {
   // Authenticated
   DASHBOARD: '/dashboard',
   PROFILE: '/profile',
+  PROFILE_EDIT: '/profile/edit',
+  PROFILE_EDUCATION: '/profile/education',
+  PROFILE_EXPERIENCE: '/profile/experience',
+  PROFILE_SKILLS: '/profile/skills',
+  PROFILE_LANGUAGES: '/profile/languages',
+  PROFILE_SOCIAL: '/profile/social',
+  PROFILE_RESUME: '/profile/resume',
   COMMUNITY: '/community',
   SESSIONS: '/sessions',
   WALLET: '/wallet',

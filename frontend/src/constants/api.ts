@@ -14,6 +14,15 @@ export const API_ENDPOINTS = {
   USERS: {
     BASE: '/users',
     PROFILE: '/users/profile',
+    SEARCH: '/users/search',
+    EDUCATION: '/users/{userId}/education',
+    EDUCATION_ITEM: '/users/{userId}/education/{itemId}',
+    EXPERIENCE: '/users/{userId}/experience',
+    EXPERIENCE_ITEM: '/users/{userId}/experience/{itemId}',
+    SKILLS: '/users/{userId}/skills',
+    SKILLS_ITEM: '/users/{userId}/skills/{itemId}',
+    LANGUAGES: '/users/{userId}/languages',
+    LANGUAGES_ITEM: '/users/{userId}/languages/{itemId}',
   },
   MENTORS: {
     BASE: '/mentors',

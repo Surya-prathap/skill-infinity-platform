@@ -5,6 +5,7 @@ export const STORAGE_KEYS = {
   THEME: 'skill_theme_mode',
   LANGUAGE: 'skill_language',
   REMEMBER_ME: 'skill_remember_me',
+  PROFILE: 'skill_profile',
 } as const;
 
 export const PERSIST_KEYS = {

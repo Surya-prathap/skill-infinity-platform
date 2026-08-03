@@ -41,9 +41,41 @@ const DashboardPage = lazyPage(async () => {
   const module = await import('@/pages/DashboardPage');
   return { default: module.DashboardPage };
 });
-const ProfilePage = lazyPage(async () => {
-  const module = await import('@/pages/ProfilePage');
-  return { default: module.ProfilePage };
+const ProfileLayout = lazyPage(async () => {
+  const module = await import('@/pages/profile/ProfileLayout');
+  return { default: module.ProfileLayout };
+});
+const ProfileOverviewPage = lazyPage(async () => {
+  const module = await import('@/pages/profile/ProfileOverviewPage');
+  return { default: module.ProfileOverviewPage };
+});
+const EditProfilePage = lazyPage(async () => {
+  const module = await import('@/pages/profile/EditProfilePage');
+  return { default: module.EditProfilePage };
+});
+const EducationPage = lazyPage(async () => {
+  const module = await import('@/pages/profile/EducationPage');
+  return { default: module.EducationPage };
+});
+const ExperiencePage = lazyPage(async () => {
+  const module = await import('@/pages/profile/ExperiencePage');
+  return { default: module.ExperiencePage };
+});
+const SkillsPage = lazyPage(async () => {
+  const module = await import('@/pages/profile/SkillsPage');
+  return { default: module.SkillsPage };
+});
+const LanguagesPage = lazyPage(async () => {
+  const module = await import('@/pages/profile/LanguagesPage');
+  return { default: module.LanguagesPage };
+});
+const SocialLinksPage = lazyPage(async () => {
+  const module = await import('@/pages/profile/SocialLinksPage');
+  return { default: module.SocialLinksPage };
+});
+const ResumePage = lazyPage(async () => {
+  const module = await import('@/pages/profile/ResumePage');
+  return { default: module.ResumePage };
 });
 const MentorDashboardPage = lazyPage(async () => {
   const module = await import('@/pages/MentorDashboardPage');
@@ -186,10 +218,75 @@ export const AppRouter: React.FC = () => {
             path={ROUTES.PROFILE}
             element={
               <Suspense fallback={<RouteFallback />}>
-                <ProfilePage />
+                <ProfileLayout />
               </Suspense>
             }
-          />
+          >
+            <Route
+              index
+              element={
+                <Suspense fallback={<RouteFallback />}>
+                  <ProfileOverviewPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="edit"
+              element={
+                <Suspense fallback={<RouteFallback />}>
+                  <EditProfilePage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="education"
+              element={
+                <Suspense fallback={<RouteFallback />}>
+                  <EducationPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="experience"
+              element={
+                <Suspense fallback={<RouteFallback />}>
+                  <ExperiencePage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="skills"
+              element={
+                <Suspense fallback={<RouteFallback />}>
+                  <SkillsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="languages"
+              element={
+                <Suspense fallback={<RouteFallback />}>
+                  <LanguagesPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="social"
+              element={
+                <Suspense fallback={<RouteFallback />}>
+                  <SocialLinksPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="resume"
+              element={
+                <Suspense fallback={<RouteFallback />}>
+                  <ResumePage />
+                </Suspense>
+              }
+            />
+          </Route>
           <Route
             path={ROUTES.COMMUNITY}
             element={

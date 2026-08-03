@@ -30,10 +30,14 @@ export const fetchUserProfile = createAsyncThunk<UserProfile, void, { rejectValu
 export const updateUserProfile = createAsyncThunk<
   UserProfile,
   Partial<UserProfile>,
-  { rejectValue: string }
->('user/updateProfile', async (payload, { rejectWithValue }) => {
+  { rejectValue: string; state: unknown }
+>('user/updateProfile', async (payload, { rejectWithValue, getState }) => {
   try {
-    const response = await userService.updateProfile(payload);
+    const userId = (getState() as { auth: { user?: { userId?: string } } }).auth.user?.userId;
+    if (!userId) {
+      return rejectWithValue('Unable to determine your user ID.');
+    }
+    const response = await userService.updateProfile(userId, payload);
     return response.data.data;
   } catch (error) {
     return rejectWithValue(normalizeError(error).message);
