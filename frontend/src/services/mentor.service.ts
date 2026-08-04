@@ -8,13 +8,17 @@ import type {
   Category,
   CertificationRequest,
   DashboardData,
+  DiscoveryQuery,
   ExpertiseRequest,
   Mentor,
   MentorAchievement,
   MentorAvailability,
   MentorCertification,
   MentorExpertise,
+  MentorLanguage,
   MentorPricing,
+  MentorSummary,
+  PageResponse,
   PricingRequest,
   TimeSlot,
   UpdateMentorProfileRequest,
@@ -38,6 +42,31 @@ export const mentorService = {
 
   updateProfile: (mentorId: string, payload: UpdateMentorProfileRequest) =>
     apiClient.put<ApiResponse<Mentor>>(`${API_ENDPOINTS.MENTORS.BASE}/${mentorId}`, payload),
+
+  /* ---------------- Marketplace (discovery) ---------------- */
+
+  searchMentors: (query: DiscoveryQuery) =>
+    apiClient.get<ApiResponse<PageResponse<MentorSummary>>>(API_ENDPOINTS.MENTORS.SEARCH, {
+      params: query,
+    }),
+
+  getMentorById: (mentorId: string) =>
+    apiClient.get<ApiResponse<Mentor>>(`${API_ENDPOINTS.MENTORS.BASE}/${mentorId}`),
+
+  getPublicProfile: (mentorId: string) =>
+    apiClient.get<ApiResponse<Mentor>>(
+      resolve(API_ENDPOINTS.MENTORS.PUBLIC_PROFILE, { mentorId }),
+    ),
+
+  getMentorAvailability: (mentorId: string) =>
+    apiClient.get<ApiResponse<MentorAvailability[]>>(
+      resolve(API_ENDPOINTS.MENTORS.AVAILABILITY_BY_ID, { mentorId }),
+    ),
+
+  getMentorLanguages: (mentorId: string) =>
+    apiClient.get<ApiResponse<MentorLanguage[]>>(
+      `${API_ENDPOINTS.MENTORS.BASE}/${mentorId}/languages`,
+    ),
 
   /* ---------------- Dashboard ---------------- */
 

@@ -7,6 +7,8 @@ export const ROUTES = {
   RESET_PASSWORD: '/reset-password',
   EMAIL_VERIFICATION: '/verify-email',
   MENTORS: '/mentors',
+  MENTOR_DETAILS: '/mentors/:mentorId',
+  BOOK_SESSION: '/book/:mentorId',
 
   // Authenticated
   DASHBOARD: '/dashboard',
@@ -20,7 +22,11 @@ export const ROUTES = {
   PROFILE_RESUME: '/profile/resume',
   COMMUNITY: '/community',
   SESSIONS: '/sessions',
+  SESSION_DETAILS: '/sessions/:sessionId',
+  CALENDAR: '/calendar',
   WALLET: '/wallet',
+  CREDITS: '/wallet/credits',
+  TRANSACTIONS: '/wallet/transactions',
   NOTIFICATIONS: '/notifications',
   SETTINGS: '/settings',
 

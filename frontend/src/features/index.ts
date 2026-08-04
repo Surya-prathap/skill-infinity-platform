@@ -9,3 +9,7 @@
  * Cross-cutting concerns live in src/components, src/hooks, src/services etc.
  */
 export * from './auth';
+export * from './marketplace';
+export * from './sessions';
+export * from './wallet';
+export * from './payments';

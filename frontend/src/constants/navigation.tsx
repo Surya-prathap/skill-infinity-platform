@@ -8,6 +8,7 @@ import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import WorkspacePremiumOutlinedIcon from '@mui/icons-material/WorkspacePremiumOutlined';
 import AdminPanelSettingsOutlinedIcon from '@mui/icons-material/AdminPanelSettingsOutlined';
 import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
+import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined';
 import PriceChangeOutlinedIcon from '@mui/icons-material/PriceChangeOutlined';
 import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
 import EmojiEventsOutlinedIcon from '@mui/icons-material/EmojiEventsOutlined';
@@ -19,6 +20,7 @@ import { ROLES, ROUTES } from '@/constants';
 export const CORE_NAV: NavItem[] = [
   { label: 'Dashboard', path: ROUTES.DASHBOARD, icon: <DashboardOutlinedIcon />, end: true },
   { label: 'Sessions', path: ROUTES.SESSIONS, icon: <EventAvailableOutlinedIcon /> },
+  { label: 'Calendar', path: ROUTES.CALENDAR, icon: <CalendarTodayOutlinedIcon /> },
   { label: 'Wallet', path: ROUTES.WALLET, icon: <AccountBalanceWalletOutlinedIcon /> },
   { label: 'Community', path: ROUTES.COMMUNITY, icon: <ForumOutlinedIcon /> },
 ];

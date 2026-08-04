@@ -11,3 +11,4 @@ export { PageHeader } from './PageHeader';
 export { ScrollToTop } from './ScrollToTop';
 export { DashboardHeader } from './DashboardHeader';
 export { DashboardSidebar } from './DashboardSidebar';
+export { PageTransition } from './PageTransition';

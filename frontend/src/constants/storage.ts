@@ -8,6 +8,8 @@ export const STORAGE_KEYS = {
   PROFILE: 'skill_profile',
   MENTOR_DRAFT: 'skill_mentor_draft',
   MENTOR_PROFILE: 'skill_mentor_profile',
+  SAVED_MENTORS: 'skill_saved_mentors',
+  RECENT_SEARCHES: 'skill_recent_searches',
 } as const;
 
 export const PERSIST_KEYS = {

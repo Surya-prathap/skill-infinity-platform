@@ -1,142 +1,228 @@
-import { Box, Button, Grid } from '@mui/material';
+import { useMemo, useState } from 'react';
+import { Box, Button, Chip, Grid } from '@mui/material';
+import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import AddIcon from '@mui/icons-material/Add';
+import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
+import TrendingUpOutlinedIcon from '@mui/icons-material/TrendingUpOutlined';
+import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import { Card } from '@/components/ui/Card';
 import { Stack } from '@/components/ui/Stack';
 import { Typography } from '@/components/ui/Typography';
-import AddIcon from '@mui/icons-material/Add';
-import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import { useState } from 'react';
-import { Card, DataTable, PageHeader, Pagination, StatusBadge } from '@/components';
+import { MetricCard } from '@/components/ui/MetricCard';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { PageHeader } from '@/components/common';
+import { AreaChart, DonutChart } from '@/components/charts';
+import { WalletBalanceCard, TransactionCard } from '@/components/wallet';
+import { EmptyState, PageSkeleton } from '@/components/feedback';
+import { Pagination } from '@/components/ui/Pagination';
 import { useDocumentTitle } from '@/hooks';
-import { formatCurrency } from '@/utils';
-import { showInfo } from '@/utils';
+import { ROUTES } from '@/constants';
+import {
+  useWalletBalanceQuery,
+  useWalletHistoryQuery,
+  useWalletStatisticsQuery,
+} from '@/features/wallet';
+import { seedWalletMonthlySeries } from '@/features/wallet/data';
+import { formatCompactNumber, formatCurrency } from '@/utils';
 
-interface Transaction {
-  id: string;
-  description: string;
-  date: string;
-  amount: number;
-  type: 'credit' | 'debit';
-  status: 'Completed' | 'Pending';
-}
-
-const TRANSACTIONS: Transaction[] = [
-  { id: '1', description: 'Session with Alex Rivera', date: 'Aug 6, 2026', amount: -40, type: 'debit', status: 'Completed' },
-  { id: '2', description: 'Credit top-up', date: 'Aug 4, 2026', amount: 100, type: 'credit', status: 'Completed' },
-  { id: '3', description: 'Referral bonus', date: 'Aug 2, 2026', amount: 50, type: 'credit', status: 'Completed' },
-  { id: '4', description: 'Session with Emily Watson', date: 'Jul 30, 2026', amount: -35, type: 'debit', status: 'Completed' },
-  { id: '5', description: 'Mentor payout', date: 'Jul 28, 2026', amount: 120, type: 'credit', status: 'Pending' },
-];
+const PAGE_SIZE = 5;
 
 export const WalletPage: React.FC = () => {
   useDocumentTitle('Wallet');
-  const [page, setPage] = useState(1);
-  const pageSize = 5;
+  const navigate = useNavigate();
+  const [page, setPage] = useState(0);
+
+  const balance = useWalletBalanceQuery();
+  const statistics = useWalletStatisticsQuery();
+  const history = useWalletHistoryQuery(page, PAGE_SIZE);
+
+  const spendingSplit = useMemo(() => {
+    const stats = statistics.statistics;
+    return [
+      { label: 'Sessions', value: Math.max(Math.round((stats.totalCreditsOut ?? 0) * 0.7), 1), color: '#6D5DF6' },
+      { label: 'Course & content', value: Math.max(Math.round((stats.totalCreditsOut ?? 0) * 0.2), 1), color: '#14B8A6' },
+      { label: 'Rewards & other', value: Math.max(Math.round((stats.totalCreditsOut ?? 0) * 0.1), 1), color: '#F59E0B' },
+    ];
+  }, [statistics.statistics]);
 
   return (
     <Box>
       <PageHeader
         title="Wallet"
-        subtitle="Manage your credits, track transactions and top up anytime."
+        subtitle="Manage your credits, track spending and top up anytime."
         actions={
-          <Button variant="contained" startIcon={<AddIcon />} onClick={() => showInfo('Top-up flow ships with the Payment feature.')}>
-            Top Up
-          </Button>
+          <>
+            <Button
+              variant="outlined"
+              startIcon={<ReceiptLongOutlinedIcon />}
+              onClick={() => navigate(ROUTES.TRANSACTIONS)}
+            >
+              Transactions
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => navigate(ROUTES.CREDITS)}
+            >
+              Buy credits
+            </Button>
+          </>
         }
       />
 
-      <Grid container spacing={3}>
-        <Grid size={{ xs: 12, md: 4 }}>
-          <Card
-            gradient
-            sx={{ p: 3.5, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}
-          >
-            <Stack direction="row" alignItems="center" justifyContent="space-between">
-              <Typography variant="body2" sx={{ opacity: 0.85, fontWeight: 600 }}>
-                Available Balance
-              </Typography>
-              <AccountBalanceWalletOutlinedIcon />
-            </Stack>
-            <Typography variant="h3" fontWeight={800} sx={{ my: 2 }}>
-              {formatCurrency(248)}
-            </Typography>
-            <Stack direction="row" spacing={1}>
-              <Button
-                variant="contained"
-                size="small"
-                sx={{ backgroundColor: 'rgba(255,255,255,0.18)', '&:hover': { backgroundColor: 'rgba(255,255,255,0.28)' } }}
-                onClick={() => showInfo('Top-up flow ships with the Payment feature.')}
-              >
-                Deposit
-              </Button>
-              <Button
-                variant="outlined"
-                size="small"
-                sx={{ borderColor: 'rgba(255,255,255,0.4)', color: '#fff', '&:hover': { borderColor: '#fff', backgroundColor: 'rgba(255,255,255,0.08)' } }}
-                onClick={() => showInfo('Withdrawal flow ships with the Payment feature.')}
-              >
-                Withdraw
-              </Button>
-            </Stack>
-          </Card>
-
-          <Card sx={{ p: 3, mt: 3 }}>
-            <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1.5 }}>
-              <TrendingUpIcon color="success" />
-              <Typography variant="subtitle1" fontWeight={700}>
-                Monthly Activity
-              </Typography>
-            </Stack>
-            <Typography variant="body2" color="text.secondary">
-              You earned {formatCurrency(220)} and spent {formatCurrency(75)} this month.
-            </Typography>
-          </Card>
+      {/* ================= Balance hero ================= */}
+      <Grid container spacing={3} sx={{ mb: 3 }}>
+        <Grid size={{ xs: 12, md: 5 }}>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }} style={{ height: '100%' }}>
+            <WalletBalanceCard
+              balance={balance.balance}
+              onTopUp={() => navigate(ROUTES.CREDITS)}
+              onHistory={() => navigate(ROUTES.TRANSACTIONS)}
+            />
+          </motion.div>
         </Grid>
-
-        <Grid size={{ xs: 12, md: 8 }}>
-          <Card sx={{ p: 3 }}>
-            <Typography variant="h6" fontWeight={700} sx={{ mb: 2.5 }}>
-              Transaction History
-            </Typography>
-            <DataTable<Transaction>
-              columns={[
-                { id: 'description', label: 'Description' },
-                { id: 'date', label: 'Date' },
-                {
-                  id: 'amount',
-                  label: 'Amount',
-                  align: 'right',
-                  render: (row) => (
-                    <Typography variant="body2" fontWeight={700} color={row.type === 'credit' ? 'success.main' : 'text.primary'}>
-                      {row.type === 'credit' ? '+' : '−'}
-                      {formatCurrency(Math.abs(row.amount))}
-                    </Typography>
-                  ),
-                },
-                {
-                  id: 'status',
-                  label: 'Status',
-                  align: 'center',
-                  render: (row) => (
-                    <StatusBadge
-                      label={row.status}
-                      color={row.status === 'Completed' ? 'success' : 'warning'}
-                    />
-                  ),
-                },
-              ]}
-              rows={TRANSACTIONS}
-              keyExtractor={(row) => row.id}
-            />
-            <Pagination
-              page={page}
-              count={2}
-              totalItems={TRANSACTIONS.length}
-              pageSize={pageSize}
-              onChange={(_, value) => setPage(value)}
-            />
-          </Card>
+        <Grid size={{ xs: 12, md: 7 }}>
+          <Grid container spacing={3}>
+            {[
+              { label: 'Credits purchased', value: statistics.statistics.totalCreditsIn, suffix: '', color: '#6D5DF6', icon: <AddIcon /> },
+              { label: 'Credits used', value: statistics.statistics.totalCreditsOut, suffix: '', color: '#14B8A6', icon: <AccountBalanceWalletOutlinedIcon /> },
+              { label: 'Transactions', value: statistics.statistics.totalTransactions, suffix: '', color: '#F59E0B', icon: <ReceiptLongOutlinedIcon /> },
+              { label: 'Active days', value: statistics.statistics.activeDays, suffix: '', color: '#3B82F6', icon: <TrendingUpOutlinedIcon /> },
+            ].map((stat, index) => (
+              <Grid key={stat.label} size={{ xs: 12, sm: 6 }}>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.45, delay: index * 0.08 }}
+                  style={{ height: '100%' }}
+                >
+                  <MetricCard
+                    label={stat.label}
+                    value={stat.value}
+                    suffix={stat.suffix}
+                    icon={stat.icon}
+                    color={stat.color}
+                  />
+                </motion.div>
+              </Grid>
+            ))}
+          </Grid>
         </Grid>
       </Grid>
+
+      {/* ================= Charts ================= */}
+      <Grid container spacing={3} sx={{ mb: 3 }}>
+        <Grid size={{ xs: 12, lg: 8 }}>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.1 }} style={{ height: '100%' }}>
+            <Card sx={{ p: { xs: 2.5, md: 3.5 }, height: '100%' }}>
+              <SectionHeader
+                icon={<TrendingUpOutlinedIcon />}
+                iconColor="#6D5DF6"
+                title="Monthly spending"
+                subtitle="Credits in & out over the last 7 months"
+                action={
+                  <Chip
+                    label={`${formatCurrency(balance.balance.availableBalance)} available`}
+                    size="small"
+                    color="success"
+                    variant="outlined"
+                    sx={{ fontWeight: 700 }}
+                  />
+                }
+              />
+              <AreaChart data={[...seedWalletMonthlySeries]} color="#6D5DF6" suffix="" height={240} />
+            </Card>
+          </motion.div>
+        </Grid>
+        <Grid size={{ xs: 12, lg: 4 }}>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.15 }} style={{ height: '100%' }}>
+            <Card sx={{ p: { xs: 2.5, md: 3.5 }, height: '100%', textAlign: 'center' }}>
+              <SectionHeader
+                icon={<AccountBalanceWalletOutlinedIcon />}
+                iconColor="#14B8A6"
+                title="Spending split"
+                subtitle="Where credits go"
+              />
+              <DonutChart
+                segments={spendingSplit}
+                size={170}
+                centerValue={formatCompactNumber(statistics.statistics.totalCreditsOut)}
+                centerLabel="spent"
+              />
+              <Stack spacing={1} sx={{ mt: 2 }}>
+                {spendingSplit.map((segment) => (
+                  <Stack key={segment.label} direction="row" alignItems="center" gap={1}>
+                    <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: segment.color }} />
+                    <Typography variant="caption" fontWeight={600} sx={{ flexGrow: 1 }}>
+                      {segment.label}
+                    </Typography>
+                    <Typography variant="caption" fontWeight={800}>
+                      {formatCurrency(segment.value)}
+                    </Typography>
+                  </Stack>
+                ))}
+              </Stack>
+            </Card>
+          </motion.div>
+        </Grid>
+      </Grid>
+
+      {/* ================= Recent transactions ================= */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.2 }}>
+        <Card sx={{ p: { xs: 2, md: 3.5 } }}>
+          <SectionHeader
+            icon={<ReceiptLongOutlinedIcon />}
+            iconColor="#F59E0B"
+            title="Recent transactions"
+            subtitle="Your latest wallet activity"
+            action={
+              <Button
+                size="small"
+                endIcon={<ArrowForwardIcon fontSize="small" />}
+                onClick={() => navigate(ROUTES.TRANSACTIONS)}
+              >
+                View all
+              </Button>
+            }
+          />
+
+          {history.isFetching && history.data.content.length === 0 ? (
+            <PageSkeleton />
+          ) : history.data.empty ? (
+            <EmptyState
+              icon={<AccountBalanceWalletOutlinedIcon />}
+              title="No transactions yet"
+              description="Buy credits to start your learning journey."
+              actionLabel="Buy credits"
+              onAction={() => navigate(ROUTES.CREDITS)}
+            />
+          ) : (
+            <>
+              <Stack spacing={1.25}>
+                {history.data.content.map((transaction, index) => (
+                  <TransactionCard key={transaction.id} transaction={transaction} index={index} />
+                ))}
+              </Stack>
+              <Pagination
+                page={page + 1}
+                count={history.data.totalPages}
+                totalItems={history.data.totalElements}
+                pageSize={PAGE_SIZE}
+                onChange={(_, value) => setPage(value - 1)}
+                sx={{ mt: 2.5 }}
+              />
+            </>
+          )}
+
+          {history.isOffline && (
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2, textAlign: 'center' }}>
+              Showing your local wallet preview — live balance syncs when the API is reachable.
+            </Typography>
+          )}
+        </Card>
+      </motion.div>
     </Box>
   );
 };
