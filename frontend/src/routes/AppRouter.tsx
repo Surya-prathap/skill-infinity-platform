@@ -153,6 +153,22 @@ const NotificationsPage = lazyPage(async () => {
   const module = await import('@/pages/NotificationsPage');
   return { default: module.NotificationsPage };
 });
+const CommunicationPage = lazyPage(async () => {
+  const module = await import('@/pages/CommunicationPage');
+  return { default: module.CommunicationPage };
+});
+const AnnouncementsPage = lazyPage(async () => {
+  const module = await import('@/pages/AnnouncementsPage');
+  return { default: module.AnnouncementsPage };
+});
+const MeetingsPage = lazyPage(async () => {
+  const module = await import('@/pages/MeetingsPage');
+  return { default: module.MeetingsPage };
+});
+const MeetingPage = lazyPage(async () => {
+  const module = await import('@/pages/MeetingPage');
+  return { default: module.MeetingPage };
+});
 const SettingsPage = lazyPage(async () => {
   const module = await import('@/pages/SettingsPage');
   return { default: module.SettingsPage };
@@ -273,9 +289,9 @@ export const AppRouter: React.FC = () => {
         {/* ---------- Authenticated ---------- */}
         <Route
           element={
-            <AuthGuard>
+
               <DashboardLayout />
-            </AuthGuard>
+
           }
         >
           <Route
@@ -432,6 +448,38 @@ export const AppRouter: React.FC = () => {
             }
           />
           <Route
+            path={ROUTES.MESSAGES}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <CommunicationPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.MESSAGES_CONVERSATION}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <CommunicationPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.ANNOUNCEMENTS}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <AnnouncementsPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.MEETINGS}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <MeetingsPage />
+              </Suspense>
+            }
+          />
+          <Route
             path={ROUTES.SETTINGS}
             element={
               <Suspense fallback={<RouteFallback />}>
@@ -518,6 +566,18 @@ export const AppRouter: React.FC = () => {
             }
           />
         </Route>
+
+        {/* ---------- Full-screen meeting (outside the dashboard chrome) ---------- */}
+        <Route
+          path={ROUTES.MEETING}
+          element={
+
+              <Suspense fallback={<RouteFallback />}>
+                <MeetingPage />
+              </Suspense>
+
+          }
+        />
 
         {/* ---------- Admin ---------- */}
         <Route

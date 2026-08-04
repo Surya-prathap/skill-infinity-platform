@@ -28,6 +28,11 @@ export const ROUTES = {
   CREDITS: '/wallet/credits',
   TRANSACTIONS: '/wallet/transactions',
   NOTIFICATIONS: '/notifications',
+  MESSAGES: '/messages',
+  MESSAGES_CONVERSATION: '/messages/:conversationId',
+  ANNOUNCEMENTS: '/announcements',
+  MEETINGS: '/meetings',
+  MEETING: '/meet/:meetingId',
   SETTINGS: '/settings',
 
   // Mentor

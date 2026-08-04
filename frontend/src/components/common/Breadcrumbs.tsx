@@ -12,6 +12,8 @@ const LABEL_MAP: Record<string, string> = {
   sessions: 'Sessions',
   wallet: 'Wallet',
   notifications: 'Notifications',
+  messages: 'Messages',
+  announcements: 'Announcements',
   settings: 'Settings',
   mentor: 'Mentor',
   admin: 'Admin',

@@ -8,3 +8,4 @@ export * from './marketplace';
 export * from './session';
 export * from './wallet';
 export * from './booking';
+export * from './communication';

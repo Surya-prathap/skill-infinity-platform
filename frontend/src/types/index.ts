@@ -8,3 +8,5 @@ export type * from './session';
 export type * from './wallet';
 export type * from './payment';
 export type * from './review';
+export type * from './chat';
+export type * from './meeting';

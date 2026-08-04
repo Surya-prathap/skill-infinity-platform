@@ -11,6 +11,13 @@ export interface AppNotification {
   read: boolean;
   createdAt: string;
   link?: string;
+  /** Domain category used for grouping in the notification center. */
+  category?: string;
+  /** Icon emoji used by the premium notification center. */
+  emoji?: string;
+  /** Optional action label rendered as a button on the notification card. */
+  actionLabel?: string;
+  readAt?: string;
 }
 
 export interface NavItem {

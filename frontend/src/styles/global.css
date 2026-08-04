@@ -99,6 +99,19 @@ body {
   }
 }
 
+/* Presence pulse ring */
+@keyframes presencePing {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  75%,
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
 /* Respect reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *,
