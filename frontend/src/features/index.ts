@@ -13,3 +13,5 @@ export * from './marketplace';
 export * from './sessions';
 export * from './wallet';
 export * from './payments';
+export * from './communication';
+export * from './meeting';

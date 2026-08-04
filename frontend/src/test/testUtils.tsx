@@ -4,7 +4,14 @@ import { Provider } from 'react-redux';
 import { MemoryRouter } from 'react-router-dom';
 import { configureStore } from '@reduxjs/toolkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { authReducer, mentorReducer, settingsReducer, themeReducer } from '@/store/slices';
+import {
+  authReducer,
+  chatReducer,
+  mentorReducer,
+  notificationsReducer,
+  settingsReducer,
+  themeReducer,
+} from '@/store/slices';
 
 export const createTestStore = () =>
   configureStore({
@@ -13,6 +20,8 @@ export const createTestStore = () =>
       mentor: mentorReducer,
       settings: settingsReducer,
       theme: themeReducer,
+      chat: chatReducer,
+      notifications: notificationsReducer,
     },
   });
 
