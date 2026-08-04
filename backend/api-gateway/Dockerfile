@@ -1,18 +1,16 @@
-FROM eclipse-temurin:21-jdk-alpine AS builder
-WORKDIR /app
-COPY pom.xml ../pom.xml
-COPY common/pom.xml ../common/pom.xml
-COPY common/src ../common/src
-COPY api-gateway/pom.xml api-gateway/pom.xml
-COPY api-gateway/src api-gateway/src
-RUN cd .. && mvn clean install -pl api-gateway -am -DskipTests -q
+FROM maven:3.9.11-eclipse-temurin-21 AS builder
+WORKDIR /workspace
+
+COPY . .
+
+RUN mvn clean package -pl api-gateway -am -DskipTests
 
 FROM eclipse-temurin:21-jre-alpine
 RUN apk add --no-cache curl wget && \
     addgroup -S skillinfinity && adduser -S skillinfinity -G skillinfinity
 
 WORKDIR /app
-COPY --from=builder /app/api-gateway/target/*.jar app.jar
+COPY --from=builder /workspace/api-gateway/target/api-gateway-1.0.0-SNAPSHOT.jar /app/app.jar
 
 ENV JAVA_OPTS="-XX:+UseZGC \
     -XX:MaxRAMPercentage=75.0 \
