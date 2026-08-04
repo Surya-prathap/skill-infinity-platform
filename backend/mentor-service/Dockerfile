@@ -1,18 +1,16 @@
-FROM eclipse-temurin:21-jdk-alpine AS builder
-WORKDIR /app
-COPY pom.xml ../pom.xml
-COPY common/pom.xml ../common/pom.xml
-COPY common/src ../common/src
-COPY mentor-service/pom.xml mentor-service/pom.xml
-COPY mentor-service/src mentor-service/src
-RUN cd .. && mvn clean install -pl mentor-service -am -DskipTests -q
+FROM maven:3.9.11-eclipse-temurin-21 AS builder
+WORKDIR /workspace
+
+COPY . .
+
+RUN mvn clean package -pl mentor-service -am -DskipTests
 
 FROM eclipse-temurin:21-jre-alpine
 RUN apk add --no-cache curl wget && \
     addgroup -S skillinfinity && adduser -S skillinfinity -G skillinfinity
 
 WORKDIR /app
-COPY --from=builder /app/mentor-service/target/*.jar app.jar
+COPY --from=builder /workspace/mentor-service/target/mentor-service-1.0.0-SNAPSHOT.jar /app/app.jar
 
 ENV JAVA_OPTS="-XX:+UseZGC -XX:MaxRAMPercentage=75.0 -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8"
 

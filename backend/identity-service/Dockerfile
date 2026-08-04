@@ -1,18 +1,16 @@
-FROM eclipse-temurin:21-jdk-alpine AS builder
-WORKDIR /app
-COPY pom.xml ../pom.xml
-COPY common/pom.xml ../common/pom.xml
-COPY common/src ../common/src
-COPY identity-service/pom.xml identity-service/pom.xml
-COPY identity-service/src identity-service/src
-RUN cd .. && mvn clean install -pl identity-service -am -DskipTests -q
+FROM maven:3.9.11-eclipse-temurin-21 AS builder
+WORKDIR /workspace
+
+COPY . .
+
+RUN mvn clean package -pl identity-service -am -DskipTests
 
 FROM eclipse-temurin:21-jre-alpine
 RUN apk add --no-cache curl wget && \
     addgroup -S skillinfinity && adduser -S skillinfinity -G skillinfinity
 
 WORKDIR /app
-COPY --from=builder /app/identity-service/target/*.jar app.jar
+COPY --from=builder /workspace/identity-service/target/identity-service-1.0.0-SNAPSHOT.jar /app/app.jar
 
 # JVM optimization flags
 ENV JAVA_OPTS="-XX:+UseZGC \

@@ -1,18 +1,16 @@
-FROM eclipse-temurin:21-jdk-alpine AS builder
-WORKDIR /app
-COPY pom.xml ../pom.xml
-COPY common/pom.xml ../common/pom.xml
-COPY common/src ../common/src
-COPY discovery-server/pom.xml discovery-server/pom.xml
-COPY discovery-server/src discovery-server/src
-RUN cd .. && mvn clean install -pl discovery-server -am -DskipTests -q
+FROM maven:3.9.11-eclipse-temurin-21 AS builder
+WORKDIR /workspace
+
+COPY . .
+
+RUN mvn clean package -pl discovery-server -am -DskipTests
 
 FROM eclipse-temurin:21-jre-alpine
 RUN apk add --no-cache curl wget && \
     addgroup -S skillinfinity && adduser -S skillinfinity -G skillinfinity
 
 WORKDIR /app
-COPY --from=builder /app/discovery-server/target/*.jar app.jar
+COPY --from=builder /workspace/discovery-server/target/discovery-server-1.0.0-SNAPSHOT.jar /app/app.jar
 
 ENV JAVA_OPTS="-XX:+UseZGC \
     -XX:MaxRAMPercentage=75.0 \
