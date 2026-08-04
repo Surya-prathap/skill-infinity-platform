@@ -21,6 +21,14 @@ const MentorsPage = lazyPage(async () => {
   const module = await import('@/pages/MentorsPage');
   return { default: module.MentorsPage };
 });
+const MentorProfilePage = lazyPage(async () => {
+  const module = await import('@/pages/MentorProfilePage');
+  return { default: module.MentorProfilePage };
+});
+const BookingPage = lazyPage(async () => {
+  const module = await import('@/pages/BookingPage');
+  return { default: module.BookingPage };
+});
 const LoginPage = lazyPage(async () => {
   const module = await import('@/pages/LoginPage');
   return { default: module.LoginPage };
@@ -117,6 +125,22 @@ const CommunityPage = lazyPage(async () => {
   const module = await import('@/pages/CommunityPage');
   return { default: module.CommunityPage };
 });
+const CalendarPage = lazyPage(async () => {
+  const module = await import('@/pages/CalendarPage');
+  return { default: module.CalendarPage };
+});
+const CreditPurchasePage = lazyPage(async () => {
+  const module = await import('@/pages/CreditPurchasePage');
+  return { default: module.CreditPurchasePage };
+});
+const TransactionHistoryPage = lazyPage(async () => {
+  const module = await import('@/pages/TransactionHistoryPage');
+  return { default: module.TransactionHistoryPage };
+});
+const SessionDetailsPage = lazyPage(async () => {
+  const module = await import('@/pages/SessionDetailsPage');
+  return { default: module.SessionDetailsPage };
+});
 const WalletPage = lazyPage(async () => {
   const module = await import('@/pages/WalletPage');
   return { default: module.WalletPage };
@@ -171,6 +195,14 @@ export const AppRouter: React.FC = () => {
             element={
               <Suspense fallback={<RouteFallback />}>
                 <MentorsPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.MENTOR_DETAILS}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <MentorProfilePage />
               </Suspense>
             }
           />
@@ -344,10 +376,50 @@ export const AppRouter: React.FC = () => {
             }
           />
           <Route
+            path={ROUTES.SESSION_DETAILS}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <SessionDetailsPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.CALENDAR}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <CalendarPage />
+              </Suspense>
+            }
+          />
+          <Route
             path={ROUTES.WALLET}
             element={
               <Suspense fallback={<RouteFallback />}>
                 <WalletPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.CREDITS}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <CreditPurchasePage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.TRANSACTIONS}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <TransactionHistoryPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.BOOK_SESSION}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <BookingPage />
               </Suspense>
             }
           />

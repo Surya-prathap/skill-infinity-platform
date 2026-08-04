@@ -4,3 +4,7 @@ export * from './charts';
 export * from './feedback';
 export * from './form';
 export * from './mentor';
+export * from './marketplace';
+export * from './session';
+export * from './wallet';
+export * from './booking';

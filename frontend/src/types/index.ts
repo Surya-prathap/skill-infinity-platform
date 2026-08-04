@@ -3,3 +3,8 @@ export type * from './auth';
 export type * from './common';
 export type * from './user';
 export type * from './mentor';
+export type * from './marketplace';
+export type * from './session';
+export type * from './wallet';
+export type * from './payment';
+export type * from './review';
