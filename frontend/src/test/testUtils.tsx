@@ -5,8 +5,10 @@ import { MemoryRouter } from 'react-router-dom';
 import { configureStore } from '@reduxjs/toolkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
+  adminReducer,
   authReducer,
   chatReducer,
+  communityReducer,
   mentorReducer,
   notificationsReducer,
   settingsReducer,
@@ -22,6 +24,8 @@ export const createTestStore = () =>
       theme: themeReducer,
       chat: chatReducer,
       notifications: notificationsReducer,
+      community: communityReducer,
+      admin: adminReducer,
     },
   });
 

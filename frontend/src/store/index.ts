@@ -28,6 +28,8 @@ import {
   mentorReducer,
   chatReducer,
   meetingReducer,
+  communityReducer,
+  adminReducer,
   type AuthState,
 } from './slices';
 
@@ -41,6 +43,8 @@ const rootReducer = combineReducers({
   mentor: mentorReducer,
   chat: chatReducer,
   meeting: meetingReducer,
+  community: communityReducer,
+  admin: adminReducer,
 });
 
 const resetAuthState: AuthState = {

@@ -11,6 +11,13 @@ export interface ReviewReply {
   updatedAt?: string;
 }
 
+export interface ReviewDimensionRatings {
+  skill?: number;
+  communication?: number;
+  knowledge?: number;
+  professionalism?: number;
+}
+
 export interface Review {
   id: string;
   sessionId?: string;
@@ -22,6 +29,10 @@ export interface Review {
   content?: string;
   status?: string;
   verified?: boolean;
+  /** When true the learner's identity is hidden on public pages. */
+  anonymous?: boolean;
+  /** Per-criterion scores: skill, communication, knowledge, professionalism. */
+  dimensionRatings?: ReviewDimensionRatings;
   helpfulCount?: number;
   notHelpfulCount?: number;
   replyCount?: number;
@@ -71,4 +82,10 @@ export interface ReviewRequest {
 export interface ReplyRequest {
   reviewId: string;
   content: string;
+}
+
+export interface ReviewRequestOptions {
+  /** Hides the learner identity on public review pages. */
+  anonymous?: boolean;
+  dimensionRatings?: ReviewDimensionRatings;
 }
