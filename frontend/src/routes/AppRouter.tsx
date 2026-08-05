@@ -289,9 +289,9 @@ export const AppRouter: React.FC = () => {
         {/* ---------- Authenticated ---------- */}
         <Route
           element={
-
+              <AuthGuard>
               <DashboardLayout />
-
+               </AuthGuard>
           }
         >
           <Route
@@ -571,10 +571,11 @@ export const AppRouter: React.FC = () => {
         <Route
           path={ROUTES.MEETING}
           element={
-
+              <AuthGuard>
               <Suspense fallback={<RouteFallback />}>
                 <MeetingPage />
               </Suspense>
+              </AuthGuard>
 
           }
         />
