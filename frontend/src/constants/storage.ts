@@ -10,6 +10,7 @@ export const STORAGE_KEYS = {
   MENTOR_PROFILE: 'skill_mentor_profile',
   SAVED_MENTORS: 'skill_saved_mentors',
   RECENT_SEARCHES: 'skill_recent_searches',
+  COMMUNITY_DRAFT: 'skill_community_draft',
 } as const;
 
 export const PERSIST_KEYS = {

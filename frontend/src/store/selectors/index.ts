@@ -62,6 +62,16 @@ export const selectMentorSubmitted = (state: RootState) => state.mentor.submitte
 export const selectGlobalLoading = (state: RootState) => state.loading.pendingRequests > 0;
 export const selectPageLoading = (state: RootState) => state.loading.pageLoading;
 
+/* ---------------- Admin ---------------- */
+export const selectAdminSidebarCollapsed = (state: RootState) => state.admin.sidebarCollapsed;
+export const selectAdminEnvironment = (state: RootState) => state.admin.environment;
+
+/* ---------------- Community ---------------- */
+export const selectCommunityDrafts = (state: RootState) => state.community.drafts;
+export const selectCommunityDraft = (key: string) => (state: RootState) =>
+  state.community.drafts[key] ?? null;
+export const selectCommunityLiveEvents = (state: RootState) => state.community.liveEvents;
+
 /* ---------------- Chat / Communication ---------------- */
 export const selectChatConversations = (state: RootState) => state.chat.conversations;
 export const selectChatActiveConversationId = (state: RootState) => state.chat.activeConversationId;

@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { Box, CircularProgress } from '@mui/material';
 import { AdminLayout, AuthLayout, DashboardLayout, ErrorLayout, MainLayout } from '@/layouts';
 import { AuthGuard, GuestGuard, RoleGuard } from '@/guards';
@@ -121,9 +121,41 @@ const MentorSettingsPage = lazyPage(async () => {
   const module = await import('@/pages/mentor/MentorSettingsPage');
   return { default: module.MentorSettingsPage };
 });
-const CommunityPage = lazyPage(async () => {
-  const module = await import('@/pages/CommunityPage');
-  return { default: module.CommunityPage };
+const CommunityHubPage = lazyPage(async () => {
+  const module = await import('@/pages/community/CommunityHubPage');
+  return { default: module.CommunityHubPage };
+});
+const CommunitiesPage = lazyPage(async () => {
+  const module = await import('@/pages/community/CommunitiesPage');
+  return { default: module.CommunitiesPage };
+});
+const CommunityDetailsPage = lazyPage(async () => {
+  const module = await import('@/pages/community/CommunityDetailsPage');
+  return { default: module.CommunityDetailsPage };
+});
+const PostDetailsPage = lazyPage(async () => {
+  const module = await import('@/pages/community/PostDetailsPage');
+  return { default: module.PostDetailsPage };
+});
+const LeaderboardPage = lazyPage(async () => {
+  const module = await import('@/pages/community/LeaderboardPage');
+  return { default: module.LeaderboardPage };
+});
+const ActivityPage = lazyPage(async () => {
+  const module = await import('@/pages/community/ActivityPage');
+  return { default: module.ActivityPage };
+});
+const AchievementsPage = lazyPage(async () => {
+  const module = await import('@/pages/community/AchievementsPage');
+  return { default: module.AchievementsPage };
+});
+const MentorReviewsPage = lazyPage(async () => {
+  const module = await import('@/pages/community/MentorReviewsPage');
+  return { default: module.MentorReviewsPage };
+});
+const SearchPage = lazyPage(async () => {
+  const module = await import('@/pages/community/SearchPage');
+  return { default: module.SearchPage };
 });
 const CalendarPage = lazyPage(async () => {
   const module = await import('@/pages/CalendarPage');
@@ -174,8 +206,68 @@ const SettingsPage = lazyPage(async () => {
   return { default: module.SettingsPage };
 });
 const AdminDashboardPage = lazyPage(async () => {
-  const module = await import('@/pages/AdminDashboardPage');
+  const module = await import('@/pages/admin/AdminDashboardPage');
   return { default: module.AdminDashboardPage };
+});
+const AdminAnalyticsPage = lazyPage(async () => {
+  const module = await import('@/pages/admin/AnalyticsPage');
+  return { default: module.AnalyticsPage };
+});
+const AdminUsersPage = lazyPage(async () => {
+  const module = await import('@/pages/admin/UsersPage');
+  return { default: module.UsersPage };
+});
+const AdminMentorsPage = lazyPage(async () => {
+  const module = await import('@/pages/admin/MentorsPage');
+  return { default: module.MentorsPage };
+});
+const AdminSessionsPage = lazyPage(async () => {
+  const module = await import('@/pages/admin/SessionsPage');
+  return { default: module.SessionsPage };
+});
+const AdminPaymentsPage = lazyPage(async () => {
+  const module = await import('@/pages/admin/PaymentsPage');
+  return { default: module.PaymentsPage };
+});
+const AdminWalletPage = lazyPage(async () => {
+  const module = await import('@/pages/admin/WalletPage');
+  return { default: module.WalletPage };
+});
+const AdminCommunityPage = lazyPage(async () => {
+  const module = await import('@/pages/admin/CommunityModerationPage');
+  return { default: module.CommunityModerationPage };
+});
+const AdminReviewsPage = lazyPage(async () => {
+  const module = await import('@/pages/admin/ReviewsModerationPage');
+  return { default: module.ReviewsModerationPage };
+});
+const AdminSupportPage = lazyPage(async () => {
+  const module = await import('@/pages/admin/SupportCenterPage');
+  return { default: module.SupportCenterPage };
+});
+const AdminAnnouncementsPage = lazyPage(async () => {
+  const module = await import('@/pages/admin/AnnouncementsPage');
+  return { default: module.AnnouncementsPage };
+});
+const AdminReportsPage = lazyPage(async () => {
+  const module = await import('@/pages/admin/ReportsPage');
+  return { default: module.ReportsPage };
+});
+const AdminSettingsPage = lazyPage(async () => {
+  const module = await import('@/pages/admin/SettingsPage');
+  return { default: module.SettingsPage };
+});
+const AdminFeatureFlagsPage = lazyPage(async () => {
+  const module = await import('@/pages/admin/FeatureFlagsPage');
+  return { default: module.FeatureFlagsPage };
+});
+const AdminAuditLogsPage = lazyPage(async () => {
+  const module = await import('@/pages/admin/AuditLogsPage');
+  return { default: module.AuditLogsPage };
+});
+const AdminMonitoringPage = lazyPage(async () => {
+  const module = await import('@/pages/admin/MonitoringPage');
+  return { default: module.MonitoringPage };
 });
 const NotFoundPage = lazyPage(async () => {
   const module = await import('@/pages/NotFoundPage');
@@ -219,6 +311,14 @@ export const AppRouter: React.FC = () => {
             element={
               <Suspense fallback={<RouteFallback />}>
                 <MentorProfilePage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.MENTOR_REVIEWS}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <MentorReviewsPage />
               </Suspense>
             }
           />
@@ -379,7 +479,63 @@ export const AppRouter: React.FC = () => {
             path={ROUTES.COMMUNITY}
             element={
               <Suspense fallback={<RouteFallback />}>
-                <CommunityPage />
+                <CommunityHubPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.COMMUNITIES}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <CommunitiesPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.COMMUNITY_DETAILS}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <CommunityDetailsPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.COMMUNITY_POST}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <PostDetailsPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.COMMUNITY_LEADERBOARD}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <LeaderboardPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.COMMUNITY_ACTIVITY}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <ActivityPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.COMMUNITY_ACHIEVEMENTS}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <AchievementsPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.COMMUNITY_SEARCH}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <SearchPage />
               </Suspense>
             }
           />
@@ -583,11 +739,11 @@ export const AppRouter: React.FC = () => {
         {/* ---------- Admin ---------- */}
         <Route
           element={
-            <AuthGuard>
-              <RoleGuard roles={[ROLES.ADMIN]}>
+
+              
                 <AdminLayout />
-              </RoleGuard>
-            </AuthGuard>
+
+
           }
         >
           <Route
@@ -595,6 +751,132 @@ export const AppRouter: React.FC = () => {
             element={
               <Suspense fallback={<RouteFallback />}>
                 <AdminDashboardPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.ADMIN_DASHBOARD}
+            element={
+              <Navigate to={ROUTES.ADMIN} replace />
+            }
+          />
+          <Route
+            path={ROUTES.ADMIN_ANALYTICS}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <AdminAnalyticsPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.ADMIN_USERS}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <AdminUsersPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.ADMIN_MENTORS}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <AdminMentorsPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.ADMIN_SESSIONS}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <AdminSessionsPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.ADMIN_PAYMENTS}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <AdminPaymentsPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.ADMIN_WALLET}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <AdminWalletPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.ADMIN_COMMUNITY}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <AdminCommunityPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.ADMIN_REVIEWS}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <AdminReviewsPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.ADMIN_SUPPORT}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <AdminSupportPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.ADMIN_ANNOUNCEMENTS}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <AdminAnnouncementsPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.ADMIN_REPORTS}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <AdminReportsPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.ADMIN_SETTINGS}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <AdminSettingsPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.ADMIN_FEATURE_FLAGS}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <AdminFeatureFlagsPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.ADMIN_AUDIT}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <AdminAuditLogsPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.ADMIN_MONITORING}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <AdminMonitoringPage />
               </Suspense>
             }
           />

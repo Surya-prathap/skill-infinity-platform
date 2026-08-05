@@ -9,7 +9,6 @@ export { ResetPasswordPage } from './ResetPasswordPage';
 export { EmailVerificationPage } from './EmailVerificationPage';
 export { DashboardPage } from './DashboardPage';
 export { MentorDashboardPage } from './MentorDashboardPage';
-export { CommunityPage } from './CommunityPage';
 export { CalendarPage } from './CalendarPage';
 export { WalletPage } from './WalletPage';
 export { CreditPurchasePage } from './CreditPurchasePage';
@@ -22,9 +21,41 @@ export { AnnouncementsPage } from './AnnouncementsPage';
 export { MeetingsPage } from './MeetingsPage';
 export { MeetingPage } from './MeetingPage';
 export { SettingsPage } from './SettingsPage';
-export { AdminDashboardPage } from './AdminDashboardPage';
 export { NotFoundPage } from './NotFoundPage';
 export { UnauthorizedPage } from './UnauthorizedPage';
+
+/* Community platform */
+export {
+  CommunityHubPage,
+  CommunitiesPage,
+  CommunityDetailsPage,
+  PostDetailsPage,
+  LeaderboardPage,
+  ActivityPage,
+  AchievementsPage,
+  MentorReviewsPage,
+  SearchPage,
+} from './community';
+
+/* Enterprise Admin Portal (aliased to avoid collisions with user-facing pages). */
+export {
+  AdminDashboardPage,
+  AnalyticsPage as AdminAnalyticsPage,
+  UsersPage as AdminUsersPage,
+  MentorsPage as AdminMentorsPage,
+  SessionsPage as AdminSessionsPage,
+  PaymentsPage as AdminPaymentsPage,
+  WalletPage as AdminWalletPage,
+  CommunityModerationPage as AdminCommunityPage,
+  ReviewsModerationPage as AdminReviewsPage,
+  SupportCenterPage as AdminSupportPage,
+  AnnouncementsPage as AdminAnnouncementsPage,
+  ReportsPage as AdminReportsPage,
+  SettingsPage as AdminSettingsPage,
+  FeatureFlagsPage as AdminFeatureFlagsPage,
+  AuditLogsPage as AdminAuditLogsPage,
+  MonitoringPage as AdminMonitoringPage,
+} from './admin';
 
 /* Mentor portal */
 export { BecomeMentorPage } from './mentor/BecomeMentorPage';

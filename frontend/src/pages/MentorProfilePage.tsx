@@ -325,11 +325,21 @@ export const MentorProfilePage: React.FC = () => {
                 title="Ratings & Reviews"
                 subtitle={`${formatCompactNumber(stats?.totalReviews ?? 0)} verified reviews`}
                 action={
-                  <Stack direction="row" alignItems="center" gap={0.5} sx={{ color: '#F59E0B' }}>
-                    <StarIcon />
-                    <Typography variant="h6" fontWeight={800}>
-                      {(stats?.averageRating ?? 0).toFixed(1)}
-                    </Typography>
+                  <Stack direction="row" alignItems="center" gap={1.5}>
+                    <Stack direction="row" alignItems="center" gap={0.5} sx={{ color: '#F59E0B' }}>
+                      <StarIcon />
+                      <Typography variant="h6" fontWeight={800}>
+                        {(stats?.averageRating ?? 0).toFixed(1)}
+                      </Typography>
+                    </Stack>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => navigate(ROUTES.MENTOR_REVIEWS.replace(':mentorId', mentor.id))}
+                      sx={{ fontWeight: 800 }}
+                    >
+                      See all reviews
+                    </Button>
                   </Stack>
                 }
               />
