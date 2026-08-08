@@ -8,9 +8,8 @@ import type { CommunityPost } from '@/types';
  * Real-time community layer.
  *
  * Wires community-service events (live likes, comments, new posts, poll
- * updates, notifications) into Redux. When the socket is unavailable the
- * REST layer + seed data keep the UI fully functional, and `simulateLiveFeed`
- * provides a lifelike stream of community activity for the hub ticker.
+ * updates, notifications) into Redux. All data shown in the UI comes from
+ * the real backend via REST + these socket events.
  */
 
 export const COMMUNITY_SOCKET_EVENTS = {
@@ -85,26 +84,4 @@ export const emitCommunityPost = (post: CommunityPost): void => {
 
 export const emitCommunityLike = (postId: string, liked: boolean): void => {
   socketService.emit(COMMUNITY_SOCKET_EVENTS.POST_LIKED, { postId, liked });
-};
-
-/* ---------------- Offline live-feed companion (demo) ---------------- */
-
-const LIVE_MESSAGES = [
-  'Sarah Chen liked a post in System Design',
-  'Priya Sharma commented on “AWS study plan”',
-  'Marcus Reid earned the “Early Riser” badge',
-  'Emily Watson shared a code snippet in Java & Spring',
-  'David Kim reached a 7-day learning streak',
-  'A new poll was created in Career & Leadership',
-];
-
-/** Pushes a lifelike stream of community events while offline. Returns a stop function. */
-export const simulateLiveFeed = (dispatch: AppDispatch): (() => void) => {
-  let index = 0;
-  const interval = window.setInterval(() => {
-    const message = LIVE_MESSAGES[index % LIVE_MESSAGES.length] ?? LIVE_MESSAGES[0]!;
-    index += 1;
-    dispatch(pushLiveEvent({ kind: 'NOTIFICATION', message }));
-  }, 12_000);
-  return () => window.clearInterval(interval);
 };

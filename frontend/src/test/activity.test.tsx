@@ -1,13 +1,31 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { renderWithProviders } from './testUtils';
 import { ActivityPage, AchievementsPage } from '@/pages/community';
 import { ActivityCard, AchievementCard, ContributionGraph } from '@/components/community';
-import { seedAchievements } from '@/features/community/data';
+import { testAchievements } from './fixtures';
 import type { ActivityItem } from '@/types';
 
+vi.mock('@/services', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/services')>();
+  const { testAchievements: achievements, testActivityItems, testLearningStats } = await import('./fixtures');
+  return {
+    ...actual,
+    communityService: {
+      ...actual.communityService,
+      getActivity: vi.fn().mockResolvedValue({ data: { data: testActivityItems } }),
+      getAchievements: vi.fn().mockResolvedValue({ data: { data: achievements } }),
+      getLearningStats: vi.fn().mockResolvedValue({ data: { data: testLearningStats } }),
+    },
+  };
+});
+
 describe('ActivityPage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('renders the learning stats and weekly/monthly progress', async () => {
     renderWithProviders(<ActivityPage />);
 
@@ -27,13 +45,17 @@ describe('ActivityPage', () => {
 });
 
 describe('AchievementsPage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('renders the level card, collection donut and badge grid', async () => {
     renderWithProviders(<AchievementsPage />);
 
     expect(await screen.findByText(/Rising Star/)).toBeInTheDocument();
-    expect(screen.getByText('Collection')).toBeInTheDocument();
-    expect(screen.getByText('First Steps')).toBeInTheDocument();
-    expect(screen.getByText('Streak Builder')).toBeInTheDocument();
+    expect(await screen.findByText('Collection')).toBeInTheDocument();
+    expect(await screen.findByText('First Steps')).toBeInTheDocument();
+    expect(await screen.findByText('Streak Builder')).toBeInTheDocument();
   });
 
   it('separates locked achievements into their own section', async () => {
@@ -70,7 +92,7 @@ describe('Activity primitives', () => {
   });
 
   it('AchievementCard shows progress for locked achievements', () => {
-    const locked = seedAchievements.find((a) => !a.unlocked)!;
+    const locked = testAchievements.find((a) => !a.unlocked)!;
     renderWithProviders(<AchievementCard achievement={locked} />);
     expect(screen.getByText(/\/ 30/)).toBeInTheDocument();
   });
@@ -83,7 +105,7 @@ describe('Activity primitives', () => {
 
   it('AchievementCard unlocks with animation state', async () => {
     const user = userEvent.setup();
-    const unlocked = seedAchievements.find((a) => a.unlocked)!;
+    const unlocked = testAchievements.find((a) => a.unlocked)!;
     renderWithProviders(<AchievementCard achievement={unlocked} justUnlocked />);
     await waitFor(() => {
       expect(screen.getByText('First Steps')).toBeInTheDocument();

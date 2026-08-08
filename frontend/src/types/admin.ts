@@ -4,7 +4,7 @@
  * These mirror the admin-service DTOs (DashboardResponse, AnalyticsResponse,
  * AdminUserResponse, AuditLogResponse, PlatformSetting, FeatureFlag,
  * SystemAnnouncement, SupportTicket, ReportedContent) and add richer frontend
- * shapes used by the seed data and premium widgets.
+ * shapes used by the admin console and premium widgets.
  */
 
 /* ============================================================

@@ -8,16 +8,14 @@ import {
   typingChanged,
 } from '@/store/slices/chatSlice';
 import { addNotification } from '@/store/slices/notificationsSlice';
-import { CURRENT_USER_ID, DEMO_THINKING_REPLIES } from '@/features/communication/data';
 import type { ChatMessage, PresenceInfo, SocketStatus, TypingInfo } from '@/types';
 
 /**
  * Real-time chat layer.
  *
  * Wires communication-service events (messages, typing, presence, read
- * receipts, notifications) into Redux. When the socket is unavailable the
- * REST layer + seed data keep the UI fully functional, and `simulatePeerReply`
- * provides a lifelike offline companion.
+ * receipts, notifications) into Redux. The signed-in user's identity comes
+ * from the auth store — never hardcoded.
  */
 
 let bound = false;
@@ -30,8 +28,12 @@ const toSocketStatus = (connected: boolean, reconnecting = false): SocketStatus 
 };
 
 /** Attach all chat event handlers (idempotent). */
-export const connectChatSocket = (dispatch: AppDispatch): void => {
+export const connectChatSocket = (
+  dispatch: AppDispatch,
+  userId: string,
+): void => {
   if (bound) return;
+  if (!userId) return;
   bound = true;
 
   const socket = socketService.connect();
@@ -39,7 +41,7 @@ export const connectChatSocket = (dispatch: AppDispatch): void => {
   socket.on(SOCKET_EVENTS.CONNECT, () => {
     dispatch(setSocketStatus('connected'));
     // Announce our own presence + fetch the online roster.
-    socketService.emit('presence:online', { userId: CURRENT_USER_ID, status: 'online' });
+    socketService.emit('presence:online', { userId, status: 'online' });
   });
 
   socket.on(SOCKET_EVENTS.DISCONNECT, () => {
@@ -81,7 +83,7 @@ export const connectChatSocket = (dispatch: AppDispatch): void => {
   // Presence keep-alive while connected.
   keepAliveInterval = window.setInterval(() => {
     if (socketService.isConnected()) {
-      socketService.emit('presence:online', { userId: CURRENT_USER_ID, status: 'online' });
+      socketService.emit('presence:online', { userId, status: 'online' });
     }
   }, 25_000);
 };
@@ -115,74 +117,3 @@ export const emitMessageSent = (message: ChatMessage): void => {
 };
 
 export const isSocketConnected = (): boolean => socketService.isConnected();
-
-/* ---------------- Offline companion (demo) ---------------- */
-
-let simulationId = 0;
-
-/**
- * Simulates the peer typing and replying when the socket is disconnected,
- * so the Communication Center feels alive without a backend. Returns a
- * cancel function.
- */
-export const simulatePeerReply = (
-  dispatch: AppDispatch,
-  conversationId: string,
-  peer: { userId: string; name: string },
-  content: string,
-  delayMs = 1600,
-): (() => void) => {
-  const id = ++simulationId;
-  const timers: number[] = [];
-
-  const typingStart: TypingInfo = {
-    conversationId,
-    userId: peer.userId,
-    userName: peer.name,
-    isTyping: true,
-    expiresAt: new Date(Date.now() + 4000).toISOString(),
-  };
-
-  const thinkingDelay = 500 + (id % 3) * 350;
-
-  timers.push(
-    window.setTimeout(() => {
-      dispatch(typingChanged({ ...typingStart, isTyping: true }));
-    }, Math.max(200, delayMs - thinkingDelay)),
-  );
-
-  timers.push(
-    window.setTimeout(() => {
-      dispatch(typingChanged({ ...typingStart, isTyping: false }));
-      // The peer has read our latest messages.
-      dispatch(
-        readReceiptReceived({
-          conversationId,
-          messageIds: [],
-          readerId: peer.userId,
-        }),
-      );
-      const reply: ChatMessage = {
-        id: `peer-${Date.now()}-${id}`,
-        conversationId,
-        senderId: peer.userId,
-        senderName: peer.name,
-        content,
-        kind: 'text',
-        attachments: [],
-        reactions: [],
-        status: 'delivered',
-        createdAt: new Date().toISOString(),
-        replyTo: null,
-        readBy: [peer.userId, CURRENT_USER_ID],
-      };
-      dispatch(messageReceived(reply));
-    }, delayMs),
-  );
-
-  return () => timers.forEach((timer) => window.clearTimeout(timer));
-};
-
-/** Canned “thinking” line used before an offline peer reply. */
-export const pickThinkingLine = (): string =>
-  DEMO_THINKING_REPLIES[Math.floor(Math.random() * DEMO_THINKING_REPLIES.length)] ?? 'Typing…';

@@ -2,10 +2,10 @@ import { describe, expect, it, afterEach, vi } from 'vitest';
 import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { BookingWizard } from '@/components/booking/BookingWizard';
 import { renderWithProviders } from './testUtils';
-import { seedMentors } from '@/features/marketplace/data';
+import { testMentor } from './fixtures';
 import type { BookingRequest } from '@/types';
 
-const mentor = seedMentors[0];
+const mentor = testMentor;
 const pricing = mentor.pricingList ?? [];
 
 const stepContent = async (text: string): Promise<void> => {

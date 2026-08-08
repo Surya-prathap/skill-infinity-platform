@@ -53,7 +53,7 @@
     <appender name="ASYNC" class="ch.qos.logback.classic.AsyncAppender">
         <queueSize>512</queueSize>
         <neverBlock>true</neverBlock>
-        <appender-ref ref="ROLLING_FILE"/>
+        <appender-ref ref="CONSOLE"/>
     </appender>
 
     <!-- JSON appender - only active in non-local profiles -->

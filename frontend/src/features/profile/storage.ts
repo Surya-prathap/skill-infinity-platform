@@ -1,18 +1,20 @@
 import { STORAGE_KEYS } from '@/constants';
 import type { UserProfile } from '@/types';
-import { SEED_PROFILE } from './seed';
 
 const PROFILE_KEY = STORAGE_KEYS.PROFILE;
 
-/** Load the locally persisted profile, falling back to the seed profile. */
-export const loadStoredProfile = (): UserProfile => {
+/**
+ * Load the locally persisted profile (a cache of the last server response).
+ * Returns null when nothing has been cached yet — no seed/demo data.
+ */
+export const loadStoredProfile = (): UserProfile | null => {
   try {
     const raw = window.localStorage.getItem(PROFILE_KEY);
-    if (!raw) return SEED_PROFILE;
+    if (!raw) return null;
     const parsed = JSON.parse(raw) as UserProfile;
-    return parsed && typeof parsed === 'object' ? parsed : SEED_PROFILE;
+    return parsed && typeof parsed === 'object' ? parsed : null;
   } catch {
-    return SEED_PROFILE;
+    return null;
   }
 };
 

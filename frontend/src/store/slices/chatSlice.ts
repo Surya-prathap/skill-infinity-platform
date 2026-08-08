@@ -6,7 +6,6 @@ import type {
   SocketStatus,
   TypingInfo,
 } from '@/types';
-import { CURRENT_USER_ID, CURRENT_USER_NAME, seedPresence } from '@/features/communication/data';
 
 export interface ChatState {
   conversations: Conversation[];
@@ -19,6 +18,9 @@ export interface ChatState {
   unreadCounts: Record<string, number>;
   socketStatus: SocketStatus;
   ownPresence: PresenceInfo;
+  /** Real signed-in user id (set from the auth store — no demo constants). */
+  ownUserId: string;
+  ownUserName: string;
 }
 
 const initialState: ChatState = {
@@ -26,15 +28,17 @@ const initialState: ChatState = {
   messages: {},
   activeConversationId: null,
   typing: {},
-  presence: { ...seedPresence },
+  presence: {},
   unreadCounts: {},
   socketStatus: 'disconnected',
   ownPresence: {
-    userId: CURRENT_USER_ID,
+    userId: '',
     status: 'online',
     customStatus: 'Ready to learn',
     device: 'web',
   },
+  ownUserId: '',
+  ownUserName: '',
 };
 
 /* ---------------- helpers ---------------- */
@@ -69,6 +73,14 @@ const chatSlice = createSlice({
   name: 'chat',
   initialState,
   reducers: {
+    setOwnIdentity(state, action: PayloadAction<{ userId: string; userName: string }>) {
+      const { userId, userName } = action.payload;
+      state.ownUserId = userId;
+      state.ownUserName = userName;
+      state.ownPresence = { ...state.ownPresence, userId };
+      state.presence = { ...state.presence, [userId]: state.ownPresence };
+    },
+
     hydrateConversations(state, action: PayloadAction<Conversation[]>) {
       state.conversations = sortConversations(action.payload);
       const unread: Record<string, number> = {};
@@ -108,7 +120,11 @@ const chatSlice = createSlice({
         message,
       );
       state.conversations = updateConversationPreview(state.conversations, message);
-      if (message.conversationId !== state.activeConversationId && message.senderId !== CURRENT_USER_ID) {
+      if (
+        message.conversationId !== state.activeConversationId &&
+        state.ownUserId &&
+        message.senderId !== state.ownUserId
+      ) {
         state.unreadCounts[message.conversationId] =
           (state.unreadCounts[message.conversationId] ?? 0) + 1;
       }
@@ -175,6 +191,7 @@ const chatSlice = createSlice({
       action: PayloadAction<{ conversationId: string; messageId: string; emoji: string }>,
     ) {
       const { conversationId, messageId, emoji } = action.payload;
+      const ownId = state.ownUserId;
       const list = state.messages[conversationId] ?? [];
       state.messages[conversationId] = list.map((item) => {
         if (item.id !== messageId) return item;
@@ -186,7 +203,7 @@ const chatSlice = createSlice({
               ...existing,
               count: Math.max(0, existing.count - 1),
               reactedByMe: false,
-              userIds: existing.userIds.filter((id) => id !== CURRENT_USER_ID),
+              userIds: existing.userIds.filter((id) => id !== ownId),
             };
             return {
               ...item,
@@ -197,13 +214,13 @@ const chatSlice = createSlice({
             ...existing,
             count: existing.count + 1,
             reactedByMe: true,
-            userIds: [...existing.userIds, CURRENT_USER_ID],
+            userIds: [...existing.userIds, ownId],
           };
           return { ...item, reactions: reactions.map((r) => (r.emoji === emoji ? next : r)) };
         }
         return {
           ...item,
-          reactions: [...reactions, { emoji, count: 1, reactedByMe: true, userIds: [CURRENT_USER_ID] }],
+          reactions: [...reactions, { emoji, count: 1, reactedByMe: true, userIds: [ownId] }],
         };
       });
     },
@@ -263,13 +280,14 @@ const chatSlice = createSlice({
       action: PayloadAction<{ conversationId: string; messageIds: string[]; readerId: string }>,
     ) {
       const { conversationId, messageIds, readerId } = action.payload;
+      const ownId = state.ownUserId;
       const list = state.messages[conversationId] ?? [];
       state.messages[conversationId] = list.map((item) => {
         if (!messageIds.includes(item.id)) return item;
         const readBy = [...(item.readBy ?? [])];
         if (!readBy.includes(readerId)) readBy.push(readerId);
         const next: ChatMessage = { ...item, readBy };
-        if (item.senderId === CURRENT_USER_ID) {
+        if (ownId && item.senderId === ownId) {
           next.status = 'read';
         }
         return next;
@@ -278,11 +296,12 @@ const chatSlice = createSlice({
 
     markConversationRead(state, action: PayloadAction<string>) {
       const conversationId = action.payload;
+      const ownId = state.ownUserId;
       state.unreadCounts[conversationId] = 0;
       const list = state.messages[conversationId] ?? [];
       state.messages[conversationId] = list.map((item) =>
-        item.senderId === CURRENT_USER_ID && item.status !== 'read'
-          ? { ...item, status: 'read', readBy: [...new Set([...(item.readBy ?? []), CURRENT_USER_ID])] }
+        ownId && item.senderId === ownId && item.status !== 'read'
+          ? { ...item, status: 'read', readBy: [...new Set([...(item.readBy ?? []), ownId])] }
           : item,
       );
       state.conversations = state.conversations.map((conversation) =>
@@ -296,7 +315,9 @@ const chatSlice = createSlice({
 
     setOwnPresence(state, action: PayloadAction<PresenceInfo>) {
       state.ownPresence = action.payload;
-      state.presence = { ...state.presence, [CURRENT_USER_ID]: action.payload };
+      if (state.ownUserId) {
+        state.presence = { ...state.presence, [state.ownUserId]: action.payload };
+      }
     },
 
     clearChat(state) {
@@ -304,14 +325,16 @@ const chatSlice = createSlice({
       state.messages = {};
       state.activeConversationId = null;
       state.typing = {};
-      state.presence = { ...seedPresence };
+      state.presence = {};
       state.unreadCounts = {};
       state.socketStatus = 'disconnected';
+      state.ownPresence = { ...state.ownPresence, userId: state.ownUserId };
     },
   },
 });
 
 export const {
+  setOwnIdentity,
   hydrateConversations,
   hydrateMessages,
   setActiveConversation,
@@ -335,16 +358,17 @@ export const {
   clearChat,
 } = chatSlice.actions;
 
-/** Convenience: build a locally optimistically-sent message. */
+/** Convenience: build a locally optimistically-sent message for the real user. */
 export const buildLocalMessage = (
   conversationId: string,
   content: string,
+  identity: { userId: string; userName: string },
   extra: Partial<ChatMessage> = {},
 ): ChatMessage => ({
   id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
   conversationId,
-  senderId: CURRENT_USER_ID,
-  senderName: CURRENT_USER_NAME,
+  senderId: identity.userId,
+  senderName: identity.userName,
   content,
   kind: 'text',
   attachments: [],
@@ -352,7 +376,7 @@ export const buildLocalMessage = (
   status: 'sending',
   createdAt: new Date().toISOString(),
   replyTo: null,
-  readBy: [CURRENT_USER_ID],
+  readBy: identity.userId ? [identity.userId] : [],
   ...extra,
 });
 

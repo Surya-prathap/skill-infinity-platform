@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Box, Button, Chip, Grid, InputBase } from '@mui/material';
 import { motion } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -11,7 +11,7 @@ import { EmptyState } from '@/components/feedback';
 import { Stack } from '@/components/ui/Stack';
 import { Typography } from '@/components/ui/Typography';
 import { useDocumentTitle, useDebounce } from '@/hooks';
-import { useCommunitiesQuery, usePopularTagsQuery, seedCategoriesForUse } from '@/features/community';
+import { useCommunitiesQuery, usePopularTagsQuery } from '@/features/community';
 import { useJoinCommunityMutation } from '@/features/community';
 import { showInfo } from '@/utils';
 import { ROUTES } from '@/constants';
@@ -29,7 +29,23 @@ export const CommunitiesPage: React.FC = () => {
   const { communities, isLoading, isOffline } = useCommunitiesQuery(undefined, undefined);
   const { tags } = usePopularTagsQuery();
   const joinMutation = useJoinCommunityMutation();
-  const categories = seedCategoriesForUse();
+  // Category filter chips are derived from the real communities returned by the API.
+  const categories = useMemo(() => {
+    const seen = new Set<string>();
+    return communities
+      .filter((community) => {
+        if (!community.category || seen.has(community.category)) return false;
+        seen.add(community.category);
+        return true;
+      })
+      .map((community) => ({
+        id: community.category,
+        name: community.category,
+        emoji: community.emoji ?? '📌',
+        description: '',
+        communityCount: 0,
+      }));
+  }, [communities]);
 
   useEffect(() => {
     if (initialCategory) setCategory(initialCategory);
@@ -130,7 +146,7 @@ export const CommunitiesPage: React.FC = () => {
 
       {isOffline && (
         <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mb: 1.5 }}>
-          Offline mode — showing curated demo communities.
+          Communities unavailable — check your connection.
         </Typography>
       )}
 

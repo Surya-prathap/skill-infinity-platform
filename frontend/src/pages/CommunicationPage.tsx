@@ -55,7 +55,7 @@ import {
   VirtualizedMessageList,
 } from '@/components/communication';
 import { Typography } from '@/components/ui/Typography';
-import { CURRENT_USER_ID } from '@/features/communication/data';
+import { useCurrentUserIdentity } from '@/hooks';
 import type { ChatMessage, Conversation, ReplyPreview } from '@/types';
 import type { MessageAction } from '@/components/communication/MessageBubble';
 import type { ComposerPayload } from '@/components/communication/MessageComposer';
@@ -94,6 +94,7 @@ export const CommunicationPage: React.FC = () => {
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [historyPage, setHistoryPage] = useState(0);
   const pendingJumpRef = useRef(false);
+  const { userId: currentUserId } = useCurrentUserIdentity();
 
   useConversationsQuery();
   const { announcements } = useAnnouncementsQuery();
@@ -266,9 +267,10 @@ export const CommunicationPage: React.FC = () => {
   const hasMore = totalElements > messages.length;
   const isLoadingMore = historyPage > 0 && messages.length < totalElements;
 
-  const isOwn = (message: ChatMessage): boolean => message.senderId === CURRENT_USER_ID;
+  const isOwn = (message: ChatMessage): boolean =>
+    Boolean(currentUserId) && message.senderId === currentUserId;
   const chatPartner =
-    activeConversation?.participants.find((participant) => participant.userId !== CURRENT_USER_ID) ?? null;
+    activeConversation?.participants.find((participant) => participant.userId !== currentUserId) ?? null;
 
   const showSidebar = isMdUp || !activeConversationId;
   const showChatPanel = isMdUp || Boolean(activeConversationId);
@@ -366,7 +368,7 @@ export const CommunicationPage: React.FC = () => {
               <VirtualizedMessageList
                 key={activeConversation.id}
                 messages={messages}
-                currentUserId="user-me"
+                currentUserId={currentUserId}
                 isGroup={activeConversation.type === 'group' || activeConversation.type === 'session'}
                 typingNames={typingNames}
                 hasMore={hasMore}
@@ -481,6 +483,7 @@ export const CommunicationPage: React.FC = () => {
         open={Boolean(forwardTarget)}
         message={forwardTarget}
         conversations={conversations}
+        currentUserId={currentUserId}
         onClose={() => setForwardTarget(null)}
         onForward={(conversationId) => {
           if (forwardTarget) {
@@ -502,6 +505,7 @@ interface ForwardDialogProps {
   open: boolean;
   message: ChatMessage | null;
   conversations: Conversation[];
+  currentUserId: string;
   onClose: () => void;
   onForward: (conversationId: string) => void;
 }
@@ -510,12 +514,13 @@ const ForwardDialog: React.FC<ForwardDialogProps> = ({
   open,
   message,
   conversations,
+  currentUserId,
   onClose,
   onForward,
 }) => {
   const labelFor = (conversation: Conversation): string => {
     if (conversation.title) return conversation.title;
-    const other = conversation.participants.find((participant) => participant.userId !== CURRENT_USER_ID);
+    const other = conversation.participants.find((participant) => participant.userId !== currentUserId);
     return other?.name ?? 'Conversation';
   };
 

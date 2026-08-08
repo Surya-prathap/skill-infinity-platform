@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { paymentService, walletService } from '@/services';
 import { getErrorMessage, showError, showSuccess } from '@/utils';
@@ -12,14 +13,19 @@ import type {
   WalletTransaction,
 } from '@/types';
 import { walletKeys } from './queryKeys';
-import {
-  seedPayments,
-  seedWalletBalance,
-  seedWalletStatistics,
-  seedWalletTransactions,
-} from './data';
 
-/** Current wallet balance (offline → seed). */
+const emptyPage = (page: number, size: number): PageResponse<WalletTransaction> => ({
+  content: [],
+  page,
+  size,
+  totalElements: 0,
+  totalPages: 1,
+  first: page === 0,
+  last: true,
+  empty: true,
+});
+
+/** Current wallet balance. */
 export const useWalletBalanceQuery = () => {
   const query = useQuery({
     queryKey: walletKeys.balance(),
@@ -27,15 +33,14 @@ export const useWalletBalanceQuery = () => {
       const response = await walletService.getBalance();
       return response.data.data;
     },
-    placeholderData: seedWalletBalance,
     retry: 1,
   });
 
-  const balance = (query.data ?? seedWalletBalance) as WalletBalance;
+  const balance = query.data as WalletBalance | undefined;
   return { ...query, balance, isOffline: query.isError };
 };
 
-/** Wallet statistics (offline → seed). */
+/** Wallet statistics. */
 export const useWalletStatisticsQuery = () => {
   const query = useQuery({
     queryKey: walletKeys.statistics(),
@@ -43,15 +48,54 @@ export const useWalletStatisticsQuery = () => {
       const response = await walletService.getStatistics();
       return response.data.data;
     },
-    placeholderData: seedWalletStatistics,
     retry: 1,
   });
 
-  const statistics = (query.data ?? seedWalletStatistics) as WalletStatistics;
+  const statistics = query.data as WalletStatistics | undefined;
   return { ...query, statistics, isOffline: query.isError };
 };
 
-/** Paginated wallet transaction history (offline → seed). */
+/**
+ * Monthly credits-in/out series for the last `months` months, aggregated
+ * from the real wallet transaction history (no seed data).
+ */
+export const useWalletMonthlySeriesQuery = (months = 7) => {
+  const query = useQuery({
+    queryKey: [...walletKeys.all, 'monthly', months],
+    queryFn: async (): Promise<WalletTransaction[]> => {
+      const response = await walletService.getHistory(0, 500);
+      return response.data.data.content;
+    },
+    retry: 1,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const series = useMemo(() => {
+    const now = new Date();
+    const buckets: { label: string; value: number }[] = [];
+    for (let i = months - 1; i >= 0; i -= 1) {
+      const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+      const monthKey = monthStart.toLocaleString('en-US', { month: 'short' });
+      const net = (query.data ?? []).reduce((total, tx) => {
+        const at = tx.createdAt ? new Date(tx.createdAt) : null;
+        if (!at || at < monthStart || at >= monthEnd) return total;
+        if (
+          tx.transactionType === 'CREDIT' ||
+          tx.transactionType === 'REWARD' ||
+          tx.transactionType === 'REFUND'
+        ) {
+          return total + (tx.amount ?? 0);
+        }
+        return total - (tx.amount ?? 0);
+      }, 0);
+      buckets.push({ label: monthKey, value: Math.round(net * 100) / 100 });
+    }
+    return buckets;
+  }, [query.data, months]);
+
+  return { ...query, series, isOffline: query.isError };
+};
 export const useWalletHistoryQuery = (page = 0, size = 20) => {
   const query = useQuery({
     queryKey: walletKeys.history(page, size),
@@ -59,37 +103,15 @@ export const useWalletHistoryQuery = (page = 0, size = 20) => {
       const response = await walletService.getHistory(page, size);
       return response.data.data;
     },
-    placeholderData: (): PageResponse<WalletTransaction> => {
-      const content = seedWalletTransactions;
-      return {
-        content,
-        page,
-        size,
-        totalElements: content.length,
-        totalPages: 1,
-        first: page === 0,
-        last: true,
-        empty: false,
-      };
-    },
     retry: 1,
   });
 
-  const data = (query.data ?? {
-    content: seedWalletTransactions,
-    page,
-    size,
-    totalElements: seedWalletTransactions.length,
-    totalPages: 1,
-    first: true,
-    last: true,
-    empty: false,
-  }) as PageResponse<WalletTransaction>;
+  const data = query.data ?? emptyPage(page, size);
 
   return { ...query, data, isOffline: query.isError };
 };
 
-/** Payment history (offline → seed). */
+/** Payment history. */
 export const usePaymentHistoryQuery = (page = 0, size = 20) => {
   const query = useQuery({
     queryKey: [...walletKeys.all, 'payments', page, size],
@@ -97,29 +119,10 @@ export const usePaymentHistoryQuery = (page = 0, size = 20) => {
       const response = await paymentService.getHistory(page, size);
       return response.data.data;
     },
-    placeholderData: (): PageResponse<Payment> => ({
-      content: seedPayments,
-      page,
-      size,
-      totalElements: seedPayments.length,
-      totalPages: 1,
-      first: page === 0,
-      last: true,
-      empty: false,
-    }),
     retry: 1,
   });
 
-  const data = (query.data ?? {
-    content: seedPayments,
-    page,
-    size,
-    totalElements: seedPayments.length,
-    totalPages: 1,
-    first: true,
-    last: true,
-    empty: false,
-  }) as PageResponse<Payment>;
+  const data = (query.data ?? emptyPage(page, size)) as PageResponse<Payment>;
 
   return { ...query, data, isOffline: query.isError };
 };

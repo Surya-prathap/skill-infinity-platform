@@ -1,15 +1,51 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { renderWithProviders } from './testUtils';
 import { CommentThread } from '@/components/community';
-import { seedComments } from '@/features/community/data';
+import { testCommentsByPost } from './fixtures';
+
+vi.mock('@/services', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/services')>();
+  const { testCommentsByPost } = await import('./fixtures');
+  return {
+    ...actual,
+    communityService: {
+      ...actual.communityService,
+      getPostComments: vi.fn().mockImplementation((postId: string) =>
+        Promise.resolve({ data: { data: { content: testCommentsByPost[postId] ?? [] } } }),
+      ),
+      createComment: vi.fn().mockImplementation((payload: { postId: string; parentId: string | null; content: string }) =>
+        Promise.resolve({
+          data: {
+            data: {
+              id: `cm-new-${Date.now()}`,
+              postId: payload.postId,
+              parentId: payload.parentId,
+              authorId: 'user-me',
+              authorName: 'Alex Morgan',
+              content: payload.content,
+              likeCount: 0,
+              liked: false,
+              replyCount: 0,
+              createdAt: new Date().toISOString(),
+            },
+          },
+        }),
+      ),
+    },
+  };
+});
 
 describe('CommentThread', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('renders top-level comments with author names', async () => {
     renderWithProviders(<CommentThread postId="post-sd-1" />);
 
-    const seed = seedComments['post-sd-1'] ?? [];
+    const seed = testCommentsByPost['post-sd-1'] ?? [];
     expect(await screen.findByText(seed[0]!.authorName)).toBeInTheDocument();
     // Heading + count caption both mention comments.
     expect(screen.getAllByText(/Comments/i).length).toBeGreaterThan(0);

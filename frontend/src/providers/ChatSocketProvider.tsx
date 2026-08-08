@@ -1,6 +1,6 @@
 import { useEffect, type ReactNode } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { selectIsAuthenticated } from '@/store/selectors';
+import { selectIsAuthenticated, selectUser } from '@/store/selectors';
 import { connectChatSocket, disconnectChatSocket } from '@/socket/chatSocket';
 
 interface ChatSocketProviderProps {
@@ -15,12 +15,13 @@ interface ChatSocketProviderProps {
 export const ChatSocketProvider: React.FC<ChatSocketProviderProps> = ({ children }) => {
   const dispatch = useAppDispatch();
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
+  const user = useAppSelector(selectUser);
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    connectChatSocket(dispatch);
+    connectChatSocket(dispatch, user?.userId ?? '');
     return () => disconnectChatSocket();
-  }, [dispatch, isAuthenticated]);
+  }, [dispatch, isAuthenticated, user?.userId]);
 
   return <>{children}</>;
 };

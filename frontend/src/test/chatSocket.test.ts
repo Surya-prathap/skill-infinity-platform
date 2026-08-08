@@ -1,23 +1,14 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import chatReducer, {
   messageReceived,
+  setOwnIdentity,
   setSocketStatus,
   typingChanged,
+  hydrateConversations,
 } from '@/store/slices/chatSlice';
-import { simulatePeerReply } from '@/socket/chatSocket';
-import { hydrateConversations } from '@/store/slices/chatSlice';
-import { seedConversations } from '@/features/communication/data';
+import { testConversations } from './fixtures';
 
 describe('chatSocket real-time integration', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-    vi.restoreAllMocks();
-  });
-
   it('maps socket connect to the connected status', () => {
     const state = chatReducer(undefined, setSocketStatus('connected'));
     expect(state.socketStatus).toBe('connected');
@@ -38,7 +29,8 @@ describe('chatSocket real-time integration', () => {
       replyTo: null,
       readBy: ['user-sarah'],
     };
-    let state = chatReducer(undefined, hydrateConversations(seedConversations));
+    let state = chatReducer(undefined, setOwnIdentity({ userId: 'user-me', userName: 'Alex Morgan' }));
+    state = chatReducer(state, hydrateConversations(testConversations));
     state = chatReducer(state, { type: 'chat/setActiveConversation', payload: 'c-maya' });
     state = chatReducer(state, messageReceived(incoming));
 
@@ -58,33 +50,5 @@ describe('chatSocket real-time integration', () => {
       }),
     );
     expect(state.typing['c-sarah']?.[0]?.isTyping).toBe(true);
-  });
-
-  it('simulates a peer reply: typing → read → message', () => {
-    const actions: unknown[] = [];
-    const fakeDispatch = (action: unknown) => {
-      actions.push(action);
-      return action;
-    };
-
-    const cancel = simulatePeerReply(
-      fakeDispatch as never,
-      'c-sarah',
-      { userId: 'user-sarah', name: 'Sarah Chen' },
-      'I’ll review your notes right away!',
-      1600,
-    );
-
-    vi.advanceTimersByTime(1000);
-    expect(actions.some((action) => (action as { type: string }).type === 'chat/typingChanged')).toBe(true);
-
-    vi.advanceTimersByTime(1000);
-    const received = actions.filter((action) => (action as { type: string }).type === 'chat/messageReceived');
-    expect(received.length).toBe(1);
-    expect((received[0] as { payload: { content: string } }).payload.content).toBe(
-      'I’ll review your notes right away!',
-    );
-
-    cancel();
   });
 });

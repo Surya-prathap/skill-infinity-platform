@@ -1,16 +1,42 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { renderWithProviders } from './testUtils';
 import { CommunitiesPage } from '@/pages/community/CommunitiesPage';
-import { seedCommunities } from '@/features/community/data';
+import { testCommunities } from './fixtures';
+
+vi.mock('@/services', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/services')>();
+  const { testCommunities } = await import('./fixtures');
+  return {
+    ...actual,
+    communityService: {
+      ...actual.communityService,
+      getCommunities: vi.fn().mockResolvedValue({
+        data: { data: { content: testCommunities } },
+      }),
+      getPopularTags: vi.fn().mockResolvedValue({ data: { data: [] } }),
+      joinCommunity: vi.fn().mockImplementation((communityId: string) =>
+        Promise.resolve({
+          data: {
+            data: testCommunities.find((c) => c.id === communityId) ?? testCommunities[0],
+          },
+        }),
+      ),
+    },
+  };
+});
 
 describe('CommunitiesPage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('renders community cards with names, descriptions and membership', async () => {
     renderWithProviders(<CommunitiesPage />);
 
     expect(screen.getByText('Communities')).toBeInTheDocument();
-    expect(screen.getByText('System Design')).toBeInTheDocument();
+    expect(await screen.findByText('System Design')).toBeInTheDocument();
     expect(screen.getByText('Java & Spring')).toBeInTheDocument();
 
     // Joined communities show the joined state.
@@ -22,7 +48,7 @@ describe('CommunitiesPage', () => {
     const user = userEvent.setup();
     renderWithProviders(<CommunitiesPage />);
 
-    const search = screen.getByLabelText('Search communities');
+    const search = await screen.findByLabelText('Search communities');
     await user.type(search, 'machine learning');
 
     await waitFor(() => {
@@ -35,7 +61,7 @@ describe('CommunitiesPage', () => {
     const user = userEvent.setup();
     renderWithProviders(<CommunitiesPage />);
 
-    await user.click(screen.getByRole('button', { name: /Data & AI/i }));
+    await user.click(await screen.findByRole('button', { name: /Data & AI/i }));
 
     await waitFor(() => {
       expect(screen.getByText('Machine Learning')).toBeInTheDocument();
@@ -47,10 +73,10 @@ describe('CommunitiesPage', () => {
     const user = userEvent.setup();
     renderWithProviders(<CommunitiesPage />);
 
-    const community = seedCommunities.find((c) => c.id === 'comm-java');
+    const community = testCommunities.find((c) => c.id === 'comm-java');
     expect(community).toBeDefined();
 
-    const card = screen.getByText('Java & Spring').closest('.MuiCard-root') as HTMLElement;
+    const card = (await screen.findByText('Java & Spring')).closest('.MuiCard-root') as HTMLElement;
     expect(card).not.toBeNull();
     const joinButton = within(card).getByRole('button', { name: /^Join$/i });
     await user.click(joinButton);
@@ -64,7 +90,7 @@ describe('CommunitiesPage', () => {
     const user = userEvent.setup();
     renderWithProviders(<CommunitiesPage />);
 
-    const search = screen.getByLabelText('Search communities');
+    const search = await screen.findByLabelText('Search communities');
     await user.type(search, 'quantum-computing-xyz');
 
     await waitFor(() => {

@@ -10,12 +10,11 @@ import {
   setDevices,
   setMeetingError,
 } from '@/store/slices/meetingSlice';
-import { selectMeetingControls, selectMeetingStatus } from '@/store/selectors';
+import { selectMeetingControls, selectMeetingStatus, selectUser } from '@/store/selectors';
 import { meetingService } from '@/services';
 import { showError } from '@/utils';
 import { meetingKeys } from './queryKeys';
-import { MEETING_CURRENT_USER_ID, MEETING_CURRENT_USER_NAME, seedMeetings } from './data';
-import type { Meeting, MeetingError, MeetingParticipant } from '@/types';
+import type { AuthUser, Meeting, MeetingError, MeetingParticipant } from '@/types';
 
 /* ---------------- Meetings ---------------- */
 
@@ -27,9 +26,6 @@ export const useMeetingQuery = (meetingId: string | null) => {
       return response.data.data;
     },
     enabled: Boolean(meetingId),
-    placeholderData: (): Meeting =>
-      seedMeetings.find((meeting) => meeting.id === meetingId) ??
-      seedMeetings[0]!,
     retry: 1,
   });
 
@@ -43,11 +39,10 @@ export const useUpcomingMeetingsQuery = () => {
       const response = await meetingService.getUpcomingMeetings();
       return response.data.data;
     },
-    placeholderData: (): Meeting[] => seedMeetings,
     retry: 1,
   });
 
-  return { ...query, meetings: query.data ?? seedMeetings, isOffline: query.isError };
+  return { ...query, meetings: query.data ?? [], isOffline: query.isError };
 };
 
 /* ---------------- Session meeting link ---------------- */
@@ -60,8 +55,6 @@ export const useSessionMeetingQuery = (sessionId: string | null) => {
       return response.data.data;
     },
     enabled: Boolean(sessionId),
-    placeholderData: (): Meeting =>
-      seedMeetings.find((meeting) => meeting.sessionId === sessionId) ?? seedMeetings[0]!,
     retry: 1,
   });
 
@@ -71,15 +64,15 @@ export const useSessionMeetingQuery = (sessionId: string | null) => {
 /* ---------------- Local participant ---------------- */
 
 export const buildLocalParticipant = (
+  user: AuthUser,
   meeting: Meeting | null,
   isHost = false,
   role: MeetingParticipant['role'] = 'LEARNER',
 ): MeetingParticipant => ({
-  id: MEETING_CURRENT_USER_ID,
-  name: MEETING_CURRENT_USER_NAME,
-  firstName: 'Alex',
-  lastName: 'Morgan',
-  role: isHost ? 'HOST' : meeting?.hostId === MEETING_CURRENT_USER_ID ? 'HOST' : role,
+  id: user.userId,
+  name: user.username || user.email,
+  email: user.email,
+  role: isHost ? 'HOST' : meeting?.hostId === user.userId ? 'HOST' : role,
   isLocal: true,
   audioEnabled: true,
   videoEnabled: true,
@@ -101,14 +94,15 @@ interface JoinMeetingOptions {
 export const useJoinMeeting = () => {
   const dispatch = useAppDispatch();
   const queryClient = useQueryClient();
+  const user = useAppSelector(selectUser);
   const joinedRef = useRef<string | null>(null);
 
   const join = useCallback(
     (meeting: Meeting, options: JoinMeetingOptions = {}) => {
-      if (joinedRef.current === meeting.id) return;
+      if (!user || joinedRef.current === meeting.id) return;
       joinedRef.current = meeting.id;
 
-      const participant = buildLocalParticipant(meeting, false, options.role);
+      const participant = buildLocalParticipant(user, meeting, false, options.role);
       if (options.mutedJoin) {
         participant.audioEnabled = false;
         participant.videoEnabled = false;
@@ -117,8 +111,8 @@ export const useJoinMeeting = () => {
       dispatch(
         addMessage({
           id: `meet-local-join-${Date.now()}`,
-          senderId: MEETING_CURRENT_USER_ID,
-          senderName: MEETING_CURRENT_USER_NAME,
+          senderId: user.userId,
+          senderName: user.username || user.email,
           content: 'You joined the meeting',
           kind: 'system',
           createdAt: new Date().toISOString(),
@@ -126,7 +120,7 @@ export const useJoinMeeting = () => {
       );
       void queryClient.invalidateQueries({ queryKey: meetingKeys.all });
     },
-    [dispatch, queryClient],
+    [dispatch, queryClient, user],
   );
 
   const leave = useCallback(() => {

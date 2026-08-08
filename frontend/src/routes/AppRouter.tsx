@@ -739,11 +739,11 @@ export const AppRouter: React.FC = () => {
         {/* ---------- Admin ---------- */}
         <Route
           element={
-
-              
+             <AuthGuard>
+               <RoleGuard roles={[ROLES.ADMIN]}>
                 <AdminLayout />
-
-
+               </RoleGuard>
+             </AuthGuard>
           }
         >
           <Route

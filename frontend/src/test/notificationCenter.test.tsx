@@ -2,18 +2,22 @@ import { describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { NotificationsPage } from '@/pages/NotificationsPage';
 import { renderWithProviders } from './testUtils';
+import { setNotifications } from '@/store/slices/notificationsSlice';
+import { testNotifications } from './fixtures';
 
 describe('NotificationsPage', () => {
-  it('seeds the store with realistic notifications on mount', async () => {
-    renderWithProviders(<NotificationsPage />);
+  it('renders notifications dispatched into the store', async () => {
+    const { store } = renderWithProviders(<NotificationsPage />);
+    store.dispatch(setNotifications(testNotifications));
 
     expect(await screen.findByText('Session reminder')).toBeInTheDocument();
     expect(screen.getByText(/Booking confirmed/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Unread \(3\)/ })).toBeInTheDocument(); // 3 unread in seed
+    expect(screen.getByRole('button', { name: /Unread \(3\)/ })).toBeInTheDocument(); // 3 unread in fixture
   });
 
   it('filters to unread notifications', async () => {
-    renderWithProviders(<NotificationsPage />);
+    const { store } = renderWithProviders(<NotificationsPage />);
+    store.dispatch(setNotifications(testNotifications));
     await screen.findByText('Session reminder');
 
     fireEvent.click(screen.getByRole('button', { name: /Unread/ }));
@@ -27,7 +31,8 @@ describe('NotificationsPage', () => {
   });
 
   it('marks a single notification as read and deletes it', async () => {
-    renderWithProviders(<NotificationsPage />);
+    const { store } = renderWithProviders(<NotificationsPage />);
+    store.dispatch(setNotifications(testNotifications));
     await screen.findByText('Session reminder');
 
     const cards = screen.getAllByRole('button', { name: 'Delete notification' });
@@ -42,7 +47,8 @@ describe('NotificationsPage', () => {
   });
 
   it('marks all notifications as read', async () => {
-    renderWithProviders(<NotificationsPage />);
+    const { store } = renderWithProviders(<NotificationsPage />);
+    store.dispatch(setNotifications(testNotifications));
     await screen.findByText('Session reminder');
 
     fireEvent.click(screen.getByRole('button', { name: 'Mark all read' }));
@@ -52,7 +58,8 @@ describe('NotificationsPage', () => {
   });
 
   it('groups notifications by day', async () => {
-    renderWithProviders(<NotificationsPage />);
+    const { store } = renderWithProviders(<NotificationsPage />);
+    store.dispatch(setNotifications(testNotifications));
     await screen.findByText('Session reminder');
 
     // Group headers render without depending on wall-clock day boundaries.
@@ -61,7 +68,8 @@ describe('NotificationsPage', () => {
   });
 
   it('clears all notifications', async () => {
-    renderWithProviders(<NotificationsPage />);
+    const { store } = renderWithProviders(<NotificationsPage />);
+    store.dispatch(setNotifications(testNotifications));
     await screen.findByText('Session reminder');
 
     fireEvent.click(screen.getByText('Clear all'));

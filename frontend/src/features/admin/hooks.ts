@@ -3,39 +3,21 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminService } from '@/services';
 import { getErrorMessage, showError, showInfo, showSuccess } from '@/utils';
 import { adminKeys } from './queryKeys';
-import {
-  seedAnalytics,
-  seedAnnouncements,
-  seedAuditLogs,
-  seedCommunities,
-  seedCommunityPosts,
-  seedCoupons,
-  seedDashboard,
-  seedFeatureFlags,
-  seedMentorApprovals,
-  seedMentors,
-  seedModerationQueue,
-  seedModerationReviews,
-  seedPayments,
-  seedPolls,
-  seedRefunds,
-  seedReportDefinitions,
-  seedReviewAnalytics,
-  seedSessions,
-  seedSettings,
-  seedSubscriptions,
-  seedSystemMetrics,
-  seedTickets,
-  seedUsers,
-  seedWalletStats,
-  seedWalletTransactions,
-  seedAnnouncementTemplates,
-  seedServices,
-} from './data';
+import { seedDashboard } from './data';
 import type {
   AdminAnalytics,
+  AdminCommunity,
+  AdminCommunityPost,
+  AdminCoupon,
   AdminMentor,
+  AdminPayment,
+  AdminPoll,
+  AdminRefund,
+  AdminSession,
+  AdminSubscription,
   AdminUser,
+  AdminWalletTransaction,
+  MonitoredService,
   AnnouncementTemplate,
   AuditLog,
   CreateAnnouncementRequest,
@@ -51,11 +33,52 @@ import type {
   TicketStatus,
   UpdateFeatureFlagRequest,
   UpdateSettingRequest,
+  WalletStats,
 } from '@/types';
 
-/** Offline-first: prefer the API but keep the admin console usable when the backend is unreachable. */
-const offline = <T,>(promise: Promise<T>, fallback: () => T): Promise<T> =>
-  promise.catch(() => fallback());
+/* ============================================================
+   Zeroed defaults — typed empty shapes so admin pages render
+   honest "no data yet" states instead of fabricated seed data.
+   ============================================================ */
+
+const emptyAnalytics = (): AdminAnalytics => ({
+  revenue: { totalRevenue: 0, monthlyRevenue: 0, weeklyRevenue: 0, averageTransactionValue: 0, revenueByMonth: {} },
+  growth: {
+    userGrowthRate: 0,
+    mentorGrowthRate: 0,
+    sessionGrowthRate: 0,
+    revenueGrowthRate: 0,
+    registrationsByDay: {},
+  },
+  users: { totalUsers: 0, activeUsers: 0, newUsersToday: 0, newUsersThisWeek: 0, newUsersThisMonth: 0, usersByRole: {} },
+  sessions: {
+    totalSessions: 0,
+    completedSessions: 0,
+    cancelledSessions: 0,
+    averageSessionDuration: 0,
+    sessionsToday: 0,
+    sessionsByStatus: {},
+  },
+  engagement: { averageRating: 0, totalReviews: 0, totalPosts: 0, totalComments: 0, mentorResponseRate: 0 },
+});
+
+const emptyRevenue = (): RevenueAnalytics => ({
+  totalRevenue: 0,
+  monthlyRevenue: 0,
+  weeklyRevenue: 0,
+  averageTransactionValue: 0,
+  revenueByMonth: {},
+});
+
+const emptyWalletStats = (): WalletStats => ({
+  totalCreditsIssued: 0,
+  creditsOutstanding: 0,
+  creditsUsed: 0,
+  rewardsDistributed: 0,
+  bonusesDistributed: 0,
+  refundsProcessed: 0,
+  averageBalance: 0,
+});
 
 /* ============================================================
    Executive dashboard & analytics
@@ -72,7 +95,8 @@ export const useAdminDashboardQuery = () => {
     refetchInterval: 60 * 1000,
     retry: 1,
   });
-  return { ...result, dashboard: result.data ?? seedDashboard, isOffline: result.isError };
+  const dashboard = result.data ?? seedDashboard;
+  return { ...result, dashboard, isOffline: result.isError };
 };
 
 export const useAdminAnalyticsQuery = () => {
@@ -85,7 +109,7 @@ export const useAdminAnalyticsQuery = () => {
     staleTime: 60 * 1000,
     retry: 1,
   });
-  return { ...result, analytics: (result.data ?? seedAnalytics) as AdminAnalytics, isOffline: result.isError };
+  return { ...result, analytics: (result.data ?? emptyAnalytics()) as AdminAnalytics, isOffline: result.isError };
 };
 
 export const useRevenueAnalyticsQuery = () => {
@@ -98,16 +122,7 @@ export const useRevenueAnalyticsQuery = () => {
     staleTime: 60 * 1000,
     retry: 1,
   });
-  const fallback: RevenueAnalytics = useMemo(
-    () => ({
-      totalRevenue: seedAnalytics.revenue.totalRevenue,
-      monthlyRevenue: seedAnalytics.revenue.monthlyRevenue,
-      weeklyRevenue: seedAnalytics.revenue.weeklyRevenue,
-      averageTransactionValue: seedAnalytics.revenue.averageTransactionValue,
-      revenueByMonth: seedAnalytics.revenue.revenueByMonth,
-    }),
-    [],
-  );
+  const fallback = useMemo(() => emptyRevenue(), []);
   return { ...result, revenue: result.data ?? fallback, isOffline: result.isError };
 };
 
@@ -125,14 +140,11 @@ export const useAdminUsersQuery = (page = 0, size = 20) => {
     staleTime: 30 * 1000,
     retry: 1,
   });
-  const fallback = useMemo(
-    () => seedUsers.slice(page * size, page * size + size),
-    [page, size],
-  );
-  const totalElements = Math.max(result.data?.length ?? fallback.length, seedUsers.length);
+  const users = result.data ?? ([] as AdminUser[]);
+  const totalElements = result.data?.length ?? 0;
   return {
     ...result,
-    users: result.data ?? fallback,
+    users,
     totalElements,
     totalPages: Math.max(1, Math.ceil(totalElements / size)),
     isOffline: result.isError,
@@ -144,13 +156,8 @@ export const useAdminUserStatusMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ userId, active }: { userId: string; active: boolean }) =>
-      offline(
-        adminService.updateUserStatus(userId, active).then(() => undefined),
-        () => undefined,
-      ),
+      adminService.updateUserStatus(userId, active).then(() => undefined),
     onMutate: ({ userId, active }) => {
-      const seedUser = seedUsers.find((u) => u.id === userId);
-      if (seedUser) seedUser.status = active ? 'ACTIVE' : 'SUSPENDED';
       queryClient.setQueriesData<unknown>({ queryKey: adminKeys.all }, (oldData: unknown) => {
         if (!Array.isArray(oldData)) return oldData;
         return oldData.map((item) => {
@@ -170,32 +177,75 @@ export const useAdminUserStatusMutation = () => {
    Mentors
    ============================================================ */
 
+/** Maps an AdminUser row to the AdminMentor shape used by the console.
+ * The admin-service mentors endpoint returns AdminUserResponse rows; fields
+ * not present there (rating, revenue, hourly rate, expertise) are zeroed
+ * rather than fabricated. */
+const toAdminMentor = (user: AdminUser): AdminMentor => ({
+  id: user.id,
+  name: user.name,
+  email: user.email,
+  status: user.status === 'BANNED' ? 'SUSPENDED' : (user.status as AdminMentor['status']),
+  verified: false,
+  rating: 0,
+  reviewCount: 0,
+  sessionsCompleted: user.sessionsCompleted,
+  revenue: 0,
+  hourlyRate: 0,
+  expertise: [],
+  responseRate: 0,
+  joinedAt: user.joinedAt,
+  lastActiveAt: user.lastActiveAt,
+  certificates: 0,
+});
+
 export const useAdminMentorsQuery = () => {
   const result = useQuery({
     queryKey: adminKeys.mentors(0, 50),
     queryFn: async () => {
       const response = await adminService.getMentors(0, 50);
-      return response.data.data.content;
+      return response.data.data.content.map(toAdminMentor);
     },
     staleTime: 30 * 1000,
     retry: 1,
   });
-  return { ...result, mentors: (result.data ?? seedMentors) as AdminMentor[], isOffline: result.isError };
+  return { ...result, mentors: (result.data ?? []) as AdminMentor[], isOffline: result.isError };
 };
 
+/**
+ * Approval queue derived from the real mentor directory (pending mentors).
+ * Unavailable approval fields are zeroed/empty rather than fabricated.
+ */
 export const useMentorApprovalsQuery = () => {
-  // The admin-service exposes mentors as AdminUserResponse rows which cannot be
-  // mapped to approval-shaped cards without profile data, so the approval queue
-  // is seed-backed (the live list renders from the mentors endpoint instead).
   const result = useQuery({
     queryKey: adminKeys.mentorApprovals(),
-    queryFn: async () => seedMentorApprovals,
+    queryFn: async () => {
+      const response = await adminService.getMentors(0, 200);
+      const mentors = response.data.data.content;
+      return mentors
+        .filter((mentor) => mentor.status === 'PENDING')
+        .map(
+          (mentor): MentorApproval => ({
+            id: mentor.id,
+            name: mentor.name,
+            email: mentor.email,
+            expertise: [],
+            yearsExperience: 0,
+            requestedAt: mentor.joinedAt,
+            verificationScore: 0,
+            certificates: [],
+            bio: '',
+            hourlyRate: 0,
+            status: 'PENDING',
+          }),
+        );
+    },
     staleTime: 30 * 1000,
     retry: 1,
   });
   return {
     ...result,
-    approvals: (result.data ?? seedMentorApprovals) as MentorApproval[],
+    approvals: (result.data ?? []) as MentorApproval[],
     isOffline: result.isError,
   };
 };
@@ -203,11 +253,8 @@ export const useMentorApprovalsQuery = () => {
 export const useApproveMentorMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (mentorId: string) =>
-      offline(adminService.approveMentor(mentorId).then(() => undefined), () => undefined),
+    mutationFn: (mentorId: string) => adminService.approveMentor(mentorId).then(() => undefined),
     onMutate: (mentorId) => {
-      const seed = seedMentorApprovals.find((m) => m.id === mentorId);
-      if (seed) seed.status = 'APPROVED';
       queryClient.setQueryData<MentorApproval[]>(adminKeys.mentorApprovals(), (old) =>
         old?.map((m) => (m.id === mentorId ? { ...m, status: 'APPROVED' as const } : m)) ?? old,
       );
@@ -221,10 +268,8 @@ export const useRejectMentorMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ mentorId, reason }: { mentorId: string; reason: string }) =>
-      offline(adminService.rejectMentor(mentorId, reason).then(() => undefined), () => undefined),
+      adminService.rejectMentor(mentorId, reason).then(() => undefined),
     onMutate: ({ mentorId }) => {
-      const seed = seedMentorApprovals.find((m) => m.id === mentorId);
-      if (seed) seed.status = 'REJECTED';
       queryClient.setQueryData<MentorApproval[]>(adminKeys.mentorApprovals(), (old) =>
         old?.map((m) => (m.id === mentorId ? { ...m, status: 'REJECTED' as const } : m)) ?? old,
       );
@@ -248,7 +293,7 @@ export const useAdminSessionsQuery = () => {
     staleTime: 30 * 1000,
     retry: 1,
   });
-  return { ...result, sessions: seedSessions, analytics: result.data, isOffline: result.isError };
+  return { ...result, sessions: [] as AdminSession[], analytics: result.data, isOffline: result.isError };
 };
 
 export const useAdminPaymentsQuery = () => {
@@ -263,10 +308,10 @@ export const useAdminPaymentsQuery = () => {
   });
   return {
     ...result,
-    payments: seedPayments,
-    refunds: seedRefunds,
-    subscriptions: seedSubscriptions,
-    coupons: seedCoupons,
+    payments: [] as AdminPayment[],
+    refunds: [] as AdminRefund[],
+    subscriptions: [] as AdminSubscription[],
+    coupons: [] as AdminCoupon[],
     revenue: result.data,
     isOffline: result.isError,
   };
@@ -276,20 +321,16 @@ export const useRefundMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ refundId, action }: { refundId: string; action: 'APPROVE' | 'REJECT' }) =>
-      offline(
-        adminService.manageRefund(refundId, action).then(() => undefined),
-        () => undefined,
-      ),
+      adminService.manageRefund(refundId, action).then(() => undefined),
     onMutate: ({ refundId, action }) => {
-      const seed = seedRefunds.find((r) => r.id === refundId);
-      if (seed) seed.status = action === 'APPROVE' ? 'PROCESSED' : 'REJECTED';
-      queryClient.setQueryData<typeof seedRefunds>(adminKeys.refunds(), (old) =>
-        old?.map((r) =>
-          r.id === refundId
-            ? { ...r, status: action === 'APPROVE' ? ('PROCESSED' as const) : ('REJECTED' as const) }
-            : r,
-        ) ?? old,
-      );
+      queryClient.setQueriesData<unknown>({ queryKey: adminKeys.refunds() }, (oldData: unknown) => {
+        if (!Array.isArray(oldData)) return oldData;
+        return oldData.map((item) => {
+          const refund = item as { id: string; status: string };
+          if (refund.id !== refundId) return refund;
+          return { ...refund, status: action === 'APPROVE' ? 'PROCESSED' : 'REJECTED' };
+        });
+      });
     },
     onSuccess: (_data, variables) =>
       showSuccess(variables.action === 'APPROVE' ? 'Refund approved' : 'Refund rejected'),
@@ -298,19 +339,13 @@ export const useRefundMutation = () => {
 };
 
 export const useAdminWalletQuery = () => {
-  // The admin-service exposes no wallet ledger endpoint, so the wallet
-  // management page is seed-backed (stats + transactions).
-  const result = useQuery({
-    queryKey: adminKeys.wallet(),
-    queryFn: async () => seedWalletStats,
-    staleTime: 60 * 1000,
-    retry: 1,
-  });
+  // The admin-service exposes no wallet ledger endpoint yet, so the wallet
+  // management page shows an honest empty state until it ships.
   return {
-    ...result,
-    transactions: seedWalletTransactions,
-    stats: (result.data ?? seedWalletStats) as typeof seedWalletStats,
-    isOffline: result.isError,
+    transactions: [] as AdminWalletTransaction[],
+    stats: emptyWalletStats(),
+    isOffline: false,
+    isLoading: false,
   };
 };
 
@@ -330,10 +365,10 @@ export const useAdminCommunityQuery = () => {
   });
   return {
     ...result,
-    moderationQueue: seedModerationQueue,
-    posts: seedCommunityPosts,
-    communities: seedCommunities,
-    polls: seedPolls,
+    moderationQueue: [] as ModerationQueueItem[],
+    posts: [] as AdminCommunityPost[],
+    communities: [] as AdminCommunity[],
+    polls: [] as AdminPoll[],
     engagement: result.data,
     isOffline: result.isError,
   };
@@ -350,8 +385,6 @@ export const useModerationMutation = () => {
     mutationFn: (_variables: { itemId: string; status: 'RESOLVED' | 'DISMISSED' }) =>
       Promise.resolve(undefined as void),
     onMutate: ({ itemId, status }) => {
-      const seed = seedModerationQueue.find((m) => m.id === itemId);
-      if (seed) seed.status = status;
       queryClient.setQueryData<ModerationQueueItem[]>(
         [...adminKeys.all, 'moderation-queue'] as const,
         (old) => old?.map((m) => (m.id === itemId ? { ...m, status } : m)) ?? old,
@@ -375,8 +408,17 @@ export const useAdminReviewsQuery = () => {
   });
   return {
     ...result,
-    reviews: seedModerationReviews,
-    analytics: seedReviewAnalytics,
+    reviews: [] as ModerationReview[],
+    analytics: {
+      totalReviews: 0,
+      pending: 0,
+      approved: 0,
+      rejected: 0,
+      reported: 0,
+      averageRating: 0,
+      helpfulVotes: 0,
+      ratingsDistribution: {} as Record<string, number>,
+    },
     isOffline: result.isError,
   };
 };
@@ -392,8 +434,6 @@ export const useReviewModerationMutation = () => {
     mutationFn: (_variables: { reviewId: string; status: 'APPROVED' | 'REJECTED' }) =>
       Promise.resolve(undefined as void),
     onMutate: ({ reviewId, status }) => {
-      const seed = seedModerationReviews.find((r) => r.id === reviewId);
-      if (seed) seed.status = status;
       queryClient.setQueryData<ModerationReview[]>(
         [...adminKeys.all, 'moderation-reviews'] as const,
         (old) => old?.map((r) => (r.id === reviewId ? { ...r, status } : r)) ?? old,
@@ -420,30 +460,14 @@ export const useAdminSupportQuery = (status?: TicketStatus) => {
     refetchInterval: 60 * 1000,
     retry: 1,
   });
-  const fallback = useMemo(
-    () => (status ? seedTickets.filter((t) => t.status === status) : seedTickets),
-    [status],
-  );
-  return { ...result, tickets: (result.data ?? fallback) as SupportTicket[], isOffline: result.isError };
+  return { ...result, tickets: (result.data ?? []) as SupportTicket[], isOffline: result.isError };
 };
 
 export const useSupportReplyMutation = (ticketId: string) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (message: string) =>
-      offline(adminService.replyToTicket(ticketId, message).then(() => undefined), () => undefined),
+    mutationFn: (message: string) => adminService.replyToTicket(ticketId, message).then(() => undefined),
     onMutate: (message) => {
-      const seed = seedTickets.find((t) => t.id === ticketId);
-      if (seed) {
-        seed.replies.push({
-          id: `reply-${Date.now()}`,
-          senderName: 'Support Team',
-          senderType: 'ADMIN',
-          message,
-          internal: false,
-          createdAt: new Date().toISOString(),
-        });
-      }
       queryClient.setQueryData<SupportTicket[]>(adminKeys.support(undefined), (old) =>
         old?.map((t) =>
           t.id === ticketId
@@ -473,18 +497,18 @@ export const useSupportReplyMutation = (ticketId: string) => {
    ============================================================ */
 
 export const useAdminAnnouncementsQuery = () => {
-  // The admin-service only exposes announcement creation; the list is
-  // seed-backed until a read endpoint ships.
+  // The admin-service only exposes announcement creation; the list stays an
+  // honest empty state until a read endpoint ships.
   const result = useQuery({
     queryKey: adminKeys.announcements(),
-    queryFn: async () => seedAnnouncements,
+    queryFn: async () => [] as SystemAnnouncement[],
     staleTime: 60 * 1000,
     retry: 1,
   });
   return {
     ...result,
-    announcements: (result.data ?? seedAnnouncements) as SystemAnnouncement[],
-    templates: seedAnnouncementTemplates as AnnouncementTemplate[],
+    announcements: (result.data ?? []) as SystemAnnouncement[],
+    templates: [] as AnnouncementTemplate[],
     isOffline: result.isError,
   };
 };
@@ -493,21 +517,7 @@ export const useCreateAnnouncementMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: CreateAnnouncementRequest) =>
-      offline(
-        adminService.createAnnouncement(payload).then((r) => r.data.data),
-        (): SystemAnnouncement => ({
-          id: `a-${Date.now()}`,
-          title: payload.title,
-          content: payload.content,
-          announcementType: payload.announcementType,
-          targetRole: payload.targetRole,
-          priority: payload.priority,
-          status: 'PUBLISHED',
-          publishedAt: new Date().toISOString(),
-          createdAt: new Date().toISOString(),
-          author: 'You',
-        }),
-      ),
+      adminService.createAnnouncement(payload).then((r) => r.data.data),
     onSuccess: (announcement) => {
       queryClient.setQueryData<SystemAnnouncement[]>(adminKeys.announcements(), (old) =>
         old ? [announcement, ...old] : [announcement],
@@ -523,15 +533,13 @@ export const useCreateAnnouncementMutation = () => {
    ============================================================ */
 
 export const useAdminReportsQuery = () => {
-  // The admin-service has no report catalog endpoint, so the reports page is
-  // seed-backed until a reporting API ships.
-  const result = useQuery({
-    queryKey: adminKeys.reports(),
-    queryFn: async () => seedReportDefinitions,
-    staleTime: 10 * 60 * 1000,
-    retry: 1,
-  });
-  return { ...result, reports: (result.data ?? seedReportDefinitions) as ReportDefinition[], isOffline: result.isError };
+  // The admin-service has no report catalog endpoint, so the reports page
+  // shows an honest empty state until a reporting API ships.
+  return {
+    reports: [] as ReportDefinition[],
+    isOffline: false,
+    isLoading: false,
+  };
 };
 
 /* ============================================================
@@ -548,27 +556,14 @@ export const useAdminSettingsQuery = () => {
     staleTime: 5 * 60 * 1000,
     retry: 1,
   });
-  return { ...result, settings: (result.data ?? seedSettings) as PlatformSetting[], isOffline: result.isError };
+  return { ...result, settings: (result.data ?? []) as PlatformSetting[], isOffline: result.isError };
 };
 
 export const useUpdateSettingMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: UpdateSettingRequest) =>
-      offline(
-        adminService.updateSetting(payload).then((r) => r.data.data),
-        (): PlatformSetting => ({
-          id: `set-${Date.now()}`,
-          settingKey: payload.settingKey,
-          settingValue: payload.settingValue,
-          dataType: payload.dataType,
-          description: payload.description,
-          category: payload.category,
-          encrypted: false,
-          active: true,
-          updatedAt: new Date().toISOString(),
-        }),
-      ),
+      adminService.updateSetting(payload).then((r) => r.data.data),
     onSuccess: (setting) => {
       queryClient.setQueryData<PlatformSetting[]>(adminKeys.settings(), (old) =>
         old?.map((s) => (s.settingKey === setting.settingKey ? { ...s, ...setting } : s)) ?? old,
@@ -593,27 +588,14 @@ export const useAdminFeatureFlagsQuery = () => {
     staleTime: 60 * 1000,
     retry: 1,
   });
-  return { ...result, flags: (result.data ?? seedFeatureFlags) as FeatureFlag[], isOffline: result.isError };
+  return { ...result, flags: (result.data ?? []) as FeatureFlag[], isOffline: result.isError };
 };
 
 export const useUpdateFeatureFlagMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: UpdateFeatureFlagRequest) =>
-      offline(
-        adminService.updateFeatureFlag(payload).then((r) => r.data.data),
-        (): FeatureFlag => ({
-          id: `ff-${Date.now()}`,
-          featureKey: payload.featureKey,
-          featureName: payload.featureName,
-          description: payload.description,
-          enabled: payload.enabled,
-          rolloutPercentage: payload.rolloutPercentage,
-          environment: payload.environment,
-          active: true,
-          updatedAt: new Date().toISOString(),
-        }),
-      ),
+      adminService.updateFeatureFlag(payload).then((r) => r.data.data),
     onSuccess: (flag) => {
       queryClient.setQueryData<FeatureFlag[]>(adminKeys.featureFlags(), (old) =>
         old?.map((f) => (f.featureKey === flag.featureKey ? { ...f, ...flag } : f)) ?? old,
@@ -638,7 +620,7 @@ export const useAdminAuditLogsQuery = () => {
     staleTime: 60 * 1000,
     retry: 1,
   });
-  return { ...result, logs: (result.data ?? seedAuditLogs) as AuditLog[], isOffline: result.isError };
+  return { ...result, logs: (result.data ?? []) as AuditLog[], isOffline: result.isError };
 };
 
 /* ============================================================
@@ -659,10 +641,25 @@ export const useAdminMonitoringQuery = () => {
   });
   return {
     ...result,
-    metrics: seedSystemMetrics,
-    services: seedServices,
+    metrics: {
+      apiStatus: 'UP',
+      database: 'UP',
+      redis: 'UP',
+      rabbitmq: 'UP',
+      minio: 'UP',
+      cpuUsage: 0,
+      memoryUsage: 0,
+      storageUsage: 0,
+      responseTimeMs: 0,
+      errorRate: 0,
+      requestsPerMinute: 0,
+      activeSockets: 0,
+      latencySeries: [] as { label: string; value: number }[],
+      requestVolume: [] as { label: string; value: number }[],
+      errorRateSeries: [] as { label: string; value: number }[],
+    },
+    services: [] as MonitoredService[],
     health: result.data?.health,
     isOffline: result.isError,
   };
 };
-

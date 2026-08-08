@@ -7,7 +7,7 @@ import Tooltip from '@mui/material/Tooltip';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { addMessage, reactToMessage, toggleMessagePin } from '@/store/slices/meetingSlice';
 import { selectMeetingMessages } from '@/store/selectors';
-import { MEETING_CURRENT_USER_ID, MEETING_CURRENT_USER_NAME } from '@/features/meeting';
+import { useCurrentUserIdentity } from '@/hooks';
 import { avatarFor } from './meetingHelpers';
 
 interface MeetingChatProps {
@@ -19,6 +19,7 @@ const QUICK_EMOJIS = ['👍', '❤️', '😂', '👏', '🎉', '🔥'];
 /** In-meeting chat — integrates with the Communication Center patterns. */
 export const MeetingChat = ({ onClose }: MeetingChatProps) => {
   const dispatch = useAppDispatch();
+  const { userId, userName } = useCurrentUserIdentity();
   const messages = useAppSelector(selectMeetingMessages);
   const [draft, setDraft] = useState('');
   const listRef = useRef<HTMLDivElement | null>(null);
@@ -39,8 +40,8 @@ export const MeetingChat = ({ onClose }: MeetingChatProps) => {
     dispatch(
       addMessage({
         id: `meet-chat-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-        senderId: MEETING_CURRENT_USER_ID,
-        senderName: MEETING_CURRENT_USER_NAME,
+        senderId: userId,
+        senderName: userName,
         content,
         kind: 'text',
         createdAt: new Date().toISOString(),
@@ -123,27 +124,27 @@ export const MeetingChat = ({ onClose }: MeetingChatProps) => {
                 display: 'flex',
                 gap: 8,
                 flexDirection: 'column',
-                alignItems: message.senderId === MEETING_CURRENT_USER_ID ? 'flex-end' : 'flex-start',
+                alignItems: message.senderId === userId ? 'flex-end' : 'flex-start',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, maxWidth: '100%' }}>
-                {message.senderId !== MEETING_CURRENT_USER_ID && (
+                {message.senderId !== userId && (
                   <img src={avatarFor(message.senderId)} alt="" style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                 )}
                 <div
                   style={{
                     background:
-                      message.senderId === MEETING_CURRENT_USER_ID
+                      message.senderId === userId
                         ? 'linear-gradient(135deg, #6D5DF6, #5443D4)'
                         : 'rgba(255,255,255,0.08)',
-                    borderRadius: message.senderId === MEETING_CURRENT_USER_ID ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
+                    borderRadius: message.senderId === userId ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
                     padding: '8px 12px',
                     maxWidth: '82%',
                     position: 'relative',
                     border: message.pinned ? '1px solid rgba(142,128,255,0.5)' : '1px solid transparent',
                   }}
                 >
-                  {message.senderId !== MEETING_CURRENT_USER_ID && (
+                  {message.senderId !== userId && (
                     <span style={{ display: 'block', fontSize: '0.64rem', fontWeight: 700, color: '#8E80FF', marginBottom: 2 }}>
                       {message.senderName}
                     </span>

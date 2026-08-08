@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Box, Button, Chip, CircularProgress, Grid, InputAdornment, TextField } from '@mui/material';
-import type { AxiosError } from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -17,7 +16,7 @@ import type { CreditPackOption } from '@/components/wallet';
 import { useDocumentTitle } from '@/hooks';
 import { ROUTES } from '@/constants';
 import { usePurchaseCredits, useValidateCouponMutation } from '@/features/payments';
-import { seedCreditPacks } from '@/features/wallet/data';
+import { CREDIT_PACKS } from '@/features/wallet/constants';
 import { formatCurrency } from '@/utils';
 
 const TAX_RATE = 0.08;
@@ -28,7 +27,7 @@ export const CreditPurchasePage: React.FC = () => {
   const { initiate, confirm } = usePurchaseCredits();
   const validateCoupon = useValidateCouponMutation();
 
-  const [selectedPack, setSelectedPack] = useState<CreditPackOption>(seedCreditPacks[1]);
+  const [selectedPack, setSelectedPack] = useState<CreditPackOption>(CREDIT_PACKS[1]!);
   const [couponCode, setCouponCode] = useState('');
   const [couponApplied, setCouponApplied] = useState<string | null>(null);
   const [couponError, setCouponError] = useState<string | null>(null);
@@ -56,12 +55,7 @@ export const CreditPurchasePage: React.FC = () => {
         setCouponError('This coupon code is invalid.');
       }
     } catch {
-      // Offline fallback — accept known demo codes.
-      if (['WELCOME15', 'SAVE20', 'PRO10'].includes(code.toUpperCase())) {
-        setCouponApplied(code);
-      } else {
-        setCouponError('This coupon code is invalid.');
-      }
+      setCouponError('This coupon code is invalid.');
     } finally {
       setCouponLoading(false);
     }
@@ -84,14 +78,8 @@ export const CreditPurchasePage: React.FC = () => {
         gatewayTransactionId: `gw_${Date.now()}`,
       });
       setComplete(true);
-    } catch (error) {
-      // Offline demo mode — simulate a successful top-up so the flow stays usable.
-      const isNetworkFailure = Boolean((error as AxiosError)?.isAxiosError && !(error as AxiosError).response);
-      if (isNetworkFailure) {
-        setComplete(true);
-      } else {
-        setPaymentError('Payment failed. Please check your payment details and try again.');
-      }
+    } catch {
+      setPaymentError('Payment failed. Please check your payment details and try again.');
     } finally {
       setProcessing(false);
     }
@@ -170,7 +158,7 @@ export const CreditPurchasePage: React.FC = () => {
                     Choose your pack
                   </Typography>
                   <Grid container spacing={2.5}>
-                    {seedCreditPacks.map((pack, index) => (
+                    {CREDIT_PACKS.map((pack, index) => (
                       <Grid key={pack.id} size={{ xs: 12, sm: 6, md: 4 }}>
                         <CreditPackCard
                           pack={{ ...pack, highlighted: pack.id === 'pro' }}
@@ -231,7 +219,7 @@ export const CreditPurchasePage: React.FC = () => {
                       </Typography>
                     )}
                     <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mt: 1 }}>
-                      Try WELCOME15, SAVE20 or PRO10 in demo mode.
+                      Coupons are validated by the payment service.
                     </Typography>
                   </Card>
                 </Grid>

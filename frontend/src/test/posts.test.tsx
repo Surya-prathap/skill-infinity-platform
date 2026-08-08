@@ -1,10 +1,38 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { renderWithProviders } from './testUtils';
 import { PostCard, PostComposer } from '@/components/community';
 import { useFeedQuery } from '@/features/community';
-import { seedPosts } from '@/features/community/data';
+import { testPosts } from './fixtures';
+
+vi.mock('@/services', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/services')>();
+  const { testPosts } = await import('./fixtures');
+  const page = {
+    content: testPosts,
+    page: 0,
+    size: 10,
+    totalElements: testPosts.length,
+    totalPages: 1,
+    first: true,
+    last: true,
+    empty: false,
+  };
+  return {
+    ...actual,
+    communityService: {
+      ...actual.communityService,
+      getPosts: vi.fn().mockResolvedValue({ data: { data: page } }),
+      getTrendingPosts: vi.fn().mockResolvedValue({ data: { data: testPosts } }),
+      getPinnedPosts: vi.fn().mockResolvedValue({ data: { data: [] } }),
+      likePost: vi.fn().mockResolvedValue({ data: { data: undefined } }),
+      unlikePost: vi.fn().mockResolvedValue({ data: { data: undefined } }),
+      bookmarkPost: vi.fn().mockResolvedValue({ data: { data: undefined } }),
+      unbookmarkPost: vi.fn().mockResolvedValue({ data: { data: undefined } }),
+    },
+  };
+});
 
 /** Renders the first feed post through the live query so optimistic updates flow back. */
 const FeedPostHarness: React.FC<{ postId: string }> = ({ postId }) => {
@@ -15,11 +43,15 @@ const FeedPostHarness: React.FC<{ postId: string }> = ({ postId }) => {
 };
 
 describe('PostCard', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('renders post author, content and markdown formatting', async () => {
     renderWithProviders(<FeedPostHarness postId="post-sd-1" />);
 
     expect(await screen.findByText(/Alex Rivera/)).toBeInTheDocument();
-    expect(screen.getByText(/URL shortener/)).toBeInTheDocument();
+    expect(screen.getByText('Designing a URL shortener')).toBeInTheDocument();
     // Reaction bar present with live counts
     expect(screen.getByRole('button', { name: 'Unlike' })).toBeInTheDocument();
   });
@@ -29,7 +61,7 @@ describe('PostCard', () => {
     renderWithProviders(<FeedPostHarness postId="post-sd-2" />);
 
     const likeButton = await screen.findByRole('button', { name: 'Like' });
-    const initial = seedPosts.find((p) => p.id === 'post-sd-2')!.likeCount;
+    const initial = testPosts.find((p) => p.id === 'post-sd-2')!.likeCount;
 
     await user.click(likeButton);
 
@@ -69,12 +101,16 @@ describe('PostCard', () => {
 });
 
 describe('PostComposer', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('opens the editor and enables publishing once content is added', async () => {
     const user = userEvent.setup();
     renderWithProviders(<PostComposer />);
 
     await user.click(screen.getByText(/Share something with the community/i));
-    expect(screen.getByText(/Alex Morgan/)).toBeInTheDocument();
+    expect(screen.getByText(/You/)).toBeInTheDocument();
 
     const publishButton = screen.getByRole('button', { name: /Publish/i });
     expect(publishButton).toBeEnabled();

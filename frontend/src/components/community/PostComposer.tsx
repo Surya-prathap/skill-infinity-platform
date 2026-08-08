@@ -16,7 +16,7 @@ import { RichTextEditor } from './RichTextEditor';
 import { TagChip } from './TagChip';
 import { extractHashtags, extractMentions } from './markdown';
 import { useCommunityDraft, useCreatePostMutation } from '@/features/community';
-import { CURRENT_USER_NAME, seedCommunities } from '@/features/community/data';
+import { useCurrentUserIdentity } from '@/hooks';
 import { getStoredValue, setStoredValue, showInfo, showSuccess } from '@/utils';
 import { STORAGE_KEYS } from '@/constants';
 import type { Community, PostAttachment, PostContentType } from '@/types';
@@ -57,6 +57,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({
 
   const { draft, save: saveDraft, clear: clearDraft } = useCommunityDraft(DRAFT_KEY);
   const createPost = useCreatePostMutation(communityId ?? selectedCommunity);
+  const { userName: currentUserName } = useCurrentUserIdentity();
 
   /* Rehydrate from Redux draft (session) or localStorage (persistent). */
   useEffect(() => {
@@ -202,7 +203,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({
     >
       {!open ? (
         <Stack direction="row" alignItems="center" gap={1.5}>
-          <Avatar name={CURRENT_USER_NAME} size={42} />
+          <Avatar name={currentUserName} size={42} />
           <Box
             onClick={() => setOpen(true)}
             role="button"
@@ -240,10 +241,10 @@ export const PostComposer: React.FC<PostComposerProps> = ({
           >
             <Stack spacing={1.5}>
               <Stack direction="row" alignItems="center" gap={1.5}>
-                <Avatar name={CURRENT_USER_NAME} size={42} />
+                <Avatar name={currentUserName} size={42} />
                 <Box sx={{ flexGrow: 1 }}>
                   <Typography variant="subtitle2" fontWeight={800}>
-                    {CURRENT_USER_NAME}
+                    {currentUserName || 'You'}
                   </Typography>
                   {communities.length > 0 && !communityId ? (
                     <TextField
@@ -264,7 +265,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({
                     communityId && (
                       <Chip
                         size="small"
-                        label={`${seedCommunitiesFor(communityId)}`}
+                        label={communities.find((community) => community.id === communityId)?.name ?? communityId}
                         variant="outlined"
                         sx={{ mt: 0.5, fontWeight: 700 }}
                       />
@@ -519,11 +520,6 @@ export const PostComposer: React.FC<PostComposerProps> = ({
       )}
     </Card>
   );
-};
-
-const seedCommunitiesFor = (communityId: string): string => {
-  const community = seedCommunities.find((c) => c.id === communityId);
-  return community ? `${community.emoji} ${community.name}` : communityId;
 };
 
 export default PostComposer;

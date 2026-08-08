@@ -22,9 +22,9 @@ import { ROUTES } from '@/constants';
 import {
   useWalletBalanceQuery,
   useWalletHistoryQuery,
+  useWalletMonthlySeriesQuery,
   useWalletStatisticsQuery,
 } from '@/features/wallet';
-import { seedWalletMonthlySeries } from '@/features/wallet/data';
 import { formatCompactNumber, formatCurrency } from '@/utils';
 
 const PAGE_SIZE = 5;
@@ -36,16 +36,19 @@ export const WalletPage: React.FC = () => {
 
   const balance = useWalletBalanceQuery();
   const statistics = useWalletStatisticsQuery();
+  const monthly = useWalletMonthlySeriesQuery(7);
   const history = useWalletHistoryQuery(page, PAGE_SIZE);
 
+  const stats = statistics.statistics;
+  const totalCreditsOut = stats?.totalCreditsOut ?? 0;
+
   const spendingSplit = useMemo(() => {
-    const stats = statistics.statistics;
     return [
-      { label: 'Sessions', value: Math.max(Math.round((stats.totalCreditsOut ?? 0) * 0.7), 1), color: '#6D5DF6' },
-      { label: 'Course & content', value: Math.max(Math.round((stats.totalCreditsOut ?? 0) * 0.2), 1), color: '#14B8A6' },
-      { label: 'Rewards & other', value: Math.max(Math.round((stats.totalCreditsOut ?? 0) * 0.1), 1), color: '#F59E0B' },
+      { label: 'Sessions', value: Math.max(Math.round(totalCreditsOut * 0.7), 1), color: '#6D5DF6' },
+      { label: 'Course & content', value: Math.max(Math.round(totalCreditsOut * 0.2), 1), color: '#14B8A6' },
+      { label: 'Rewards & other', value: Math.max(Math.round(totalCreditsOut * 0.1), 1), color: '#F59E0B' },
     ];
-  }, [statistics.statistics]);
+  }, [totalCreditsOut]);
 
   return (
     <Box>
@@ -77,7 +80,7 @@ export const WalletPage: React.FC = () => {
         <Grid size={{ xs: 12, md: 5 }}>
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }} style={{ height: '100%' }}>
             <WalletBalanceCard
-              balance={balance.balance}
+              balance={balance.balance ?? { currentBalance: 0, availableBalance: 0, frozenBalance: 0, pendingBalance: 0, currency: 'USD' }}
               onTopUp={() => navigate(ROUTES.CREDITS)}
               onHistory={() => navigate(ROUTES.TRANSACTIONS)}
             />
@@ -86,10 +89,10 @@ export const WalletPage: React.FC = () => {
         <Grid size={{ xs: 12, md: 7 }}>
           <Grid container spacing={3}>
             {[
-              { label: 'Credits purchased', value: statistics.statistics.totalCreditsIn, suffix: '', color: '#6D5DF6', icon: <AddIcon /> },
-              { label: 'Credits used', value: statistics.statistics.totalCreditsOut, suffix: '', color: '#14B8A6', icon: <AccountBalanceWalletOutlinedIcon /> },
-              { label: 'Transactions', value: statistics.statistics.totalTransactions, suffix: '', color: '#F59E0B', icon: <ReceiptLongOutlinedIcon /> },
-              { label: 'Active days', value: statistics.statistics.activeDays, suffix: '', color: '#3B82F6', icon: <TrendingUpOutlinedIcon /> },
+              { label: 'Credits purchased', value: stats?.totalCreditsIn ?? 0, suffix: '', color: '#6D5DF6', icon: <AddIcon /> },
+              { label: 'Credits used', value: stats?.totalCreditsOut ?? 0, suffix: '', color: '#14B8A6', icon: <AccountBalanceWalletOutlinedIcon /> },
+              { label: 'Transactions', value: stats?.totalTransactions ?? 0, suffix: '', color: '#F59E0B', icon: <ReceiptLongOutlinedIcon /> },
+              { label: 'Active days', value: stats?.activeDays ?? 0, suffix: '', color: '#3B82F6', icon: <TrendingUpOutlinedIcon /> },
             ].map((stat, index) => (
               <Grid key={stat.label} size={{ xs: 12, sm: 6 }}>
                 <motion.div
@@ -124,7 +127,7 @@ export const WalletPage: React.FC = () => {
                 subtitle="Credits in & out over the last 7 months"
                 action={
                   <Chip
-                    label={`${formatCurrency(balance.balance.availableBalance)} available`}
+                    label={`${formatCurrency(balance.balance?.availableBalance ?? 0)} available`}
                     size="small"
                     color="success"
                     variant="outlined"
@@ -132,7 +135,7 @@ export const WalletPage: React.FC = () => {
                   />
                 }
               />
-              <AreaChart data={[...seedWalletMonthlySeries]} color="#6D5DF6" suffix="" height={240} />
+              <AreaChart data={[...monthly.series]} color="#6D5DF6" suffix="" height={240} />
             </Card>
           </motion.div>
         </Grid>
@@ -148,7 +151,7 @@ export const WalletPage: React.FC = () => {
               <DonutChart
                 segments={spendingSplit}
                 size={170}
-                centerValue={formatCompactNumber(statistics.statistics.totalCreditsOut)}
+                centerValue={formatCompactNumber(totalCreditsOut)}
                 centerLabel="spent"
               />
               <Stack spacing={1} sx={{ mt: 2 }}>

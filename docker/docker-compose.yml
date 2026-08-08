@@ -1,4 +1,13 @@
-version: '3.8'
+# ============================================================
+# Skill Infinity Platform — Docker Compose
+# ------------------------------------------------------------
+# Tuned for Docker Desktop / constrained hosts (4 CPUs, ~4.8 GB).
+# Every limit below is a CEILING, and the JVMs are configured with
+# G1GC + a compact heap (MaxRAMPercentage=50) so the combined working
+# set stays well below the host memory. Health checks use
+# /actuator/health/readiness with generous start periods because
+# 11 JVMs share 4 CPUs during a cold start.
+# ============================================================
 
 networks:
   skill-infinity-network:
@@ -22,6 +31,8 @@ services:
     image: mysql:8.0
     container_name: skill-infinity-mysql
     restart: unless-stopped
+    mem_limit: 512m
+    cpus: 0.5
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?err}
       MYSQL_ROOT_HOST: '%'
@@ -33,12 +44,13 @@ services:
     command:
       - "--character-set-server=utf8mb4"
       - "--collation-server=utf8mb4_unicode_ci"
-      - "--default-authentication-plugin=mysql_native_password"
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 30
+      # First boot runs init-db.sql (creates 10 databases); give it time
+      start_period: 90s
     networks:
       - skill-infinity-network
 
@@ -49,6 +61,8 @@ services:
     image: redis:7-alpine
     container_name: skill-infinity-redis
     restart: unless-stopped
+    mem_limit: 96m
+    cpus: 0.25
     ports:
       - "${REDIS_PORT:-6379}:6379"
     volumes:
@@ -59,6 +73,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
     networks:
       - skill-infinity-network
 
@@ -69,6 +84,8 @@ services:
     image: rabbitmq:3-management-alpine
     container_name: skill-infinity-rabbitmq
     restart: unless-stopped
+    mem_limit: 384m
+    cpus: 0.5
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
@@ -77,11 +94,16 @@ services:
       - "${RABBITMQ_MGMT_PORT:-15672}:15672"
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
+      # Allow guest/guest connections from non-loopback (Docker network) interfaces
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
-      interval: 15s
-      timeout: 10s
-      retries: 5
+      # -q ping is much lighter than check_port_connectivity; the heavier probe
+      # times out under memory pressure while the 11 JVMs cold-start on 4 CPUs.
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 20s
+      timeout: 20s
+      retries: 15
+      start_period: 120s
     networks:
       - skill-infinity-network
 
@@ -92,6 +114,8 @@ services:
     image: minio/minio:latest
     container_name: skill-infinity-minio
     restart: unless-stopped
+    mem_limit: 128m
+    cpus: 0.25
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
@@ -106,6 +130,7 @@ services:
       interval: 15s
       timeout: 10s
       retries: 5
+      start_period: 20s
     networks:
       - skill-infinity-network
 
@@ -118,21 +143,22 @@ services:
       dockerfile: config-server/Dockerfile
     container_name: skill-infinity-config-server
     restart: unless-stopped
+    mem_limit: 256m
+    cpus: 0.5
     ports:
       - "${CONFIG_SERVER_PORT:-8888}:8888"
     environment:
+      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=50.0 -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
       - CONFIG_SERVER_PORT=8888
       - CONFIG_REPO_URI=${CONFIG_REPO_URI:-}
       - CONFIG_REPO_DEFAULT_BRANCH=main
       - SPRING_PROFILES_ACTIVE=native
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8888/actuator/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:8888/actuator/health/readiness"]
       interval: 15s
-      timeout: 10s
-      retries: 5
-    depends_on:
-      mysql:
-        condition: service_healthy
+      timeout: 15s
+      retries: 30
+      start_period: 600s
     networks:
       - skill-infinity-network
 
@@ -145,18 +171,22 @@ services:
       dockerfile: discovery-server/Dockerfile
     container_name: skill-infinity-discovery-server
     restart: unless-stopped
+    mem_limit: 256m
+    cpus: 0.5
     ports:
       - "${DISCOVERY_SERVER_PORT:-8761}:8761"
     environment:
       - CONFIG_SERVER_URL=http://config-server:8888
+      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=50.0 -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
       - DISCOVERY_SERVER_PORT=8761
       - EUREKA_HOSTNAME=discovery-server
       - EUREKA_DEFAULT_ZONE=http://discovery-server:8761/eureka/
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8761/actuator/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:8761/actuator/health/readiness"]
       interval: 15s
-      timeout: 10s
-      retries: 5
+      timeout: 15s
+      retries: 30
+      start_period: 600s
     depends_on:
       config-server:
         condition: service_healthy
@@ -172,21 +202,35 @@ services:
       dockerfile: api-gateway/Dockerfile
     container_name: skill-infinity-api-gateway
     restart: unless-stopped
+    mem_limit: 384m
+    cpus: 0.5
     ports:
       - "${API_GATEWAY_PORT:-8080}:8080"
     environment:
       - CONFIG_SERVER_URL=http://config-server:8888
+      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=50.0 -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
       - API_GATEWAY_PORT=8080
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_AMQP_PORT=5672
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
       - EUREKA_DEFAULT_ZONE=http://discovery-server:8761/eureka/
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health/readiness"]
       interval: 15s
-      timeout: 10s
-      retries: 5
+      timeout: 15s
+      retries: 30
+      start_period: 600s
     depends_on:
       config-server:
         condition: service_healthy
       discovery-server:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     networks:
       - skill-infinity-network
@@ -200,22 +244,32 @@ services:
       dockerfile: identity-service/Dockerfile
     container_name: skill-infinity-identity-service
     restart: unless-stopped
+    mem_limit: 320m
+    cpus: 0.5
     ports:
       - "${IDENTITY_SERVICE_PORT:-8081}:8081"
     environment:
       - CONFIG_SERVER_URL=http://config-server:8888
+      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=50.0 -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
       - IDENTITY_SERVICE_PORT=8081
       - IDENTITY_DB_HOST=mysql
       - IDENTITY_DB_NAME=skill_infinity_identity
       - IDENTITY_DB_USERNAME=root
       - IDENTITY_DB_PASSWORD=${MYSQL_ROOT_PASSWORD:?err}
       - JWT_SECRET=${JWT_SECRET:?err}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_AMQP_PORT=5672
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
       - EUREKA_DEFAULT_ZONE=http://discovery-server:8761/eureka/
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8081/actuator/health"]
-      interval: 15s
-      timeout: 10s
-      retries: 5
+      test: ["CMD", "wget", "-qO-", "http://localhost:8081/actuator/health/readiness"]
+      interval: 20s
+      timeout: 20s
+      retries: 30
+      start_period: 600s
     depends_on:
       config-server:
         condition: service_healthy
@@ -235,27 +289,41 @@ services:
       dockerfile: user-service/Dockerfile
     container_name: skill-infinity-user-service
     restart: unless-stopped
+    mem_limit: 320m
+    cpus: 0.5
     ports:
       - "${USER_SERVICE_PORT:-8082}:8082"
     environment:
       - CONFIG_SERVER_URL=http://config-server:8888
+      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=50.0 -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
       - USER_SERVICE_PORT=8082
       - USER_DB_HOST=mysql
       - USER_DB_NAME=skill_infinity_user
       - USER_DB_USERNAME=root
       - USER_DB_PASSWORD=${MYSQL_ROOT_PASSWORD:?err}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_AMQP_PORT=5672
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
       - EUREKA_DEFAULT_ZONE=http://discovery-server:8761/eureka/
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8082/actuator/health"]
-      interval: 15s
-      timeout: 10s
-      retries: 5
+      test: ["CMD", "wget", "-qO-", "http://localhost:8082/actuator/health/readiness"]
+      interval: 20s
+      timeout: 20s
+      retries: 30
+      start_period: 600s
     depends_on:
       config-server:
         condition: service_healthy
       discovery-server:
         condition: service_healthy
       mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     networks:
       - skill-infinity-network
@@ -269,23 +337,31 @@ services:
       dockerfile: mentor-service/Dockerfile
     container_name: skill-infinity-mentor-service
     restart: unless-stopped
+    mem_limit: 320m
+    cpus: 0.5
     ports:
       - "${MENTOR_SERVICE_PORT:-8083}:8083"
     environment:
       - CONFIG_SERVER_URL=http://config-server:8888
+      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=50.0 -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
       - MENTOR_SERVICE_PORT=8083
       - MENTOR_DB_HOST=mysql
       - MENTOR_DB_NAME=skill_infinity_mentor
       - MENTOR_DB_USERNAME=root
       - MENTOR_DB_PASSWORD=${MYSQL_ROOT_PASSWORD:?err}
       - REDIS_HOST=redis
+      - REDIS_PORT=6379
       - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_AMQP_PORT=5672
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
       - EUREKA_DEFAULT_ZONE=http://discovery-server:8761/eureka/
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8083/actuator/health"]
-      interval: 15s
-      timeout: 10s
-      retries: 5
+      test: ["CMD", "wget", "-qO-", "http://localhost:8083/actuator/health/readiness"]
+      interval: 20s
+      timeout: 20s
+      retries: 30
+      start_period: 600s
     depends_on:
       config-server:
         condition: service_healthy
@@ -309,23 +385,31 @@ services:
       dockerfile: session-service/Dockerfile
     container_name: skill-infinity-session-service
     restart: unless-stopped
+    mem_limit: 320m
+    cpus: 0.5
     ports:
       - "${SESSION_SERVICE_PORT:-8084}:8084"
     environment:
       - CONFIG_SERVER_URL=http://config-server:8888
+      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=50.0 -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
       - SESSION_SERVICE_PORT=8084
       - SESSION_DB_HOST=mysql
       - SESSION_DB_NAME=skill_infinity_session
       - SESSION_DB_USERNAME=root
       - SESSION_DB_PASSWORD=${MYSQL_ROOT_PASSWORD:?err}
       - REDIS_HOST=redis
+      - REDIS_PORT=6379
       - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
       - EUREKA_DEFAULT_ZONE=http://discovery-server:8761/eureka/
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8084/actuator/health"]
-      interval: 15s
-      timeout: 10s
-      retries: 5
+      test: ["CMD", "wget", "-qO-", "http://localhost:8084/actuator/health/readiness"]
+      interval: 20s
+      timeout: 20s
+      retries: 30
+      start_period: 600s
     depends_on:
       config-server:
         condition: service_healthy
@@ -349,23 +433,31 @@ services:
       dockerfile: wallet-service/Dockerfile
     container_name: skill-infinity-wallet-service
     restart: unless-stopped
+    mem_limit: 320m
+    cpus: 0.5
     ports:
       - "${WALLET_SERVICE_PORT:-8085}:8085"
     environment:
       - CONFIG_SERVER_URL=http://config-server:8888
+      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=50.0 -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
       - WALLET_SERVICE_PORT=8085
       - WALLET_DB_HOST=mysql
       - WALLET_DB_NAME=skill_infinity_wallet
       - WALLET_DB_USERNAME=root
       - WALLET_DB_PASSWORD=${MYSQL_ROOT_PASSWORD:?err}
       - REDIS_HOST=redis
+      - REDIS_PORT=6379
       - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
       - EUREKA_DEFAULT_ZONE=http://discovery-server:8761/eureka/
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8085/actuator/health"]
-      interval: 15s
-      timeout: 10s
-      retries: 5
+      test: ["CMD", "wget", "-qO-", "http://localhost:8085/actuator/health/readiness"]
+      interval: 20s
+      timeout: 20s
+      retries: 30
+      start_period: 600s
     depends_on:
       config-server:
         condition: service_healthy
@@ -389,23 +481,31 @@ services:
       dockerfile: payment-service/Dockerfile
     container_name: skill-infinity-payment-service
     restart: unless-stopped
+    mem_limit: 320m
+    cpus: 0.5
     ports:
       - "${PAYMENT_SERVICE_PORT:-8086}:8086"
     environment:
       - CONFIG_SERVER_URL=http://config-server:8888
+      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=50.0 -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
       - PAYMENT_SERVICE_PORT=8086
       - PAYMENT_DB_HOST=mysql
       - PAYMENT_DB_NAME=skill_infinity_payment
       - PAYMENT_DB_USERNAME=root
       - PAYMENT_DB_PASSWORD=${MYSQL_ROOT_PASSWORD:?err}
       - REDIS_HOST=redis
+      - REDIS_PORT=6379
       - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
       - EUREKA_DEFAULT_ZONE=http://discovery-server:8761/eureka/
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8086/actuator/health"]
-      interval: 15s
-      timeout: 10s
-      retries: 5
+      test: ["CMD", "wget", "-qO-", "http://localhost:8086/actuator/health/readiness"]
+      interval: 20s
+      timeout: 20s
+      retries: 30
+      start_period: 600s
     depends_on:
       config-server:
         condition: service_healthy
@@ -429,24 +529,34 @@ services:
       dockerfile: communication-service/Dockerfile
     container_name: skill-infinity-communication-service
     restart: unless-stopped
+    mem_limit: 320m
+    cpus: 0.5
     ports:
       - "${COMMUNICATION_SERVICE_PORT:-8087}:8087"
     environment:
       - CONFIG_SERVER_URL=http://config-server:8888
+      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=50.0 -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
       - COMMUNICATION_SERVICE_PORT=8087
       - COMMUNICATION_DB_HOST=mysql
       - COMMUNICATION_DB_NAME=skill_infinity_communication
       - COMMUNICATION_DB_USERNAME=root
       - COMMUNICATION_DB_PASSWORD=${MYSQL_ROOT_PASSWORD:?err}
       - REDIS_HOST=redis
+      - REDIS_PORT=6379
       - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
       - MINIO_URL=http://minio:9000
       - EUREKA_DEFAULT_ZONE=http://discovery-server:8761/eureka/
+      # No SMTP server exists in the platform stack; disable mail health indicator so /actuator/health stays UP
+      - MANAGEMENT_HEALTH_MAIL_ENABLED=false
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8087/actuator/health"]
-      interval: 15s
-      timeout: 10s
-      retries: 5
+      test: ["CMD", "wget", "-qO-", "http://localhost:8087/actuator/health/readiness"]
+      interval: 20s
+      timeout: 20s
+      retries: 30
+      start_period: 600s
     depends_on:
       config-server:
         condition: service_healthy
@@ -458,6 +568,8 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      minio:
+        condition: service_started
     networks:
       - skill-infinity-network
 
@@ -470,23 +582,31 @@ services:
       dockerfile: community-service/Dockerfile
     container_name: skill-infinity-community-service
     restart: unless-stopped
+    mem_limit: 320m
+    cpus: 0.5
     ports:
       - "${COMMUNITY_SERVICE_PORT:-8088}:8088"
     environment:
       - CONFIG_SERVER_URL=http://config-server:8888
+      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=50.0 -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
       - COMMUNITY_SERVICE_PORT=8088
       - COMMUNITY_DB_HOST=mysql
       - COMMUNITY_DB_NAME=skill_infinity_community
       - COMMUNITY_DB_USERNAME=root
       - COMMUNITY_DB_PASSWORD=${MYSQL_ROOT_PASSWORD:?err}
       - REDIS_HOST=redis
+      - REDIS_PORT=6379
       - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
       - EUREKA_DEFAULT_ZONE=http://discovery-server:8761/eureka/
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8088/actuator/health"]
-      interval: 15s
-      timeout: 10s
-      retries: 5
+      test: ["CMD", "wget", "-qO-", "http://localhost:8088/actuator/health/readiness"]
+      interval: 20s
+      timeout: 20s
+      retries: 30
+      start_period: 600s
     depends_on:
       config-server:
         condition: service_healthy
@@ -510,23 +630,79 @@ services:
       dockerfile: review-service/Dockerfile
     container_name: skill-infinity-review-service
     restart: unless-stopped
+    mem_limit: 320m
+    cpus: 0.5
     ports:
       - "${REVIEW_SERVICE_PORT:-8089}:8089"
     environment:
       - CONFIG_SERVER_URL=http://config-server:8888
+      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=50.0 -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
       - REVIEW_SERVICE_PORT=8089
       - REVIEW_DB_HOST=mysql
       - REVIEW_DB_NAME=skill_infinity_review
       - REVIEW_DB_USERNAME=root
       - REVIEW_DB_PASSWORD=${MYSQL_ROOT_PASSWORD:?err}
       - REDIS_HOST=redis
+      - REDIS_PORT=6379
       - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
       - EUREKA_DEFAULT_ZONE=http://discovery-server:8761/eureka/
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8089/actuator/health"]
-      interval: 15s
-      timeout: 10s
-      retries: 5
+      test: ["CMD", "wget", "-qO-", "http://localhost:8089/actuator/health/readiness"]
+      interval: 20s
+      timeout: 20s
+      retries: 30
+      start_period: 600s
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - skill-infinity-network
+
+  # ============================================================
+  # Admin Service
+  # ============================================================
+  admin-service:
+    build:
+      context: ../backend
+      dockerfile: admin-service/Dockerfile
+    container_name: skill-infinity-admin-service
+    restart: unless-stopped
+    mem_limit: 320m
+    cpus: 0.5
+    ports:
+      - "${ADMIN_SERVICE_PORT:-8090}:8090"
+    environment:
+      - CONFIG_SERVER_URL=http://config-server:8888
+      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=50.0 -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
+      - ADMIN_SERVICE_PORT=8090
+      - ADMIN_DB_HOST=mysql
+      - ADMIN_DB_NAME=skill_infinity_admin
+      - ADMIN_DB_USERNAME=root
+      - ADMIN_DB_PASSWORD=${MYSQL_ROOT_PASSWORD:?err}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
+      - EUREKA_DEFAULT_ZONE=http://discovery-server:8761/eureka/
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8090/actuator/health/readiness"]
+      interval: 20s
+      timeout: 20s
+      retries: 30
+      start_period: 600s
     depends_on:
       config-server:
         condition: service_healthy
@@ -550,12 +726,18 @@ services:
       dockerfile: Dockerfile
     container_name: skill-infinity-frontend
     restart: unless-stopped
+    mem_limit: 64m
+    cpus: 0.25
     ports:
       - "${FRONTEND_PORT:-80}:80"
-    environment:
-      - VITE_API_BASE_URL=http://localhost:8080/api/v1
     depends_on:
       api-gateway:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider http://127.0.0.1/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     networks:
       - skill-infinity-network

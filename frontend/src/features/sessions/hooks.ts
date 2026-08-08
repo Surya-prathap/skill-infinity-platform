@@ -11,9 +11,19 @@ import type {
   Session,
 } from '@/types';
 import { sessionKeys } from './queryKeys';
-import { seedCalendarEvents, seedSessions } from './data';
 
-/** Upcoming sessions for the authenticated user (offline → seed). */
+const emptyPage = (page: number, size: number): PageResponse<Session> => ({
+  content: [],
+  page,
+  size,
+  totalElements: 0,
+  totalPages: 1,
+  first: page === 0,
+  last: true,
+  empty: true,
+});
+
+/** Upcoming sessions for the authenticated user. */
 export const useUpcomingSessionsQuery = (page = 0, size = 20) => {
   const query = useQuery({
     queryKey: sessionKeys.upcoming(page, size),
@@ -21,32 +31,10 @@ export const useUpcomingSessionsQuery = (page = 0, size = 20) => {
       const response = await sessionService.getUpcoming(page, size);
       return response.data.data;
     },
-    placeholderData: (): PageResponse<Session> => {
-      const content = seedSessions.filter((s) => !['COMPLETED', 'CANCELLED'].includes(s.status));
-      return {
-        content,
-        page,
-        size,
-        totalElements: content.length,
-        totalPages: 1,
-        first: true,
-        last: true,
-        empty: content.length === 0,
-      };
-    },
     retry: 1,
   });
 
-  const data = (query.data ?? {
-    content: seedSessions.filter((s) => !['COMPLETED', 'CANCELLED'].includes(s.status)),
-    page,
-    size,
-    totalElements: seedSessions.filter((s) => !['COMPLETED', 'CANCELLED'].includes(s.status)).length,
-    totalPages: 1,
-    first: true,
-    last: true,
-    empty: false,
-  }) as PageResponse<Session>;
+  const data = query.data ?? emptyPage(page, size);
 
   return { ...query, data, isOffline: query.isError };
 };
@@ -59,37 +47,15 @@ export const useSessionHistoryQuery = (page = 0, size = 20) => {
       const response = await sessionService.getHistory(page, size);
       return response.data.data;
     },
-    placeholderData: (): PageResponse<Session> => {
-      const content = seedSessions.filter((s) => ['COMPLETED', 'CANCELLED'].includes(s.status));
-      return {
-        content,
-        page,
-        size,
-        totalElements: content.length,
-        totalPages: 1,
-        first: true,
-        last: true,
-        empty: content.length === 0,
-      };
-    },
     retry: 1,
   });
 
-  const data = (query.data ?? {
-    content: seedSessions.filter((s) => ['COMPLETED', 'CANCELLED'].includes(s.status)),
-    page,
-    size,
-    totalElements: seedSessions.filter((s) => ['COMPLETED', 'CANCELLED'].includes(s.status)).length,
-    totalPages: 1,
-    first: true,
-    last: true,
-    empty: false,
-  }) as PageResponse<Session>;
+  const data = query.data ?? emptyPage(page, size);
 
   return { ...query, data, isOffline: query.isError };
 };
 
-/** Session detail by ID (offline → seed lookup). */
+/** Session detail by ID. */
 export const useSessionQuery = (sessionId?: string) => {
   const query = useQuery({
     queryKey: sessionKeys.detail(sessionId ?? 'none'),
@@ -101,13 +67,12 @@ export const useSessionQuery = (sessionId?: string) => {
     retry: 1,
   });
 
-  const fallback = seedSessions.find((s) => s.id === sessionId) ?? null;
-  const session = query.data ?? fallback;
+  const session = query.data ?? null;
 
   return { ...query, session, isOffline: query.isError && !query.data };
 };
 
-/** Calendar events in a date range (offline → seed). */
+/** Calendar events in a date range. */
 export const useCalendarQuery = (startDate?: string, endDate?: string) => {
   const query = useQuery({
     queryKey: sessionKeys.calendar(startDate, endDate),
@@ -115,16 +80,10 @@ export const useCalendarQuery = (startDate?: string, endDate?: string) => {
       const response = await sessionService.getCalendar(startDate, endDate);
       return response.data.data;
     },
-    placeholderData: (): CalendarData => ({
-      events: seedCalendarEvents.filter((event) => {
-        if (!startDate) return true;
-        return event.startTime >= startDate && (!endDate || event.startTime <= endDate);
-      }),
-    }),
     retry: 1,
   });
 
-  const data = (query.data ?? { events: seedCalendarEvents }) as CalendarData;
+  const data = (query.data ?? { events: [] }) as CalendarData;
 
   return { ...query, data, isOffline: query.isError };
 };

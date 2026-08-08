@@ -18,7 +18,7 @@ import {
   useDeleteCommentMutation,
   useToggleCommentLikeMutation,
 } from '@/features/community';
-import { CURRENT_USER_NAME } from '@/features/community/data';
+import { useCurrentUserIdentity } from '@/hooks';
 import { formatRelativeTime, showInfo } from '@/utils';
 import type { CommunityComment } from '@/types';
 
@@ -49,6 +49,7 @@ export const CommentItem: React.FC<CommentItemProps> = ({
   const likeMutation = useToggleCommentLikeMutation(postId, comment.id);
   const createReply = useCreateCommentMutation(postId);
   const deleteMutation = useDeleteCommentMutation(postId);
+  const { userName: currentUserName } = useCurrentUserIdentity();
 
   const toggleReaction = (emoji: string) => {
     setReactions((current) => {
@@ -269,7 +270,7 @@ export const CommentItem: React.FC<CommentItemProps> = ({
               >
                 <Box sx={{ mt: 1 }}>
                   <Stack direction="row" gap={1} alignItems="flex-start">
-                    <Avatar name={CURRENT_USER_NAME} size={30} />
+                    <Avatar name={currentUserName} size={30} />
                     <Box sx={{ flexGrow: 1 }}>
                       <RichTextEditor
                         value={replyValue}

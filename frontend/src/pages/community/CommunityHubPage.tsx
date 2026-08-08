@@ -25,7 +25,6 @@ import {
   useLeaderboardQuery,
   useLearningStatsQuery,
 } from '@/features/community';
-import { seedHubStats, seedTrendingKeywords } from '@/features/community/data';
 import { useAppSelector } from '@/store/hooks';
 import { selectCommunityLiveEvents } from '@/store/selectors';
 import { formatCompactNumber } from '@/utils';
@@ -111,7 +110,7 @@ export const CommunityHubPage: React.FC = () => {
             ))}
             <Box sx={{ flexGrow: 1 }} />
             <Typography variant="caption" color="text.disabled">
-              {formatCompactNumber(seedHubStats.postsThisWeek)} posts this week
+              {formatCompactNumber(feed.posts.length)} posts in this feed
             </Typography>
           </Stack>
 
@@ -207,13 +206,13 @@ export const CommunityHubPage: React.FC = () => {
                 </motion.div>
                 <Box sx={{ flexGrow: 1 }}>
                   <Typography variant="h4" fontWeight={900}>
-                    {stats.streakDays}
+                    {stats?.streakDays ?? 0}
                     <Typography component="span" fontSize="1rem" fontWeight={700} color="text.secondary">
                       {' '}day streak
                     </Typography>
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
-                    {stats.totalPoints.toLocaleString('en-US')} lifetime points · {stats.totalHours}h learned
+                    {(stats?.totalPoints ?? 0).toLocaleString('en-US')} lifetime points · {stats?.totalHours ?? 0}h learned
                   </Typography>
                 </Box>
                 <Button size="small" variant="outlined" onClick={() => navigate(ROUTES.COMMUNITY_ACTIVITY)}>
@@ -238,22 +237,26 @@ export const CommunityHubPage: React.FC = () => {
               ))}
             </Card>
 
-            {/* Trending keywords */}
+            {/* Popular tags */}
             <Card sx={{ p: 2.5 }}>
               <Typography variant="h6" fontWeight={800} sx={{ mb: 1.5 }}>
-                Trending keywords
+                Popular tags
               </Typography>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                {seedTrendingKeywords.map((keyword) => (
-                  <Chip
-                    key={keyword}
-                    label={`#${keyword.replace(/\s+/g, '-')}`}
-                    size="small"
-                    variant="outlined"
-                    onClick={() => navigate(`${ROUTES.COMMUNITY_SEARCH}?q=${encodeURIComponent(keyword)}`)}
-                    sx={{ fontWeight: 700, cursor: 'pointer', '&:hover': { borderColor: 'primary.main', color: 'primary.main' } }}
-                  />
-                ))}
+                {feed.posts
+                  .flatMap((post) => post.tags ?? [])
+                  .filter((tag, index, all) => all.indexOf(tag) === index)
+                  .slice(0, 8)
+                  .map((tag) => (
+                    <Chip
+                      key={tag}
+                      label={`#${tag.replace(/\s+/g, '-')}`}
+                      size="small"
+                      variant="outlined"
+                      onClick={() => navigate(`${ROUTES.COMMUNITY_SEARCH}?q=${encodeURIComponent(tag)}`)}
+                      sx={{ fontWeight: 700, cursor: 'pointer', '&:hover': { borderColor: 'primary.main', color: 'primary.main' } }}
+                    />
+                  ))}
               </Box>
             </Card>
           </Stack>

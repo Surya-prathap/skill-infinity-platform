@@ -36,7 +36,7 @@ import { DeviceSettingsPanel } from './DeviceSettingsPanel';
 import { ReactionOverlay } from './ReactionOverlay';
 import { LeaveMeetingDialog } from './LeaveMeetingDialog';
 import { showInfo, showSuccess } from '@/utils';
-import { MEETING_CURRENT_USER_ID, MEETING_CURRENT_USER_NAME } from '@/features/meeting';
+import { useCurrentUserIdentity } from '@/hooks';
 
 interface MeetingRoomProps {
   onEnded: () => void;
@@ -53,6 +53,7 @@ const CAPTION_LINES = [
 export const MeetingRoom = ({ onEnded }: MeetingRoomProps) => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const { userId, userName } = useCurrentUserIdentity();
 
   const meeting = useAppSelector(selectMeeting);
   const participants = useAppSelector(selectMeetingParticipants);
@@ -77,7 +78,7 @@ export const MeetingRoom = ({ onEnded }: MeetingRoomProps) => {
   const [captionsVisible, setCaptionsVisible] = useState(false);
   const [captionIndex, setCaptionIndex] = useState(0);
 
-  const isHost = meeting?.hostId === MEETING_CURRENT_USER_ID;
+  const isHost = Boolean(meeting?.hostId) && meeting?.hostId === userId;
 
   /* ---------------- Screen share presenter ---------------- */
   const screenPresenter = useMemo(
@@ -157,7 +158,7 @@ export const MeetingRoom = ({ onEnded }: MeetingRoomProps) => {
         id: `meet-sys-end-${Date.now()}`,
         senderId: 'system',
         senderName: 'System',
-        content: `${MEETING_CURRENT_USER_NAME} ended the meeting`,
+        content: `${userName} ended the meeting`,
         kind: 'system',
         createdAt: new Date().toISOString(),
       }),

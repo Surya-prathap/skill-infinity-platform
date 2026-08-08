@@ -9,7 +9,7 @@ spring:
   datasource:
     url: jdbc:mysql://${COMMUNITY_DB_HOST:localhost}:${COMMUNITY_DB_PORT:3306}/${COMMUNITY_DB_NAME:skill_infinity_community}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
     username: ${COMMUNITY_DB_USERNAME:root}
-    password: ${COMMUNITY_DB_PASSWORD:Surya@2003}
+    password: ${COMMUNITY_DB_PASSWORD:root123}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: 10

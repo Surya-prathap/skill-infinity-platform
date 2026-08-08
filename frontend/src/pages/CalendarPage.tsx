@@ -14,10 +14,10 @@ import { SessionCalendar } from '@/components/session';
 import { EmptyState } from '@/components/feedback';
 import { useDocumentTitle } from '@/hooks';
 import { ROUTES } from '@/constants';
-import { seedSessions, useCalendarQuery } from '@/features/sessions';
+import { useCalendarQuery, useSessionHistoryQuery, useUpcomingSessionsQuery } from '@/features/sessions';
 import { sessionService } from '@/services';
 import { formatDateTime } from '@/utils';
-import type { CalendarEvent, SessionStatus } from '@/types';
+import type { CalendarEvent, Session, SessionStatus } from '@/types';
 
 export const CalendarPage: React.FC = () => {
   useDocumentTitle('Calendar');
@@ -30,12 +30,22 @@ export const CalendarPage: React.FC = () => {
   }));
 
   const { data, isOffline } = useCalendarQuery(dateRange.start, dateRange.end);
+  const { data: upcomingData } = useUpcomingSessionsQuery(0, 100);
+  const { data: historyData } = useSessionHistoryQuery(0, 100);
+
+  const realSessions = useMemo<Session[]>(() => {
+    const map = new Map<string, Session>();
+    for (const session of [...upcomingData.content, ...historyData.content]) {
+      map.set(session.id, session);
+    }
+    return [...map.values()];
+  }, [upcomingData.content, historyData.content]);
 
   const events = useMemo(() => {
     if (statusFilter === 'ALL') return data.events;
-    const statusBySession = new Map(seedSessions.map((session) => [session.id, session.status]));
+    const statusBySession = new Map(realSessions.map((session) => [session.id, session.status]));
     return data.events.filter((event) => statusBySession.get(event.sessionId) === statusFilter);
-  }, [data.events, statusFilter]);
+  }, [data.events, statusFilter, realSessions]);
 
   const exportCalendar = async () => {
     try {
@@ -120,12 +130,12 @@ export const CalendarPage: React.FC = () => {
               onAction={() => navigate(ROUTES.MENTORS)}
             />
           ) : (
-            <SessionCalendar events={events} sessions={seedSessions} onSelectEvent={setSelected} />
+            <SessionCalendar events={events} sessions={realSessions} onSelectEvent={setSelected} />
           )}
 
           {isOffline && (
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2, textAlign: 'center' }}>
-              Showing your local schedule — live calendar syncs when the API is reachable.
+              Live calendar syncs when the API is reachable.
             </Typography>
           )}
         </Card>

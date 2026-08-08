@@ -17,7 +17,6 @@ import { Typography } from '@/components/ui/Typography';
 import { Avatar } from '@/components/ui';
 import { useLocalStorage, useDebounce } from '@/hooks';
 import { useSearchMessagesQuery } from '@/features/communication/hooks';
-import { CURRENT_USER_ID, seedConversations } from '@/features/communication/data';
 import { HighlightedText } from './richText';
 import { formatRelativeTime } from '@/utils';
 import type { MessageSearchFilters, MessageSearchResult } from '@/types';
@@ -38,11 +37,9 @@ const FILTER_OPTIONS: { key: keyof MessageSearchFilters; label: string }[] = [
 ];
 
 const conversationLabel = (conversationId: string): string => {
-  const conversation = seedConversations.find((item) => item.id === conversationId);
-  if (!conversation) return 'Conversation';
-  if (conversation.title) return conversation.title;
-  const other = conversation.participants.find((participant) => participant.userId !== CURRENT_USER_ID);
-  return other?.name ?? 'Conversation';
+  if (!conversationId) return 'Conversation';
+  // Short human-readable reference; the full label is resolved by the API.
+  return conversationId.length > 24 ? `Conversation ${conversationId.slice(0, 8)}` : conversationId;
 };
 
 /** Enterprise search — instant results, filters, recent queries, keyboard nav. */

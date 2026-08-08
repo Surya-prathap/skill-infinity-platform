@@ -1,15 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { ConversationSidebar } from '@/components/communication/ConversationSidebar';
 import { ConversationCard } from '@/components/communication/ConversationCard';
-import { seedConversations, seedPresence } from '@/features/communication/data';
+import { testConversations, testPresence } from './fixtures';
+import { renderWithProviders } from './testUtils';
 import type { Conversation } from '@/types';
 
 const baseProps = {
-  conversations: seedConversations,
+  conversations: testConversations,
   activeConversationId: null,
   unreadCounts: { 'c-sarah': 2, 'c-devops': 5 },
-  presence: seedPresence,
+  presence: testPresence,
   typing: {},
   announcementsUnread: 2,
   onSelectConversation: () => undefined,
@@ -18,12 +19,12 @@ const baseProps = {
   onSearchClick: () => undefined,
   onNewChat: () => undefined,
   onAnnouncementsClick: () => undefined,
-  socketStatusLabel: 'Offline · demo mode',
+  socketStatusLabel: 'Connected · real-time active',
 };
 
 describe('ConversationSidebar', () => {
   it('renders conversations grouped by section', () => {
-    render(<ConversationSidebar {...baseProps} />);
+    renderWithProviders(<ConversationSidebar {...baseProps} />);
     expect(screen.getAllByText('Pinned').length).toBeGreaterThan(0);
     expect(screen.getByText('Sarah Chen')).toBeInTheDocument();
     expect(screen.getByText('System Design Deep Dive')).toBeInTheDocument();
@@ -31,22 +32,22 @@ describe('ConversationSidebar', () => {
   });
 
   it('filters to unread conversations', () => {
-    render(<ConversationSidebar {...baseProps} />);
+    renderWithProviders(<ConversationSidebar {...baseProps} />);
     fireEvent.click(screen.getByText('Unread'));
     expect(screen.queryByText('Maya Patel')).not.toBeInTheDocument();
     expect(screen.getByText('Sarah Chen')).toBeInTheDocument();
   });
 
   it('filters groups', () => {
-    render(<ConversationSidebar {...baseProps} />);
-    fireEvent.click(screen.getByText('Groups'));
+    renderWithProviders(<ConversationSidebar {...baseProps} />);
+    fireEvent.click(screen.getAllByText('Groups')[0]!);
     expect(screen.getAllByText('DevOps Study Group').length).toBeGreaterThan(0);
     expect(screen.queryByText('Sarah Chen')).not.toBeInTheDocument();
   });
 
   it('selects a conversation on click', () => {
     let selected: string | null = null;
-    render(
+    renderWithProviders(
       <ConversationSidebar
         {...baseProps}
         onSelectConversation={(id) => {
@@ -60,15 +61,15 @@ describe('ConversationSidebar', () => {
 });
 
 describe('ConversationCard', () => {
-  const conversation = seedConversations.find((item) => item.id === 'c-sarah') as Conversation;
+  const conversation = testConversations.find((item) => item.id === 'c-sarah') as Conversation;
 
   it('renders unread badge and preview', () => {
-    render(
+    renderWithProviders(
       <ConversationCard
         conversation={conversation}
         active={false}
         unread={2}
-        presence={seedPresence['user-sarah']}
+        presence={testPresence['user-sarah']}
         onSelect={() => undefined}
       />,
     );
@@ -78,7 +79,7 @@ describe('ConversationCard', () => {
 
   it('supports keyboard activation', () => {
     let selected = false;
-    render(
+    renderWithProviders(
       <ConversationCard
         conversation={conversation}
         active={false}

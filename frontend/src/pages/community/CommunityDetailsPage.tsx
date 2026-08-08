@@ -71,7 +71,7 @@ export const CommunityDetailsPage: React.FC = () => {
   }
 
   const moderators = community.moderators ?? [];
-  const members = community.members ?? seedMembers();
+  const members = community.members ?? [];
   const rules = community.rules ?? [];
   const stats = community.statistics;
 
@@ -301,15 +301,5 @@ const MemberRow: React.FC<{ member: CommunityMember; isModerator?: boolean }> = 
     </Box>
   </Box>
 );
-
-const seedMembers = (): CommunityMember[] => [
-  { id: 'mem-1', userId: 'u-lb-0', name: 'Sarah Chen', title: 'Backend Engineer', role: 'MEMBER', joinedAt: '2025-11-02T10:00:00' },
-  { id: 'mem-2', userId: 'u-lb-1', name: 'Marcus Reid', title: 'Data Analyst', role: 'MEMBER', joinedAt: '2025-12-14T10:00:00' },
-  { id: 'mem-3', userId: 'u-lb-4', name: 'Lena Fischer', title: 'Platform Engineer', role: 'MEMBER', joinedAt: '2026-01-08T10:00:00' },
-  { id: 'mem-4', userId: 'u-lb-8', name: 'Sofia Marino', title: 'Leadership Coach', role: 'MEMBER', joinedAt: '2026-02-19T10:00:00' },
-  { id: 'mem-5', userId: 'u-lb-10', name: 'Emily Watson', title: 'Principal Engineer', role: 'MEMBER', joinedAt: '2026-03-01T10:00:00' },
-  { id: 'mem-6', userId: 'u-lb-11', name: 'Omar Farouk', title: 'Kafka Enthusiast', role: 'MEMBER', joinedAt: '2026-04-22T10:00:00' },
-  { id: 'mem-7', userId: 'u-me', name: 'Alex Morgan', title: 'Full-stack Engineer', role: 'MEMBER', joinedAt: '2026-05-30T10:00:00' },
-];
 
 export default CommunityDetailsPage;

@@ -12,24 +12,16 @@ import {
   messageSentOptimistic,
   messageUpdated,
   presenceChanged,
+  setOwnIdentity,
   setOwnPresence,
 } from '@/store/slices/chatSlice';
-import { selectSocketStatus } from '@/store/selectors';
+import { selectSocketStatus, selectUser } from '@/store/selectors';
 import { communicationService } from '@/services';
-import { emitRead, emitTyping, simulatePeerReply } from '@/socket/chatSocket';
+import { emitRead, emitTyping } from '@/socket/chatSocket';
 import { showError, showInfo } from '@/utils';
 import { useDebounce } from '@/hooks';
 import { communicationKeys } from './queryKeys';
-import {
-  DEMO_REPLIES,
-  CURRENT_USER_ID,
-  seedAnnouncements,
-  seedConversations,
-  seedPresence,
-  seedThreads,
-} from './data';
 import type {
-  Announcement,
   ChatMessage,
   MessageSearchFilters,
   MessageSearchResult,
@@ -38,51 +30,41 @@ import type {
   SendMessageRequest,
 } from '@/types';
 
-/* ---------------- local search over seed data ---------------- */
-
-const LINK_PATTERN = /https?:\/\/[^\s]+/g;
-
-const searchSeedMessages = (
-  query: string,
-  filters: MessageSearchFilters,
-): MessageSearchResult[] => {
-  const needle = query.trim().toLowerCase();
-  const results: MessageSearchResult[] = [];
-
-  Object.entries(seedThreads).forEach(([conversationId, thread]) => {
-    thread.forEach((message) => {
-      if (message.deleted) return;
-      if (filters.onlyBookmarks && !message.bookmarked) return;
-      if (filters.onlyFiles && (message.attachments?.length ?? 0) === 0) return;
-      if (filters.onlyImages && message.kind !== 'image') return;
-      if (filters.onlyLinks && !LINK_PATTERN.test(message.content)) return;
-      if (filters.onlyMentions && !/@\w+/.test(message.content)) return;
-      if (filters.kind?.length && !filters.kind.includes(message.kind)) return;
-      if (filters.fromDate && new Date(message.createdAt) < new Date(filters.fromDate)) return;
-      if (filters.toDate && new Date(message.createdAt) > new Date(filters.toDate)) return;
-      if (needle && !message.content.toLowerCase().includes(needle)) return;
-      results.push({ message, conversationId });
-    });
-  });
-
-  return results.slice(0, 40);
-};
+const emptyPage = (page: number, size: number): PageResponse<ChatMessage> => ({
+  content: [],
+  page,
+  size,
+  totalElements: 0,
+  totalPages: 1,
+  first: page === 0,
+  last: true,
+  empty: true,
+});
 
 /* ---------------- Conversations ---------------- */
 
 export const useConversationsQuery = () => {
   const dispatch = useAppDispatch();
+  const user = useAppSelector(selectUser);
+
   const query = useQuery({
     queryKey: communicationKeys.conversations(),
     queryFn: async () => {
       const response = await communicationService.getConversations();
       return response.data.data.content;
     },
-    placeholderData: (): typeof seedConversations => seedConversations,
     retry: 1,
   });
 
-  const conversations = query.data ?? seedConversations;
+  const conversations = query.data ?? [];
+
+  useEffect(() => {
+    if (user) {
+      dispatch(
+        setOwnIdentity({ userId: user.userId ?? '', userName: user.username || user.email || '' }),
+      );
+    }
+  }, [dispatch, user]);
 
   useEffect(() => {
     if (conversations.length > 0) dispatch(hydrateConversations(conversations));
@@ -92,9 +74,6 @@ export const useConversationsQuery = () => {
 };
 
 /* ---------------- Messages (paginated) ---------------- */
-
-const paginateSeed = (thread: ChatMessage[], page: number, size: number): ChatMessage[] =>
-  thread.slice(Math.max(0, thread.length - (page + 1) * size));
 
 export const useMessagesQuery = (conversationId: string | null, page = 0, size = 30) => {
   const dispatch = useAppDispatch();
@@ -106,38 +85,11 @@ export const useMessagesQuery = (conversationId: string | null, page = 0, size =
       return response.data.data;
     },
     enabled: Boolean(conversationId),
-    placeholderData: (): PageResponse<ChatMessage> => {
-      const thread = seedThreads[conversationId ?? ''] ?? [];
-      const content = paginateSeed(thread, page, size);
-      return {
-        content,
-        page,
-        size,
-        totalElements: thread.length,
-        totalPages: Math.ceil(thread.length / size),
-        first: content.length === thread.length,
-        last: content.length === 0,
-        empty: content.length === 0,
-      };
-    },
     retry: 1,
   });
 
-  const thread = seedThreads[conversationId ?? ''] ?? [];
-
-  /* Memoized fallback keeps the hydration effect dependency stable. */
   const data = useMemo(
-    () =>
-      query.data ?? {
-        content: paginateSeed(thread, page, size),
-        page,
-        size,
-        totalElements: thread.length,
-        totalPages: Math.ceil(thread.length / size),
-        first: true,
-        last: true,
-        empty: thread.length === 0,
-      },
+    () => query.data ?? emptyPage(page, size),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [query.data, conversationId, page, size],
   );
@@ -160,11 +112,10 @@ export const useAnnouncementsQuery = () => {
       const response = await communicationService.getAnnouncements();
       return response.data.data.content;
     },
-    placeholderData: (): Announcement[] => seedAnnouncements,
     retry: 1,
   });
 
-  return { ...query, announcements: query.data ?? seedAnnouncements, isOffline: query.isError };
+  return { ...query, announcements: query.data ?? [], isOffline: query.isError };
 };
 
 /* ---------------- Search ---------------- */
@@ -174,12 +125,11 @@ export const useSearchMessagesQuery = (queryText: string, filters: MessageSearch
 
   const query = useQuery({
     queryKey: communicationKeys.search(`${debounced}:${JSON.stringify(filters)}`),
-    queryFn: async () => {
+    queryFn: async (): Promise<MessageSearchResult[]> => {
       const response = await communicationService.searchMessages(debounced, filters);
       return response.data.data.content;
     },
     enabled: debounced.length > 0,
-    placeholderData: (): MessageSearchResult[] => searchSeedMessages(debounced, filters),
     retry: 1,
   });
 
@@ -197,7 +147,7 @@ export const usePresenceQuery = (userId: string) => {
       return response.data.data;
     },
     enabled: Boolean(userId),
-    placeholderData: (): PresenceInfo => seedPresence[userId] ?? { userId, status: 'offline' },
+    placeholderData: (): PresenceInfo => ({ userId, status: 'offline' }),
     retry: 1,
   });
 
@@ -229,19 +179,18 @@ export const useUpdatePresenceMutation = () => {
 
 /* ---------------- Sending messages (optimistic) ---------------- */
 
-const pickDemoReply = (conversationId: string): { userId: string; name: string; content: string } => {
-  const entry = DEMO_REPLIES[conversationId];
-  if (!entry) return { userId: 'user-maya', name: 'Maya Patel', content: 'Got it! 👍' };
-  const content = entry.replies[Math.floor(Math.random() * entry.replies.length)] ?? '';
-  return { userId: entry.senderId, name: entry.senderName, content };
-};
-
 export const useSendMessage = (conversationId: string) => {
   const dispatch = useAppDispatch();
   const socketStatus = useAppSelector(selectSocketStatus);
+  const user = useAppSelector(selectUser);
   const queryClient = useQueryClient();
   const socketStatusRef = useRef(socketStatus);
   socketStatusRef.current = socketStatus;
+
+  const identity = useMemo(
+    () => ({ userId: user?.userId ?? '', userName: user?.username || user?.email || '' }),
+    [user],
+  );
 
   const mutation = useMutation({
     mutationFn: (payload: SendMessageRequest) =>
@@ -252,12 +201,12 @@ export const useSendMessage = (conversationId: string) => {
     (content: string, extra: Partial<ChatMessage> = {}) => {
       const trimmed = content.trim();
       if (!trimmed && (extra.attachments?.length ?? 0) === 0) return;
+      if (!identity.userId) return;
 
-      const temp = buildLocalMessage(conversationId, trimmed || 'Attachment', extra);
+      const temp = buildLocalMessage(conversationId, trimmed || 'Attachment', identity, extra);
       dispatch(messageSentOptimistic(temp));
 
-      // Fallback ack — upgrades “sending” → “sent” when no server responds
-      // (offline/demo mode keeps the experience smooth).
+      // Fallback ack — upgrades “sending” → “sent” when no server responds.
       const fallback = window.setTimeout(() => {
         dispatch(messageAck({ tempId: temp.id, message: { ...temp, status: 'sent' } }));
       }, 900);
@@ -279,16 +228,11 @@ export const useSendMessage = (conversationId: string) => {
           onError: () => {
             window.clearTimeout(fallback);
             dispatch(messageAck({ tempId: temp.id, message: { ...temp, status: 'sent' } }));
-            // Lively offline companion: the peer replies when the socket is down.
-            if (socketStatusRef.current !== 'connected') {
-              const peer = pickDemoReply(conversationId);
-              simulatePeerReply(dispatch, conversationId, { userId: peer.userId, name: peer.name }, peer.content);
-            }
           },
         },
       );
     },
-    [conversationId, dispatch, mutation, queryClient],
+    [conversationId, dispatch, mutation, queryClient, identity],
   );
 
   const retry = useCallback(
@@ -407,13 +351,19 @@ export const useMarkConversationRead = (conversationId: string | null) => {
   return { markRead };
 };
 
-export const useCurrentUserId = (): string => CURRENT_USER_ID;
+/** The signed-in user's real id (from the auth store). */
+export const useCurrentUserId = (): string => useAppSelector(selectUser)?.userId ?? '';
 
 /* ---------------- Forwarding ---------------- */
 
 export const useForwardMessage = () => {
   const dispatch = useAppDispatch();
-  const queryClient = useQueryClient();
+  const user = useAppSelector(selectUser);
+
+  const identity = useMemo(
+    () => ({ userId: user?.userId ?? '', userName: user?.username || user?.email || '' }),
+    [user],
+  );
 
   const forward = useCallback(
     (targetConversationId: string, source: ChatMessage) => {
@@ -421,7 +371,7 @@ export const useForwardMessage = () => {
         source.kind === 'text' || source.kind === 'code'
           ? source.content
           : `[${source.kind}] ${source.content}`;
-      const temp = buildLocalMessage(targetConversationId, content, {
+      const temp = buildLocalMessage(targetConversationId, content, identity, {
         kind: source.kind === 'text' ? 'text' : source.kind,
         attachments: source.attachments ?? [],
         forwardedFrom: source.senderName,
@@ -442,10 +392,8 @@ export const useForwardMessage = () => {
         })
         .then((response) => dispatch(messageAck({ tempId: temp.id, message: response.data.data })))
         .catch(() => showInfo('Offline — forwarded message stored locally.'));
-
-      void queryClient;
     },
-    [dispatch, queryClient],
+    [dispatch, identity],
   );
 
   return { forward };

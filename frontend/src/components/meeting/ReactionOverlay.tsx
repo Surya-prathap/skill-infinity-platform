@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { addReaction } from '@/store/slices/meetingSlice';
 import { selectMeetingReactions } from '@/store/selectors';
-import { MEETING_CURRENT_USER_ID, MEETING_CURRENT_USER_NAME } from '@/features/meeting';
+import { useCurrentUserIdentity } from '@/hooks';
 
 const REACTION_EMOJIS = ['👍', '👏', '❤️', '🎉', '🔥', '😂', '👋'];
 
@@ -10,14 +10,15 @@ const REACTION_EMOJIS = ['👍', '👏', '❤️', '🎉', '🔥', '😂', '👋
 export const ReactionOverlay = () => {
   const reactions = useAppSelector(selectMeetingReactions);
   const dispatch = useAppDispatch();
+  const { userId, userName } = useCurrentUserIdentity();
 
   const sendReaction = (emoji: string): void => {
     dispatch(
       addReaction({
         id: `me-reaction-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         emoji,
-        userName: MEETING_CURRENT_USER_NAME,
-        userId: MEETING_CURRENT_USER_ID,
+        userName,
+        userId,
         createdAt: new Date().toISOString(),
       }),
     );

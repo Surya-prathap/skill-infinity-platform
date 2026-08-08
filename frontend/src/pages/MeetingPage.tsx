@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
@@ -6,7 +6,6 @@ import { setConnectionStatus, setMeetingError } from '@/store/slices/meetingSlic
 import { selectMeetingStatus, selectMeeting } from '@/store/selectors';
 import { useJoinMeeting, useResolveMeeting } from '@/features/meeting';
 import { connectMeetingSocket, disconnectMeetingSocket, isMeetingSocketLive } from '@/socket/meetingSocket';
-import { SimulatedMeetingDriver } from '@/webrtc';
 import { WaitingRoom, MeetingRoom } from '@/components/meeting';
 import type { Meeting } from '@/types';
 
@@ -20,8 +19,6 @@ export const MeetingPage = () => {
   const storeMeeting = useAppSelector(selectMeeting);
   const { join, leave } = useJoinMeeting();
 
-  const driverRef = useRef<SimulatedMeetingDriver | null>(null);
-
   const effectiveMeeting: Meeting | null = storeMeeting ?? meeting ?? null;
 
   /* ---------------- Join flow ---------------- */
@@ -30,7 +27,7 @@ export const MeetingPage = () => {
       if (!meeting) return;
       dispatch(setMeetingError(null));
 
-      // Try the real signaling path first; fall back to the simulation.
+      // Connect the real signaling path when the socket is live.
       const live = isMeetingSocketLive();
       if (live) {
         connectMeetingSocket(dispatch, meeting.id);
@@ -38,17 +35,6 @@ export const MeetingPage = () => {
       }
 
       join(meeting, { mutedJoin, role: meeting.hostId === 'user-me' ? 'HOST' : 'LEARNER' });
-
-      if (!live) {
-        // Offline demo companion — lifelike participant behavior.
-        driverRef.current?.stop();
-        const driver = new SimulatedMeetingDriver(dispatch, meeting.id);
-        driverRef.current = driver;
-        driver.start();
-      } else {
-        driverRef.current?.stop();
-        driverRef.current = null;
-      }
     },
     [meeting, dispatch, join],
   );
@@ -56,16 +42,12 @@ export const MeetingPage = () => {
   /* ---------------- Cleanup ---------------- */
   useEffect(
     () => () => {
-      driverRef.current?.stop();
-      driverRef.current = null;
       disconnectMeetingSocket();
     },
     [],
   );
 
   const handleEnded = useCallback(() => {
-    driverRef.current?.stop();
-    driverRef.current = null;
     disconnectMeetingSocket();
     leave();
   }, [leave]);

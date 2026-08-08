@@ -14,13 +14,11 @@ import { AnimatePresence, motion } from 'framer-motion';
 import SearchIcon from '@mui/icons-material/Search';
 import AddCommentOutlinedIcon from '@mui/icons-material/AddCommentOutlined';
 import CampaignOutlinedIcon from '@mui/icons-material/CampaignOutlined';
-import GroupOutlinedIcon from '@mui/icons-material/GroupOutlined';
-import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import CloseIcon from '@mui/icons-material/Close';
 import { Typography } from '@/components/ui/Typography';
 import { Avatar } from '@/components/ui';
 import { gradients } from '@/theme';
-import { CURRENT_USER_ID, seedParticipants } from '@/features/communication/data';
+import { useCurrentUserIdentity } from '@/hooks';
 import { ConversationCard } from './ConversationCard';
 import { PresenceBadge } from './PresenceBadge';
 import { UnreadBadge } from './UnreadBadge';
@@ -90,6 +88,7 @@ export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
   const [filter, setFilter] = useState<ConversationFilter>('all');
   const [query, setQuery] = useState('');
   const [newChatOpen, setNewChatOpen] = useState(false);
+  const { userId: currentUserId } = useCurrentUserIdentity();
 
   const sorted = useMemo(
     () =>
@@ -109,7 +108,7 @@ export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
       if (needle) {
         const label =
           conversation.title ??
-          conversation.participants.find((p) => p.userId !== CURRENT_USER_ID)?.name ??
+          conversation.participants.find((p) => p.userId !== currentUserId)?.name ??
           '';
         if (!label.toLowerCase().includes(needle)) return false;
       }
@@ -127,13 +126,13 @@ export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
   );
 
   const onlineContacts = Object.values(presence)
-    .filter((info) => isPresenceOnline(info.status) && info.userId !== CURRENT_USER_ID)
+    .filter((info) => isPresenceOnline(info.status) && info.userId !== currentUserId)
     .slice(0, 6);
 
   const renderList = (list: Conversation[]) => (
     <AnimatePresence initial={false}>
       {list.map((conversation) => {
-        const other = conversation.participants.find((p) => p.userId !== CURRENT_USER_ID);
+        const other = conversation.participants.find((p) => p.userId !== currentUserId);
         const isTyping = (typing[conversation.id] ?? []).some((info) => info.isTyping);
         return (
           <ConversationCard
@@ -219,12 +218,7 @@ export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
             {onlineContacts.map((info) => (
               <Tooltip key={info.userId} title={info.status === 'online' ? 'Online' : 'In a session'} arrow>
                 <Box sx={{ position: 'relative', cursor: 'pointer' }}>
-                  <Avatar
-                    firstName={seedParticipants[info.userId]?.firstName}
-                    lastName={seedParticipants[info.userId]?.lastName}
-                    email={seedParticipants[info.userId]?.email}
-                    size={30}
-                  />
+                  <Avatar name={info.userId} size={30} />
                   <Box sx={{ position: 'absolute', bottom: -1, right: -1 }}>
                     <PresenceBadge status={info.status} size={9} showLabel={false} />
                   </Box>
@@ -358,9 +352,11 @@ interface NewChatDialogProps {
 export const NewChatDialog: React.FC<NewChatDialogProps> = ({ open, onClose, onSelect, presence }) => {
   const [query, setQuery] = useState('');
 
-  const options = Object.values(seedParticipants)
-    .filter((participant) =>
-      query ? participant.name.toLowerCase().includes(query.toLowerCase()) : true,
+  // Real contacts are loaded from the conversations list; presence is
+  // broadcast live by the socket. No hard-coded participant directory.
+  const options = Object.values(presence)
+    .filter((info) =>
+      query ? info.userId.toLowerCase().includes(query.toLowerCase()) : true,
     )
     .slice(0, 12);
 
@@ -400,16 +396,16 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({ open, onClose, onS
           }}
         />
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-          {options.map((participant) => {
-            const info = presence[participant.userId];
+          {options.map((info) => {
+            const name = info.userId;
             return (
               <Box
-                key={participant.userId}
+                key={info.userId}
                 role="button"
                 tabIndex={0}
-                onClick={() => onSelect(participant.userId, participant.name)}
+                onClick={() => onSelect(info.userId, name)}
                 onKeyDown={(event) => {
-                  if (event.key === 'Enter') onSelect(participant.userId, participant.name);
+                  if (event.key === 'Enter') onSelect(info.userId, name);
                 }}
                 sx={{
                   display: 'flex',
@@ -422,36 +418,27 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({ open, onClose, onS
                 }}
               >
                 <Box sx={{ position: 'relative' }}>
-                  <Avatar firstName={participant.firstName} lastName={participant.lastName} email={participant.email} size={38} />
-                  {info && (
-                    <Box sx={{ position: 'absolute', bottom: -1, right: -1 }}>
-                      <PresenceBadge status={info.status} size={9} showLabel={false} />
-                    </Box>
-                  )}
+                  <Avatar name={name} size={38} />
+                  <Box sx={{ position: 'absolute', bottom: -1, right: -1 }}>
+                    <PresenceBadge status={info.status} size={9} showLabel={false} />
+                  </Box>
                 </Box>
                 <Box sx={{ flexGrow: 1, minWidth: 0 }}>
                   <Typography variant="body2" fontWeight={600} noWrap>
-                    {participant.name}
+                    {name}
                   </Typography>
                   <Typography variant="caption" color="text.secondary" noWrap>
-                    {participant.role === 'ROLE_MENTOR' ? (
-                      <>
-                        <LockOutlinedIcon sx={{ fontSize: 12, verticalAlign: 'middle', mr: 0.25 }} />
-                        Mentor
-                      </>
-                    ) : (
-                      'Learner'
-                    )}
-                    {' · '}
-                    {participant.headline ?? 'Skill Infinity member'}
+                    {info.customStatus ?? 'Skill Infinity member'}
                   </Typography>
                 </Box>
-                {participant.role === 'ROLE_MENTOR' && (
-                  <GroupOutlinedIcon sx={{ fontSize: 16, color: 'text.disabled' }} />
-                )}
               </Box>
             );
           })}
+          {options.length === 0 && (
+            <Typography variant="body2" color="text.disabled" sx={{ py: 3, textAlign: 'center' }}>
+              No contacts online right now.
+            </Typography>
+          )}
         </Box>
       </DialogContent>
     </Dialog>

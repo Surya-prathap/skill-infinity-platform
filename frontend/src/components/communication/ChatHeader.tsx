@@ -9,7 +9,7 @@ import { Avatar } from '@/components/ui';
 import { Typography } from '@/components/ui/Typography';
 import { PresenceBadge } from './PresenceBadge';
 import { TypingIndicator } from './TypingIndicator';
-import { CURRENT_USER_ID } from '@/features/communication/data';
+import { useCurrentUserIdentity } from '@/hooks';
 import type { Conversation, PresenceInfo } from '@/types';
 
 interface ChatHeaderProps {
@@ -35,8 +35,9 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   onVideoCallClick,
   infoOpen,
 }) => {
+  const { userId: currentUserId } = useCurrentUserIdentity();
   const isGroup = conversation.type === 'group' || conversation.type === 'session';
-  const other = conversation.participants.find((participant) => participant.userId !== CURRENT_USER_ID);
+  const other = conversation.participants.find((participant) => participant.userId !== currentUserId);
   const label =
     conversation.title ??
     other?.name ??

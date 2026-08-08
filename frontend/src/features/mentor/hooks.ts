@@ -18,16 +18,20 @@ import type {
   UpdateMentorProfileRequest,
 } from '@/types';
 import { mentorKeys } from './queryKeys';
-import {
-  FALLBACK_CATEGORIES,
-  seedAchievements,
-  seedAvailability,
-  seedDashboard,
-  seedMentor,
-  seedPreferences,
-  seedPricing,
-} from './data';
 import { cacheMentor, clearDraft, loadCachedMentor, type MentorDraft } from './storage';
+
+/** Empty preference defaults — the real values come from the mentor profile. */
+const emptyPreferences = (): MentorPreference => ({
+  autoApproveSessions: false,
+  notificationOnBooking: false,
+  notificationOnCancellation: false,
+});
+
+/** Empty dashboard default — zeroed, no fabricated data. */
+const emptyDashboard = (): DashboardData => ({
+  upcomingSessions: 0,
+  pendingRequests: 0,
+});
 
 const isNetworkError = (error: unknown): boolean =>
   Boolean((error as AxiosError)?.isAxiosError && !(error as AxiosError).response);
@@ -64,7 +68,7 @@ export const useMentorProfileQuery = () => {
   };
 };
 
-/** Mentor dashboard summary. Falls back to the seed dashboard offline. */
+/** Mentor dashboard summary. */
 export const useMentorDashboardQuery = () => {
   const query = useQuery({
     queryKey: mentorKeys.dashboard(),
@@ -72,11 +76,10 @@ export const useMentorDashboardQuery = () => {
       const response = await mentorService.getDashboard();
       return response.data.data;
     },
-    placeholderData: seedDashboard,
     retry: 1,
   });
 
-  const dashboard = (query.data ?? seedDashboard) as DashboardData;
+  const dashboard = (query.data ?? emptyDashboard()) as DashboardData;
 
   return {
     ...query,
@@ -85,7 +88,7 @@ export const useMentorDashboardQuery = () => {
   };
 };
 
-/** Category taxonomy used by the wizard. Falls back to a curated list. */
+/** Category taxonomy used by the wizard. */
 export const useCategoriesQuery = () => {
   const query = useQuery({
     queryKey: mentorKeys.categories(),
@@ -97,7 +100,7 @@ export const useCategoriesQuery = () => {
     retry: 1,
   });
 
-  const categories = (query.data ?? FALLBACK_CATEGORIES) as Category[];
+  const categories = (query.data ?? []) as Category[];
 
   return { ...query, categories, isOffline: query.isError };
 };
@@ -110,11 +113,10 @@ export const useAvailabilityQuery = () => {
       const response = await mentorService.getMyAvailability();
       return response.data.data;
     },
-    placeholderData: seedAvailability,
     retry: 1,
   });
 
-  const availabilities = (query.data ?? seedAvailability) as MentorAvailability[];
+  const availabilities = (query.data ?? []) as MentorAvailability[];
 
   return { ...query, availabilities, isOffline: query.isError };
 };
@@ -124,15 +126,14 @@ export const usePricingQuery = (mentorId?: string) => {
   const query = useQuery({
     queryKey: mentorKeys.pricing(mentorId ?? 'none'),
     queryFn: async () => {
-      if (!mentorId) return seedPricing;
+      if (!mentorId) return [] as MentorPricing[];
       const response = await mentorService.getPricing(mentorId);
       return response.data.data;
     },
-    placeholderData: seedPricing,
     retry: 1,
   });
 
-  const pricing = (query.data ?? seedPricing) as MentorPricing[];
+  const pricing = (query.data ?? []) as MentorPricing[];
 
   return { ...query, pricing, isOffline: query.isError };
 };
@@ -283,7 +284,7 @@ export const useAddPricingMutation = (mentorId?: string) => {
       await queryClient.cancelQueries({ queryKey: key });
       const previous = queryClient.getQueryData<MentorPricing[]>(key);
       queryClient.setQueryData<MentorPricing[]>(key, [
-        ...(previous ?? seedPricing),
+        ...(previous ?? []),
         { ...payload, id: `temp-${Date.now()}`, active: true } as MentorPricing,
       ]);
       return { previous };
@@ -317,7 +318,7 @@ export const useDeletePricingMutation = (mentorId?: string) => {
       const previous = queryClient.getQueryData<MentorPricing[]>(key);
       queryClient.setQueryData<MentorPricing[]>(
         key,
-        (previous ?? seedPricing).filter((plan) => plan.id !== pricingId),
+        (previous ?? []).filter((plan) => plan.id !== pricingId),
       );
       return { previous };
     },
@@ -479,7 +480,7 @@ export const useUpdateCertificationMutation = () => {
    ============================================================ */
 
 const cachedAchievements = (): MentorAchievement[] =>
-  loadCachedMentor().achievements ?? seedAchievements;
+  loadCachedMentor().achievements ?? [];
 
 export const useAchievementsQuery = (mentorId?: string) => {
   const query = useQuery({
@@ -611,7 +612,7 @@ export const useDeleteAchievementMutation = (mentorId?: string) => {
 
 export const useMentorPreferencesQuery = () => {
   const { mentor } = useMentorProfileQuery();
-  const preferences = mentor?.preference ?? seedPreferences;
+  const preferences = mentor?.preference ?? emptyPreferences();
   return { preferences };
 };
 
@@ -626,7 +627,7 @@ export const useUpdatePreferenceMutation = () => {
       const mentor = previous ?? loadCachedMentor();
       queryClient.setQueryData<Mentor>(mentorKeys.profile(), {
         ...mentor,
-        preference: { ...(mentor.preference ?? seedPreferences), ...payload },
+        preference: { ...(mentor.preference ?? emptyPreferences()), ...payload },
       });
       cacheMentor(queryClient.getQueryData<Mentor>(mentorKeys.profile()) ?? mentor);
       return { previous };
@@ -641,5 +642,4 @@ export const useUpdatePreferenceMutation = () => {
   });
 };
 
-/* Exported for reuse by tests & other features. */
-export { seedMentor };
+

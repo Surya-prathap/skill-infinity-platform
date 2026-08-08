@@ -9,7 +9,7 @@ spring:
   datasource:
     url: jdbc:mysql://${REVIEW_DB_HOST:localhost}:${REVIEW_DB_PORT:3306}/${REVIEW_DB_NAME:skill_infinity_review}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
     username: ${REVIEW_DB_USERNAME:root}
-    password: ${REVIEW_DB_PASSWORD:Surya@2003}
+    password: ${REVIEW_DB_PASSWORD:root123}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: 10

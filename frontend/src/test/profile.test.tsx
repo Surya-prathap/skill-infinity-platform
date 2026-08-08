@@ -3,6 +3,8 @@ import { cleanup, screen } from '@testing-library/react';
 import { ProfileOverviewPage } from '@/pages/profile/ProfileOverviewPage';
 import { renderWithProviders } from './testUtils';
 import { setCredentials } from '@/store/slices/authSlice';
+import { persistProfile } from '@/features/profile/storage';
+import { testProfile } from './fixtures';
 import type { AuthResponse } from '@/types';
 
 const mockAuth: AuthResponse = {
@@ -22,11 +24,12 @@ describe('ProfileOverviewPage', () => {
     window.localStorage.clear();
   });
 
-  it('renders the profile identity and headline from the seeded profile', async () => {
+  it('renders the profile identity and headline from the persisted profile', async () => {
+    persistProfile(testProfile);
     const { store } = renderWithProviders(<ProfileOverviewPage />);
     store.dispatch(setCredentials(mockAuth));
 
-    // Seed profile data is served while the API is unreachable.
+    // The cached profile is shown while the API is unreachable.
     expect(await screen.findByText('Alex Morgan')).toBeInTheDocument();
     expect(screen.getByText('Senior Frontend Engineer · Design Systems & Performance')).toBeInTheDocument();
     expect(screen.getByText('About')).toBeInTheDocument();
@@ -34,6 +37,7 @@ describe('ProfileOverviewPage', () => {
   });
 
   it('shows education and experience sections', async () => {
+    persistProfile(testProfile);
     const { store } = renderWithProviders(<ProfileOverviewPage />);
     store.dispatch(setCredentials(mockAuth));
 
@@ -44,6 +48,7 @@ describe('ProfileOverviewPage', () => {
   });
 
   it('renders skills and language chips', async () => {
+    persistProfile(testProfile);
     const { store } = renderWithProviders(<ProfileOverviewPage />);
     store.dispatch(setCredentials(mockAuth));
 

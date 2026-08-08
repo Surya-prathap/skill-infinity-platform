@@ -7,9 +7,9 @@ spring:
   config:
     import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
   datasource:
-    url: jdbc:mysql://${IDENTITY_DB_HOST:localhost}:${IDENTITY_DB_PORT:3306}/${IDENTITY_DB_NAME:identity_db}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    url: jdbc:mysql://${IDENTITY_DB_HOST:localhost}:${IDENTITY_DB_PORT:3306}/${IDENTITY_DB_NAME:skill_infinity_identity}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
     username: ${IDENTITY_DB_USERNAME:root}
-    password: ${IDENTITY_DB_PASSWORD:Surya@2003}
+    password: ${IDENTITY_DB_PASSWORD:root123}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: 10
@@ -74,12 +74,7 @@ logging:
     org.springframework.security: INFO
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %highlight(%-5level) %logger{36} - %msg%n"
-  file:
-    name: ${IDENTITY_LOG_DIR:logs}/${spring.application.name}.log
-  logback:
-    rollingpolicy:
-      max-file-size: 10MB
-      max-history: 7
+
 
 springdoc:
   api-docs:

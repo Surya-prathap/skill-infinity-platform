@@ -55,6 +55,8 @@ GRANT ALL PRIVILEGES ON skill_infinity_review.* TO 'skillinfinity'@'%';
 GRANT ALL PRIVILEGES ON skill_infinity_admin.* TO 'skillinfinity'@'%';
 
 -- Also ensure root has remote access (for development)
-ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY 'root';
+-- Note: MySQL entrypoint does NOT expand ${...} inside .sql files, so the literal
+-- password must match the container's MYSQL_ROOT_PASSWORD (see docker/.env).
+ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY 'root123';
 GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION;
 FLUSH PRIVILEGES;

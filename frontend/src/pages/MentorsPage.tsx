@@ -19,7 +19,6 @@ import { ROUTES } from '@/constants';
 import { useDebounce } from '@/hooks';
 import { useMentorSearch, useRecentSearches, useSavedMentors } from '@/features/marketplace';
 import { SORT_OPTIONS } from '@/features/marketplace/constants';
-import { seedMentors, seedTrendingSkills } from '@/features/marketplace/data';
 import { Pagination } from '@/components/ui/Pagination';
 import type { DiscoveryFilters, MentorSortKey } from '@/types';
 
@@ -82,10 +81,32 @@ export const MentorsPage: React.FC = () => {
 
   const displayMentors = showSaved
     ? savedMentors.map((m) => ({ id: m.id, mentor: m }))
-    : data.content.map((summary) => ({
-        id: summary.id,
-        mentor: seedMentors.find((m) => m.id === summary.id) ?? summary,
-      }));
+    : data.content.map((summary) => ({ id: summary.id, mentor: summary }));
+
+  /** Trending skills derived from the real mentor search results (no seed data). */
+  const trendingSkills = useMemo(() => {
+    const seen = new Set<string>();
+    const skills: string[] = [];
+    for (const summary of data.content) {
+      const headline = summary.headline ?? '';
+      const parts = headline.split('·');
+      for (const part of parts) {
+        const candidate = part.trim();
+        if (candidate && !seen.has(candidate)) {
+          seen.add(candidate);
+          skills.push(candidate);
+        }
+      }
+      if (skills.length >= 4) break;
+    }
+    return skills;
+  }, [data.content]);
+
+  /** Trending mentors from real search results (top by sessions, capped at 3). */
+  const trendingMentors = useMemo(
+    () => [...data.content].sort((a, b) => b.totalSessions - a.totalSessions).slice(0, 3),
+    [data.content],
+  );
 
   return (
     <Box>
@@ -168,10 +189,12 @@ export const MentorsPage: React.FC = () => {
             />
           </motion.div>
           <Stack direction="row" alignItems="center" gap={1} flexWrap="wrap" sx={{ mt: 1.5 }}>
-            <Typography variant="caption" sx={{ opacity: 0.85, fontWeight: 700 }}>
-              Trending:
-            </Typography>
-            {seedTrendingSkills.slice(0, 4).map((skill) => (
+            {trendingSkills.length > 0 && (
+              <Typography variant="caption" sx={{ opacity: 0.85, fontWeight: 700 }}>
+                Trending:
+              </Typography>
+            )}
+            {trendingSkills.slice(0, 4).map((skill) => (
               <Chip
                 key={skill}
                 size="small"
@@ -324,7 +347,6 @@ export const MentorsPage: React.FC = () => {
                 <Grid key={id} size={{ xs: 12, sm: 6, lg: 4 }}>
                   <MarketplaceMentorCard
                     mentor={mentor}
-                    detail={seedMentors.find((m) => m.id === id)}
                     saved={isSaved(id)}
                     onToggleSave={() => toggleSaved(id)}
                     index={index}
@@ -369,19 +391,20 @@ export const MentorsPage: React.FC = () => {
               </Typography>
             </Box>
           </Stack>
-          <Grid container spacing={3}>
-            {seedMentors.slice(3, 6).map((mentor, index) => (
-              <Grid key={mentor.id} size={{ xs: 12, sm: 6, lg: 4 }}>
-                <MarketplaceMentorCard
-                  mentor={mentor}
-                  detail={mentor}
-                  saved={isSaved(mentor.id)}
-                  onToggleSave={() => toggleSaved(mentor.id)}
-                  index={index}
-                />
-              </Grid>
-            ))}
-          </Grid>
+          {trendingMentors.length > 0 && (
+            <Grid container spacing={3}>
+              {trendingMentors.map((mentor, index) => (
+                <Grid key={mentor.id} size={{ xs: 12, sm: 6, lg: 4 }}>
+                  <MarketplaceMentorCard
+                    mentor={mentor}
+                    saved={isSaved(mentor.id)}
+                    onToggleSave={() => toggleSaved(mentor.id)}
+                    index={index}
+                  />
+                </Grid>
+              ))}
+            </Grid>
+          )}
         </Box>
       )}
 

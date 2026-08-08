@@ -8,7 +8,7 @@ import { Typography } from '@/components/ui/Typography';
 import { CommentItem } from './CommentItem';
 import { RichTextEditor } from './RichTextEditor';
 import { useCommentsQuery, useCreateCommentMutation } from '@/features/community';
-import { CURRENT_USER_NAME } from '@/features/community/data';
+import { useCurrentUserIdentity } from '@/hooks';
 import { EmptyState, ListSkeleton } from '@/components/feedback';
 import type { CommunityComment } from '@/types';
 
@@ -41,6 +41,7 @@ const countTotal = (tree: CommunityComment[]): number =>
 export const CommentThread: React.FC<CommentThreadProps> = ({ postId }) => {
   const { comments, isOffline, isLoading } = useCommentsQuery(postId);
   const createComment = useCreateCommentMutation(postId);
+  const { userName: currentUserName } = useCurrentUserIdentity();
   const [content, setContent] = useState('');
   const [sort, setSort] = useState<CommentSort>('TOP');
 
@@ -114,7 +115,7 @@ export const CommentThread: React.FC<CommentThreadProps> = ({ postId }) => {
       {/* Top-level composer */}
       <Box sx={{ mb: 3 }}>
         <Stack direction="row" gap={1.5} alignItems="flex-start">
-          <Avatar name={CURRENT_USER_NAME} size={38} />
+          <Avatar name={currentUserName} size={38} />
           <Box sx={{ flexGrow: 1 }}>
             <RichTextEditor
               value={content}
@@ -157,7 +158,7 @@ export const CommentThread: React.FC<CommentThreadProps> = ({ postId }) => {
 
       {isOffline && (
         <Typography variant="caption" color="text.disabled" sx={{ display: 'block', textAlign: 'center', mt: 2 }}>
-          Offline mode — comments are demo data.
+          Comments unavailable — check your connection.
         </Typography>
       )}
     </Card>

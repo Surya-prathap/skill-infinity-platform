@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Box, Button, Chip, IconButton, Tooltip } from '@mui/material';
 import { AnimatePresence, motion } from 'framer-motion';
 import DoneAllIcon from '@mui/icons-material/DoneAll';
@@ -11,12 +11,10 @@ import {
   markAllAsRead,
   markAsRead,
   removeNotification,
-  setNotifications,
 } from '@/store/slices/notificationsSlice';
 import { selectNotifications, selectUnreadCount } from '@/store/selectors';
 import { PageHeader, PageTransition } from '@/components';
 import { Typography } from '@/components/ui/Typography';
-import { seedNotifications } from '@/features/communication/data';
 import { useDocumentTitle } from '@/hooks';
 import { formatRelativeTime } from '@/utils';
 import type { AppNotification } from '@/types';
@@ -51,13 +49,7 @@ export const NotificationsPage: React.FC = () => {
   const unreadCount = useAppSelector(selectUnreadCount);
   const [filter, setFilter] = useState<FilterValue>('all');
 
-  /* Seed the center with realistic notifications when the store is empty. */
-  useEffect(() => {
-    if (notifications.length === 0) {
-      dispatch(setNotifications(seedNotifications));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dispatch]);
+  /* Notifications arrive from the real-time socket and stay empty until then. */
 
   const filtered = useMemo(
     () => (filter === 'unread' ? notifications.filter((notification) => !notification.read) : notifications),

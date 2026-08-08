@@ -7,30 +7,37 @@ import chatReducer, {
   messageReacted,
   messageReceived,
   presenceChanged,
+  setOwnIdentity,
   setSocketStatus,
   typingChanged,
 } from '@/store/slices/chatSlice';
-import { seedConversations, seedPresence } from '@/features/communication/data';
+import { testConversations, testPresence } from './fixtures';
 import type { ChatMessage, TypingInfo } from '@/types';
 
 const seed = (conversationId: string, senderId: string, content: string, createdAt: string): ChatMessage =>
-  buildLocalMessage(conversationId, content, {
-    id: `m-${conversationId}-${Date.now()}-${Math.random()}`,
-    senderId,
-    senderName: senderId === 'user-me' ? 'Alex Morgan' : 'Sarah Chen',
-    createdAt,
-  });
+  buildLocalMessage(
+    conversationId,
+    content,
+    { userId: senderId, userName: senderId === 'user-me' ? 'Alex Morgan' : 'Sarah Chen' },
+    {
+      id: `m-${conversationId}-${Date.now()}-${Math.random()}`,
+      createdAt,
+    },
+  );
+
+const ME = { userId: 'user-me', userName: 'Alex Morgan' };
 
 describe('chatSlice', () => {
   it('hydrates conversations and initializes unread counts', () => {
-    const state = chatReducer(undefined, hydrateConversations(seedConversations));
-    expect(state.conversations.length).toBe(seedConversations.length);
+    const state = chatReducer(undefined, hydrateConversations(testConversations));
+    expect(state.conversations.length).toBe(testConversations.length);
     expect(state.unreadCounts['c-sarah']).toBe(2);
     expect(state.unreadCounts['c-devops']).toBe(5);
   });
 
   it('increments unread only for non-active incoming messages', () => {
-    let state = chatReducer(undefined, hydrateConversations(seedConversations));
+    let state = chatReducer(undefined, setOwnIdentity(ME));
+    state = chatReducer(state, hydrateConversations(testConversations));
     state = chatReducer(state, { type: 'chat/setActiveConversation', payload: 'c-sarah' });
 
     const incoming = seed('c-sarah', 'user-sarah', 'Hello!', new Date().toISOString());
@@ -44,8 +51,8 @@ describe('chatSlice', () => {
   });
 
   it('acks optimistic messages by replacing the temp id', () => {
-    const temp = buildLocalMessage('c-sarah', 'Hello world');
-    let state = chatReducer(undefined, hydrateConversations(seedConversations));
+    const temp = buildLocalMessage('c-sarah', 'Hello world', ME);
+    let state = chatReducer(undefined, hydrateConversations(testConversations));
     state = chatReducer(state, { type: 'chat/messageSentOptimistic', payload: temp });
     expect(state.messages['c-sarah']).toContainEqual(expect.objectContaining({ id: temp.id, status: 'sending' }));
 
@@ -56,7 +63,7 @@ describe('chatSlice', () => {
   });
 
   it('toggles reactions and removes zero-count reactions', () => {
-    const message = buildLocalMessage('c-sarah', 'Nice work');
+    const message = buildLocalMessage('c-sarah', 'Nice work', ME);
     let state = chatReducer(undefined, {
       type: 'chat/messageSentOptimistic',
       payload: message,
@@ -71,7 +78,8 @@ describe('chatSlice', () => {
 
   it('marks a conversation read and upgrades own messages to read', () => {
     const myMessage = seed('c-maya', 'user-me', 'See you soon', new Date().toISOString());
-    let state = chatReducer(undefined, hydrateConversations(seedConversations));
+    let state = chatReducer(undefined, setOwnIdentity(ME));
+    state = chatReducer(state, hydrateConversations(testConversations));
     state = chatReducer(state, { type: 'chat/messageSentOptimistic', payload: { ...myMessage, status: 'delivered' } });
     state = chatReducer(state, markConversationRead('c-maya'));
 
@@ -102,11 +110,11 @@ describe('chatSlice', () => {
 
     state = chatReducer(state, setSocketStatus('connected'));
     expect(state.socketStatus).toBe('connected');
-    expect(seedPresence['user-sarah']).toBeDefined();
+    expect(testPresence['user-sarah']).toBeDefined();
   });
 
   it('clears chat state on logout', () => {
-    let state = chatReducer(undefined, hydrateConversations(seedConversations));
+    let state = chatReducer(undefined, hydrateConversations(testConversations));
     state = chatReducer(state, setSocketStatus('connected'));
     state = chatReducer(state, { type: 'chat/clearChat' });
     expect(state.conversations).toHaveLength(0);

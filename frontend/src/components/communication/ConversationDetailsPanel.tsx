@@ -10,11 +10,10 @@ import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
 import VideoLibraryOutlinedIcon from '@mui/icons-material/VideoLibraryOutlined';
 import { Avatar } from '@/components/ui';
 import { Typography } from '@/components/ui/Typography';
-import { formatRelativeTime, formatDateTime } from '@/utils';
+import { formatRelativeTime } from '@/utils';
 import { PresenceBadge } from './PresenceBadge';
 import { AttachmentPreview } from './AttachmentPreview';
-import { CURRENT_USER_ID, seedParticipants } from '@/features/communication/data';
-import { seedSessions } from '@/features/sessions/data';
+import { useCurrentUserIdentity } from '@/hooks';
 import type { ChatMessage, Conversation, PresenceInfo } from '@/types';
 
 interface ConversationDetailsPanelProps {
@@ -49,12 +48,13 @@ export const ConversationDetailsPanel: React.FC<ConversationDetailsPanelProps> =
   onClose,
   onPinnedMessageClick,
 }) => {
+  const { userId: currentUserId } = useCurrentUserIdentity();
   const isGroup = conversation.type === 'group' || conversation.type === 'session';
-  const other = conversation.participants.find((participant) => participant.userId !== CURRENT_USER_ID);
+  const other = conversation.participants.find((participant) => participant.userId !== currentUserId);
   const otherPresence = other ? presence[other.userId] : null;
-  const session = conversation.sessionId
-    ? seedSessions.find((item) => item.id === conversation.sessionId)
-    : undefined;
+  // Session link is resolved live from the session-service; only the id is
+  // embedded on the conversation (no fabricated session data).
+  const sessionId = conversation.sessionId;
 
   const attachments = messages
     .filter((message) => !message.deleted)
@@ -171,19 +171,14 @@ export const ConversationDetailsPanel: React.FC<ConversationDetailsPanelProps> =
         <Divider />
 
         {/* Session info */}
-        {session && (
-          <Section icon={<ScheduleOutlinedIcon sx={{ fontSize: 17 }} />} title="Current session">
+        {sessionId && (
+          <Section icon={<ScheduleOutlinedIcon sx={{ fontSize: 17 }} />} title="Session">
             <Box sx={{ p: 1.5, borderRadius: 2.5, border: 1, borderColor: 'divider', bgcolor: 'action.hover' }}>
               <Typography variant="body2" fontWeight={700}>
-                {session.title ?? 'Session'}
+                Session {sessionId.slice(0, 8)}
               </Typography>
-              {session.startTime && (
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                  {formatDateTime(session.startTime)}
-                </Typography>
-              )}
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                {session.durationMinutes} minutes · {session.status.replaceAll('_', ' ')}
+                Linked to a booked session
               </Typography>
             </Box>
           </Section>
@@ -238,8 +233,9 @@ export const ConversationDetailsPanel: React.FC<ConversationDetailsPanelProps> =
                 <Box key={participant.userId} sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
                   <Box sx={{ position: 'relative' }}>
                     <Avatar
-                      firstName={seedParticipants[participant.userId]?.firstName ?? participant.firstName}
-                      lastName={seedParticipants[participant.userId]?.lastName ?? participant.lastName}
+                      firstName={participant.firstName}
+                      lastName={participant.lastName}
+                      name={participant.name}
                       email={participant.email}
                       size={34}
                     />
@@ -252,13 +248,13 @@ export const ConversationDetailsPanel: React.FC<ConversationDetailsPanelProps> =
                   <Box sx={{ flexGrow: 1, minWidth: 0 }}>
                     <Typography variant="body2" fontWeight={600} noWrap>
                       {participant.name}
-                      {participant.userId === CURRENT_USER_ID && (
+                      {currentUserId && participant.userId === currentUserId && (
                         <Box component="span" sx={{ color: 'primary.main', ml: 0.5 }}>(you)</Box>
                       )}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
                       {participant.role === 'ROLE_MENTOR' ? 'Mentor' : 'Learner'}
-                      {participant.userId === CURRENT_USER_ID ? '' : info ? ` · ${info.status}` : ''}
+                      {currentUserId && participant.userId === currentUserId ? '' : info ? ` · ${info.status}` : ''}
                     </Typography>
                   </Box>
                   <PersonOutlineOutlinedIcon sx={{ fontSize: 16, color: 'text.disabled' }} />

@@ -9,7 +9,7 @@ spring:
   datasource:
     url: jdbc:mysql://${PAYMENT_DB_HOST:localhost}:${PAYMENT_DB_PORT:3306}/${PAYMENT_DB_NAME:skill_infinity_payment}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
     username: ${PAYMENT_DB_USERNAME:root}
-    password: ${PAYMENT_DB_PASSWORD:Surya@2003}
+    password: ${PAYMENT_DB_PASSWORD:root123}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: 10

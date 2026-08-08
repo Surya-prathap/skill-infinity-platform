@@ -28,7 +28,7 @@ import {
 } from '@/features/community';
 import { formatRelativeTime } from '@/utils';
 import { ROUTES } from '@/constants';
-import { seedCommunities } from '@/features/community/data';
+import { useCurrentUserIdentity } from '@/hooks';
 import type { CommunityPost } from '@/types';
 
 interface PostCardProps {
@@ -55,6 +55,7 @@ export const PostCard: React.FC<PostCardProps> = ({
   onDeleted,
 }) => {
   const navigate = useNavigate();
+  const { userId: currentUserId } = useCurrentUserIdentity();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [imgFailed, setImgFailed] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -175,7 +176,7 @@ export const PostCard: React.FC<PostCardProps> = ({
             <LinkIcon fontSize="small" sx={{ mr: 1.25 }} />
             Report
           </MenuItem>
-          {post.authorId === 'u-me' && (
+          {currentUserId && post.authorId === currentUserId && (
             <MenuItem onClick={handleDelete} dense sx={{ color: 'error.main' }}>
               <LinkIcon fontSize="small" sx={{ mr: 1.25 }} />
               Delete
@@ -195,8 +196,7 @@ export const PostCard: React.FC<PostCardProps> = ({
               color="secondary"
               onClick={(event) => {
                 event.stopPropagation();
-                const community = communitySlugToId(post.communitySlug!);
-                if (community) navigate(ROUTES.COMMUNITY_DETAILS.replace(':communityId', community));
+                if (post.communityId) navigate(ROUTES.COMMUNITY_DETAILS.replace(':communityId', post.communityId));
               }}
               sx={{ fontWeight: 800, cursor: 'pointer' }}
             />
@@ -400,8 +400,5 @@ export const PostCard: React.FC<PostCardProps> = ({
     </motion.div>
   );
 };
-
-const communitySlugToId = (slug: string): string | null =>
-  seedCommunities.find((c) => c.slug === slug)?.id ?? null;
 
 export default PostCard;
