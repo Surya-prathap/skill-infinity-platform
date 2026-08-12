@@ -42,10 +42,10 @@ export const PaymentsPage: React.FC = () => {
   );
 
   const kpis = [
-    { label: 'Gross revenue', value: revenue?.monthlyRevenue ?? 0, prefix: '$', icon: <PaymentsOutlinedIcon />, color: '#10B981', delta: 18.9 },
-    { label: 'Transactions', value: payments.length, icon: <ReceiptLongOutlinedIcon />, color: '#6D5DF6', delta: 12.4 },
-    { label: 'Pending refunds', value: pendingRefunds, icon: <ReplayOutlinedIcon />, color: '#F59E0B', delta: -8.2 },
-    { label: 'Avg. transaction', value: revenue?.averageTransactionValue ?? 0, prefix: '$', decimals: 2, icon: <PercentOutlinedIcon />, color: '#3B82F6', delta: 3.1 },
+    { label: 'Gross revenue', value: revenue?.monthlyRevenue ?? 0, prefix: '₹', icon: <PaymentsOutlinedIcon />, color: '#10B981' },
+    { label: 'Transactions', value: payments.length, icon: <ReceiptLongOutlinedIcon />, color: '#6D5DF6' },
+    { label: 'Pending refunds', value: pendingRefunds, icon: <ReplayOutlinedIcon />, color: '#F59E0B' },
+    { label: 'Avg. transaction', value: revenue?.averageTransactionValue ?? 0, prefix: '₹', decimals: 2, icon: <PercentOutlinedIcon />, color: '#3B82F6' },
   ];
 
   const transactionColumns: AdminColumn<AdminPayment>[] = [
@@ -178,7 +178,7 @@ export const PaymentsPage: React.FC = () => {
                 Monthly gross revenue
               </UiTypography>
             </UiStack>
-            <AreaChart data={revenuePoints} height={220} color="#10B981" suffix="$" />
+            <AreaChart data={revenuePoints} height={220} color="#10B981" />
           </Box>
         </Grid>
       </Grid>

@@ -4,6 +4,19 @@ import axios, {
   type AxiosResponse,
   type InternalAxiosRequestConfig,
 } from 'axios';
+
+/**
+ * Requests flagged `silent: true` skip the global loading bar — used for
+ * background polls (role sync) that must not flash the UI.
+ */
+declare module 'axios' {
+  export interface AxiosRequestConfig {
+    silent?: boolean;
+  }
+  export interface InternalAxiosRequestConfig {
+    silent?: boolean;
+  }
+}
 import { APP_CONFIG } from '@/config';
 import { API_ENDPOINTS } from '@/constants';
 import type { ApiResponse, AuthResponse } from '@/types';
@@ -13,6 +26,10 @@ import { onSessionExpired } from './sessionExpiryBridge';
 
 interface RetryableRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
+  /** Marks a request already retried after a transient network-level failure. */
+  _networkRetry?: boolean;
+  /** When true, the global loading bar is not triggered for this request. */
+  silent?: boolean;
 }
 
 const API_BASE_URL = APP_CONFIG.apiBaseUrl;
@@ -31,7 +48,9 @@ apiClient.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  requestStarted();
+  if (!(config as RetryableRequestConfig).silent) {
+    requestStarted();
+  }
   return config;
 });
 
@@ -88,13 +107,33 @@ const handleSessionExpired = async (): Promise<void> => {
 /* ---------------- Response interceptor: refresh + retry ---------------- */
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => {
-    requestFinished();
+    if (!(response.config as RetryableRequestConfig).silent) {
+      requestFinished();
+    }
     return response;
   },
   async (error: AxiosError) => {
-    requestFinished();
-    const original = error.config as RetryableRequestConfig | undefined;
+    const failed = error.config as RetryableRequestConfig | undefined;
+    if (!failed?.silent) {
+      requestFinished();
+    }
+    const original = failed;
     const status = error.response?.status;
+
+    // Transient network-level failure (connection reset while the backend is
+    // GC-stalled, proxy hiccup, etc.): the request never received an HTTP
+    // response, so it is safe to retry once. Timeouts (ECONNABORTED) and
+    // explicit cancellations are excluded — they should surface immediately.
+    // If the first attempt actually succeeded server-side but the response was
+    // lost, a retried register/login simply returns the duplicate-account
+    // message, which the auth forms already handle gracefully.
+    if (!error.response && error.code !== 'ECONNABORTED' && error.code !== 'ERR_CANCELED') {
+      if (!original?._networkRetry) {
+        original!._networkRetry = true;
+        await new Promise((resolve) => window.setTimeout(resolve, 600));
+        return apiClient(original!);
+      }
+    }
 
     if (status !== 401 || !original) {
       return Promise.reject(error);

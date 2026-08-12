@@ -19,27 +19,20 @@ describe('AnalyticsPage', () => {
     expect(screen.getByText('Avg. Rating')).toBeInTheDocument();
   });
 
-  it('renders the revenue growth chart and traffic sources donut', async () => {
+  it('renders the revenue trend chart and engagement overview donut', async () => {
     renderWithProviders(<AnalyticsPage />);
 
-    expect(await screen.findByText('Revenue & User Growth')).toBeInTheDocument();
-    expect(screen.getByText('Traffic Sources')).toBeInTheDocument();
-    expect(screen.getByText('Organic')).toBeInTheDocument();
-    expect(screen.getByText('Referral')).toBeInTheDocument();
+    expect(await screen.findByText('Revenue Trend')).toBeInTheDocument();
+    expect(screen.getByText('Engagement Overview')).toBeInTheDocument();
+    expect(screen.getByText('Reviews')).toBeInTheDocument();
+    expect(screen.getByText('Posts')).toBeInTheDocument();
+    expect(screen.getByText('Comments')).toBeInTheDocument();
   });
 
-  it('renders session statistics and performance radar', async () => {
+  it('renders session statistics and daily registrations charts', async () => {
     renderWithProviders(<AnalyticsPage />);
 
     expect(await screen.findByText('Session Statistics')).toBeInTheDocument();
-    expect(screen.getByText('Performance Radar')).toBeInTheDocument();
-  });
-
-  it('renders the heatmap, community engagement and registrations charts', async () => {
-    renderWithProviders(<AnalyticsPage />);
-
-    expect(await screen.findByText('Learning Activity Heatmap')).toBeInTheDocument();
-    expect(screen.getByText('Community Engagement')).toBeInTheDocument();
     expect(screen.getByText('Daily Registrations')).toBeInTheDocument();
   });
 });

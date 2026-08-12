@@ -21,5 +21,12 @@ public class WalletBalanceResponse {
     private BigDecimal availableBalance;
     private BigDecimal frozenBalance;
     private BigDecimal pendingBalance;
+
+    /** Credit-type buckets — Welcome, Purchased, Learning, Withdrawable. */
+    private BigDecimal welcomeBalance;
+    private BigDecimal purchasedBalance;
+    private BigDecimal learningBalance;
+    private BigDecimal withdrawableBalance;
+
     private String currency;
 }

@@ -162,8 +162,6 @@ class CommonLibraryTests {
         assertEquals("session-service", ServiceConstants.SESSION_SERVICE);
         assertEquals("wallet-service", ServiceConstants.WALLET_SERVICE);
         assertEquals("payment-service", ServiceConstants.PAYMENT_SERVICE);
-        assertEquals("community-service", ServiceConstants.COMMUNITY_SERVICE);
-        assertEquals("communication-service", ServiceConstants.COMMUNICATION_SERVICE);
         assertEquals("review-service", ServiceConstants.REVIEW_SERVICE);
         assertEquals("admin-service", ServiceConstants.ADMIN_SERVICE);
         assertEquals("api-gateway", ServiceConstants.API_GATEWAY);

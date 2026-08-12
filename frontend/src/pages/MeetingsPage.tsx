@@ -19,6 +19,7 @@ import GroupIcon from '@mui/icons-material/Group';
 import { useUpcomingMeetingsQuery, useJoinMeeting } from '@/features/meeting';
 import { avatarFor } from '@/components/meeting/meetingHelpers';
 import { showInfo } from '@/utils';
+import { useAuth } from '@/hooks';
 import type { Meeting } from '@/types';
 
 const KIND_META: Record<Meeting['kind'], { label: string; color: string }> = {
@@ -35,6 +36,7 @@ const KIND_META: Record<Meeting['kind'], { label: string; color: string }> = {
 export const MeetingsPage = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+  const { user } = useAuth();
   const { meetings, isOffline } = useUpcomingMeetingsQuery();
   const { join } = useJoinMeeting();
 
@@ -52,7 +54,8 @@ export const MeetingsPage = () => {
 
   const handleJoin = (meeting: Meeting): void => {
     dispatch(setMeeting(meeting));
-    join(meeting, { role: meeting.hostId === 'user-me' ? 'HOST' : 'LEARNER' });
+    const isHost = meeting.hostId === 'user-me' || user?.userId === meeting.hostId;
+    join(meeting, { role: isHost ? 'HOST' : 'LEARNER' });
     void navigate(`/meet/${meeting.id}`);
   };
 
@@ -132,6 +135,39 @@ export const MeetingsPage = () => {
       <h2 style={{ fontSize: '0.82rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.45)', margin: '0 0 14px' }}>
         Upcoming · {sorted.length}
       </h2>
+      {sorted.length === 0 ? (
+        <div
+          style={{
+            borderRadius: 18,
+            padding: '48px 24px',
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px dashed rgba(255,255,255,0.14)',
+            textAlign: 'center',
+          }}
+        >
+          <div style={{ fontSize: '2.2rem' }}>📅</div>
+          <h3 style={{ margin: '10px 0 4px', fontSize: '1rem', fontWeight: 800, color: 'rgba(255,255,255,0.9)' }}>
+            No upcoming meetings
+          </h3>
+          <p style={{ margin: '0 auto 18px', maxWidth: 420, fontSize: '0.8rem', color: 'rgba(255,255,255,0.55)', lineHeight: 1.6 }}>
+            Your booked sessions and community sessions will appear here with a one-click join link.
+            Start an instant meeting to connect with anyone right now.
+          </p>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setInstantOpen(true)}
+            sx={{
+              background: 'linear-gradient(135deg, #6D5DF6, #5443D4)',
+              fontWeight: 800,
+              borderRadius: 12,
+              '&:hover': { transform: 'translateY(-2px)' },
+            }}
+          >
+            Start instant meeting
+          </Button>
+        </div>
+      ) : (
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
         {sorted.map((meeting, index) => {
           const meta = KIND_META[meeting.kind as keyof typeof KIND_META] ?? KIND_META.session;
@@ -226,6 +262,7 @@ export const MeetingsPage = () => {
           );
         })}
       </div>
+      )}
 
       {/* Instant meeting dialog */}
       <Dialog
@@ -269,7 +306,11 @@ export const MeetingsPage = () => {
           </p>
         </DialogContent>
         <DialogActions sx={{ padding: '12px 20px 18px' }}>
-          <Button onClick={() => setInstantOpen(false)} variant="outlined" sx={{ color: 'rgba(255,255,255,0.8)', borderColor: 'rgba(255,255,255,0.2)' }}>
+          <Button
+            onClick={() => setInstantOpen(false)}
+            variant="outlined"
+            sx={{ color: 'rgba(255,255,255,0.95)', borderColor: 'rgba(255,255,255,0.35)', '&:hover': { borderColor: 'rgba(255,255,255,0.6)', bgcolor: 'rgba(255,255,255,0.06)' } }}
+          >
             Cancel
           </Button>
           <Button onClick={createInstant} variant="contained" sx={{ background: 'linear-gradient(135deg, #6D5DF6, #5443D4)', fontWeight: 800 }}>

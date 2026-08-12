@@ -5,7 +5,9 @@ import com.skillinfinity.common.exception.BadRequestException;
 import com.skillinfinity.common.exception.ResourceNotFoundException;
 import com.skillinfinity.payment.dto.request.PaymentRequest;
 import com.skillinfinity.payment.dto.request.SubscriptionRequest;
+import com.skillinfinity.payment.dto.response.MySubscriptionResponse;
 import com.skillinfinity.payment.dto.response.PaymentResponse;
+import com.skillinfinity.payment.dto.response.SubscriptionPlanResponse;
 import com.skillinfinity.payment.dto.response.TransactionResponse;
 import com.skillinfinity.payment.entity.Payment;
 import com.skillinfinity.payment.entity.SubscriptionHistory;
@@ -152,5 +154,46 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                                 "Subscription has expired on: " + sub.getExpiresAt());
                     }
                 });
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<SubscriptionPlanResponse> getActivePlans() {
+        return subscriptionPlanRepository.findByIsActiveTrueOrderByPriceAsc().stream()
+                .map(this::toPlanResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public MySubscriptionResponse getMySubscription(UUID userId) {
+        return subscriptionHistoryRepository
+                .findTopByUserIdAndStatusOrderByCreatedAtDesc(userId, SubscriptionStatus.ACTIVE)
+                .map(sub -> MySubscriptionResponse.builder()
+                        .subscriptionId(sub.getId())
+                        .plan(toPlanResponse(sub.getPlan()))
+                        .status(sub.getStatus().name())
+                        .startedAt(sub.getStartedAt())
+                        .expiresAt(sub.getExpiresAt())
+                        .autoRenew(sub.getAutoRenew())
+                        .build())
+                .orElse(null);
+    }
+
+    private SubscriptionPlanResponse toPlanResponse(SubscriptionPlan plan) {
+        return SubscriptionPlanResponse.builder()
+                .id(plan.getId())
+                .name(plan.getName())
+                .description(plan.getDescription())
+                .price(plan.getPrice())
+                .currency(plan.getCurrency())
+                .durationDays(plan.getDurationDays())
+                .maxSessionsPerMonth(plan.getMaxSessionsPerMonth())
+                .features(plan.getFeatures() != null
+                        ? java.util.Arrays.stream(plan.getFeatures().split("[,\\n]"))
+                        .map(String::trim).filter(s -> !s.isEmpty()).toList()
+                        : List.of())
+                .active(plan.getIsActive())
+                .build();
     }
 }

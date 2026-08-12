@@ -45,6 +45,8 @@ public interface MentorService {
 
     PageResponse<MentorSummaryResponse> searchMentors(SearchRequest request, int page, int size);
 
+    PageResponse<MentorSummaryResponse> getPendingMentors(int page, int size);
+
     // Expertise
     ExpertiseResponse addExpertise(UUID mentorId, ExpertiseRequest request);
     ExpertiseResponse updateExpertise(UUID mentorId, UUID expertiseId, ExpertiseRequest request);

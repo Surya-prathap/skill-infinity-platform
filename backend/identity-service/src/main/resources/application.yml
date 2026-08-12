@@ -30,6 +30,12 @@ spring:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
       timeout: 2000ms
+  rabbitmq:
+    host: ${RABBITMQ_HOST:rabbitmq}
+    port: ${RABBITMQ_AMQP_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    connection-timeout: 5000
 
 app:
   jwt:
@@ -55,6 +61,8 @@ management:
   endpoint:
     health:
       show-details: always
+      probes:
+        enabled: true
   info:
     env:
       enabled: true

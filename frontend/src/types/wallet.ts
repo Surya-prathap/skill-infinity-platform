@@ -10,6 +10,11 @@ export interface WalletBalance {
   availableBalance: number;
   frozenBalance: number;
   pendingBalance: number;
+  /** Credit-type buckets — Welcome, Purchased, Learning, Withdrawable. */
+  welcomeBalance?: number;
+  purchasedBalance?: number;
+  learningBalance?: number;
+  withdrawableBalance?: number;
   currency: string;
 }
 
@@ -75,6 +80,7 @@ export interface CreditRequest {
   description: string;
   referenceId?: string;
   referenceType?: string;
+  creditType?: 'WELCOME' | 'PURCHASED' | 'LEARNING' | 'WITHDRAWABLE';
   sessionId?: string;
   mentorId?: string;
   paymentGatewayRef?: string;
@@ -87,4 +93,29 @@ export interface DebitRequest {
   referenceType?: string;
   sessionId?: string;
   mentorId?: string;
+}
+
+/* ---------------- Withdrawals ---------------- */
+
+export type WithdrawalStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'COMPLETED' | 'CANCELLED';
+
+export interface WithdrawalRequest {
+  amountCredits: number;
+  bankDetails?: string;
+}
+
+export interface Withdrawal {
+  id: string;
+  userId?: string;
+  amountCredits: number;
+  grossAmountInr: number;
+  platformFeeInr: number;
+  netAmountInr: number;
+  status: WithdrawalStatus;
+  bankDetails?: string;
+  rejectionReason?: string;
+  transactionRef?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  createdAt?: string;
 }

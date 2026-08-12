@@ -14,7 +14,6 @@ import { AnalyticsCard } from '@/components/mentor/AnalyticsCard';
 import { GradientCard } from '@/components/mentor/GradientCard';
 import { PricingCard } from '@/components/mentor/PricingCard';
 import { useDocumentTitle } from '@/hooks';
-import { formatCurrency } from '@/utils';
 import { CURRENCIES, SESSION_TYPES } from '@/features/mentor/constants';
 import { PricingEditor } from '@/features/mentor/components';
 import {
@@ -47,7 +46,7 @@ export const MentorPricingPage: React.FC = () => {
   const [editing, setEditing] = useState<MentorPricing | null>(null);
 
   const activePlans = pricing.filter((plan) => plan.active !== false);
-  const currency = activePlans[0]?.currency ?? 'USD';
+  const currency = activePlans[0]?.currency ?? 'INR';
   const paidPlans = activePlans.filter((plan) => !plan.isFree);
   const averagePrice = paidPlans.length
     ? Math.round(paidPlans.reduce((sum, plan) => sum + plan.price, 0) / paidPlans.length)
@@ -100,13 +99,13 @@ export const MentorPricingPage: React.FC = () => {
     },
     {
       label: 'Avg. price',
-      value: averagePrice ? formatCurrency(averagePrice, currency) : '—',
+      value: averagePrice ? `${averagePrice} credits` : '—',
       icon: <MonetizationOnOutlinedIcon />,
       color: '#10B981',
     },
     {
       label: 'From',
-      value: cheapest ? formatCurrency(cheapest, currency) : '—',
+      value: cheapest ? `${cheapest} credits` : '—',
       icon: <AccessTimeOutlinedIcon />,
       color: '#14B8A6',
     },
@@ -147,14 +146,14 @@ export const MentorPricingPage: React.FC = () => {
                 Pricing
               </Typography>
               <Typography variant="body2" sx={{ opacity: 0.85 }}>
-                {activePlans.length} plan{activePlans.length === 1 ? '' : 's'} · paid in {currency}
+                {activePlans.length} plan{activePlans.length === 1 ? '' : 's'} · priced in credits
                 {isOffline ? ' · offline preview' : ''}
               </Typography>
             </Box>
           </Stack>
           <Chip
             size="medium"
-            label={`Currency: ${currency}`}
+            label="1 credit = 10 minutes"
             sx={{
               color: '#fff',
               bgcolor: 'rgba(255,255,255,0.16)',
@@ -212,7 +211,7 @@ export const MentorPricingPage: React.FC = () => {
                     sessionType: editing.sessionType,
                     price: editing.price,
                     originalPrice: editing.originalPrice ?? null,
-                    currency: editing.currency ?? 'USD',
+                    currency: editing.currency ?? 'INR',
                     discountPercentage: editing.discountPercentage ?? null,
                     durationMinutes: editing.durationMinutes ?? 60,
                     isFree: editing.isFree,
@@ -311,9 +310,9 @@ export const MentorPricingPage: React.FC = () => {
                 activePlans.find((plan) => !plan.isFree) ?? {
                   id: 'preview-1',
                   sessionType: 'ONE_ON_ONE',
-                  price: 60,
+                  price: 3,
                   currency,
-                  durationMinutes: 60,
+                  durationMinutes: 30,
                   isFree: false,
                   description: 'Your most popular plan will be highlighted here.',
                   active: true,
@@ -348,12 +347,6 @@ export const MentorPricingPage: React.FC = () => {
                   variant="outlined"
                   sx={{ fontWeight: 600 }}
                 />
-                <Chip
-                  size="small"
-                  label="7 payout currencies"
-                  variant="outlined"
-                  sx={{ fontWeight: 600 }}
-                />
               </Stack>
               <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7 }}>
                 Learners see the discounted price with the original crossed out, the session
@@ -365,17 +358,17 @@ export const MentorPricingPage: React.FC = () => {
         </Grid>
       </AnalyticsCard>
 
-      {/* Currency strip */}
+      {/* Pricing unit strip */}
       <Stack direction="row" flexWrap="wrap" alignItems="center" gap={1} sx={{ mt: 3 }}>
         <Typography variant="caption" color="text.secondary" fontWeight={600}>
-          Supported currencies:
+          Pricing unit:
         </Typography>
         {CURRENCIES.map((option) => (
           <Chip
             key={String(option.value)}
             size="small"
-            label={String(option.value)}
-            variant={String(option.value) === currency ? 'filled' : 'outlined'}
+            label={`${String(option.value)} · 1 credit = 10 minutes`}
+            variant="filled"
             sx={{ fontWeight: 700 }}
           />
         ))}

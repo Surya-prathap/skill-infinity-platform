@@ -82,6 +82,16 @@ public class MentorController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
+    @GetMapping("/admin/pending")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Get pending mentor applications", description = "Returns paginated list of mentors awaiting admin verification (admin only)")
+    public ResponseEntity<ApiResponse<PageResponse<MentorSummaryResponse>>> getPendingMentors(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        PageResponse<MentorSummaryResponse> response = mentorService.getPendingMentors(page, size);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "Get mentor by ID", description = "Returns full mentor profile for the specified ID")
     public ResponseEntity<ApiResponse<MentorResponse>> getMentorById(@PathVariable UUID id) {

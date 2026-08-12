@@ -10,12 +10,11 @@ import { ThemeToggle } from './ThemeToggle';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { ProfileMenu } from './ProfileMenu';
 import { useAuth } from '@/hooks';
-import { ROUTES } from '@/constants';
+import { ROUTES, getHomeRoute } from '@/constants';
 
 const NAV_ITEMS = [
   { label: 'Home', path: ROUTES.HOME },
   { label: 'Mentors', path: ROUTES.MENTORS },
-  { label: 'Community', path: ROUTES.COMMUNITY },
   { label: 'Sessions', path: ROUTES.SESSIONS },
   { label: 'Wallet', path: ROUTES.WALLET },
 ];
@@ -26,7 +25,7 @@ export const Header: React.FC = () => {
   const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
   const location = useLocation();
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, roles } = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const isActive = (path: string) =>
@@ -67,7 +66,7 @@ export const Header: React.FC = () => {
   const authActions = isAuthenticated ? (
     <>
       <Tooltip title="Go to Dashboard">
-        <IconButton onClick={() => navigate(ROUTES.DASHBOARD)} aria-label="Dashboard" size="small">
+        <IconButton onClick={() => navigate(getHomeRoute(roles))} aria-label="Dashboard" size="small">
           <DashboardIcon />
         </IconButton>
       </Tooltip>
@@ -158,7 +157,7 @@ export const Header: React.FC = () => {
               variant="contained"
               onClick={() => {
                 setDrawerOpen(false);
-                navigate(ROUTES.DASHBOARD);
+                navigate(getHomeRoute(roles));
               }}
             >
               Go to Dashboard

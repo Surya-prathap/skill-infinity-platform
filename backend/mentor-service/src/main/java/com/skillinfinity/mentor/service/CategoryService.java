@@ -1,5 +1,6 @@
 package com.skillinfinity.mentor.service;
 
+import com.skillinfinity.mentor.dto.response.CategoryResponse;
 import com.skillinfinity.mentor.entity.Category;
 import com.skillinfinity.mentor.entity.SubCategory;
 
@@ -8,7 +9,7 @@ import java.util.UUID;
 
 public interface CategoryService {
 
-    List<Category> getAllCategories();
+    List<CategoryResponse> getAllCategories();
 
     Category getCategoryById(UUID id);
 

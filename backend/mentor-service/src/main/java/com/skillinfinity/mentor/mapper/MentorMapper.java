@@ -137,6 +137,9 @@ public interface MentorMapper {
     @Mapping(target = "preferences", source = "preference", qualifiedByName = "toPreferenceResponse")
     DashboardResponse toDashboardResponse(Mentor mentor);
 
+    @Mapping(target = "status", expression = "java(mentor.getStatus() != null ? mentor.getStatus().name() : null)")
+    @Mapping(target = "verified", source = "mentor.verified")
+    @Mapping(target = "createdAt", source = "mentor.createdAt")
     @Mapping(target = "headline", source = "profile.headline")
     @Mapping(target = "bio", source = "profile.bio")
     @Mapping(target = "profilePictureUrl", source = "profile.profilePictureUrl")

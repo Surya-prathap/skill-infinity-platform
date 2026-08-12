@@ -72,6 +72,15 @@ export const SessionDetailsPage: React.FC = () => {
   const isUpcoming = ['CONFIRMED', 'SCHEDULED', 'PENDING', 'IN_PROGRESS'].includes(session.status);
   const [mentorFirst, mentorLast] = (session.mentorName ?? 'Mentor').split(' ');
 
+  /**
+   * Session meetings always run in the app's meeting room (/meet/{sessionId}) —
+   * the room resolves the session and its meeting link. Legacy external join
+   * URLs in the database are ignored so joining never opens a dead link.
+   */
+  const openJoin = () => {
+    navigate(`/meet/${session.id}`);
+  };
+
   const handleCancel = async () => {
     await cancelMutation.mutateAsync({
       sessionId: session.id,
@@ -123,11 +132,11 @@ export const SessionDetailsPage: React.FC = () => {
                     Mentor
                   </Typography>
                 </Box>
-                {isUpcoming && session.meetingLink?.active && (
+                {isUpcoming && (
                   <Button
                     variant="contained"
                     startIcon={<VideoCallOutlinedIcon />}
-                    onClick={() => window.open(session.meetingLink?.joinUrl, '_blank')}
+                    onClick={openJoin}
                   >
                     Join session
                   </Button>
@@ -174,19 +183,21 @@ export const SessionDetailsPage: React.FC = () => {
                     </Typography>
                   </Box>
                 </Stack>
-                {session.meetingLink?.active && (
+                {isUpcoming && (
                   <Stack direction="row" alignItems="center" gap={1.5}>
                     <VideoCallOutlinedIcon sx={{ color: 'success.main', fontSize: 20 }} />
                     <Box sx={{ minWidth: 0 }}>
                       <Typography variant="caption" color="text.secondary">Meeting link</Typography>
                       <Typography variant="subtitle2" fontWeight={600} noWrap sx={{ color: 'primary.main' }}>
                         <a
-                          href={session.meetingLink?.joinUrl}
-                          target="_blank"
-                          rel="noreferrer"
+                          href={`/meet/${session.id}`}
+                          onClick={(event) => {
+                            event.preventDefault();
+                            navigate(`/meet/${session.id}`);
+                          }}
                           style={{ textDecoration: 'none', color: 'inherit' }}
                         >
-                          {session.meetingLink?.joinUrl}
+                          /meet/{session.id}
                         </a>
                       </Typography>
                     </Box>

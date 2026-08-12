@@ -14,8 +14,11 @@ const DEFAULT_MESSAGE = 'Something went wrong. Please try again.';
 export const getErrorMessage = (error: unknown): string => {
   if (!error) return DEFAULT_MESSAGE;
   if (typeof error === 'string') return error;
-  if (error instanceof Error) return error.message || DEFAULT_MESSAGE;
 
+  // NOTE: an AxiosError IS an instance of Error, so it must be checked BEFORE
+  // the generic `instanceof Error` branch — otherwise we always fall through to
+  // the raw axios message ("Request failed with status code 409") and never
+  // surface the friendly backend message from `response.data.message`.
   const axiosError = error as AxiosError<ErrorResponse>;
   if (axiosError.isAxiosError) {
     const data = axiosError.response?.data;
@@ -27,6 +30,8 @@ export const getErrorMessage = (error: unknown): string => {
     if (axiosError.response.status === 404) return 'The requested resource was not found.';
     if (axiosError.response.status >= 500) return 'The server encountered an error. Please try again later.';
   }
+
+  if (error instanceof Error) return error.message || DEFAULT_MESSAGE;
   return DEFAULT_MESSAGE;
 };
 

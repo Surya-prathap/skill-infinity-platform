@@ -11,38 +11,162 @@ import {
   setMeetingError,
 } from '@/store/slices/meetingSlice';
 import { selectMeetingControls, selectMeetingStatus, selectUser } from '@/store/selectors';
-import { meetingService } from '@/services';
+import { meetingService, sessionService } from '@/services';
 import { showError } from '@/utils';
 import { meetingKeys } from './queryKeys';
-import type { AuthUser, Meeting, MeetingError, MeetingParticipant } from '@/types';
+import type { AuthUser, Meeting, MeetingError, MeetingInfo, MeetingParticipant, Session } from '@/types';
+
+/* ---------------- Session → Meeting mapping ---------------- */
+
+/**
+ * The platform's meetings ARE sessions: the session-service owns the meeting
+ * link for every booked/community session and its joinUrl points at the
+ * in-app meeting room (/meet/{sessionId}). This maps a session (+ its meeting
+ * link) onto the Meeting model used by the meeting room.
+ */
+export const buildSessionMeeting = (session: Session, link?: MeetingInfo | null): Meeting => {
+  const joinPath = link?.joinUrl ?? `/meet/${session.id}`;
+  const inProgress = session.status === 'IN_PROGRESS';
+  return {
+    id: session.id,
+    title: session.topic ?? session.title ?? 'Mentoring session',
+    kind: 'session',
+    sessionId: session.id,
+    hostId: session.mentorId,
+    hostName: session.mentorName ?? 'Mentor',
+    hostRole: 'MENTOR',
+    scheduledAt: session.startTime,
+    durationMinutes: session.durationMinutes,
+    joinUrl: joinPath,
+    password: link?.password,
+    maxParticipants: Math.max(25, (session.participantCount ?? 0) + 5),
+    status: inProgress ? 'in-progress' : 'scheduled',
+    createdAt: session.createdAt ?? new Date().toISOString(),
+  };
+};
+
+/** Sample meetings shown only when the API is unreachable (demo mode). */
+export const DEMO_UPCOMING_MEETINGS: Meeting[] = [
+  {
+    id: 'meet-demo-1',
+    title: 'System Design Deep Dive',
+    kind: 'session',
+    hostId: 'meet-sarah',
+    hostName: 'Sarah Chen',
+    hostRole: 'MENTOR',
+    sessionId: 'demo-session-1',
+    scheduledAt: new Date(Date.now() + 86_400_000).toISOString(),
+    durationMinutes: 60,
+    joinUrl: '/meet/meet-demo-1',
+    maxParticipants: 25,
+    status: 'scheduled',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'meet-demo-2',
+    title: 'Java Spring Boot Crash Course',
+    kind: 'session',
+    hostId: 'meet-james',
+    hostName: 'James Carter',
+    hostRole: 'MENTOR',
+    sessionId: 'demo-session-2',
+    scheduledAt: new Date(Date.now() + 172_800_000).toISOString(),
+    durationMinutes: 45,
+    joinUrl: '/meet/meet-demo-2',
+    maxParticipants: 25,
+    status: 'scheduled',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'meet-demo-3',
+    title: 'Frontend Performance Workshop',
+    kind: 'session',
+    hostId: 'meet-priya',
+    hostName: 'Priya Sharma',
+    hostRole: 'MENTOR',
+    sessionId: 'demo-session-3',
+    scheduledAt: new Date(Date.now() + 259_200_000).toISOString(),
+    durationMinutes: 90,
+    joinUrl: '/meet/meet-demo-3',
+    maxParticipants: 25,
+    status: 'scheduled',
+    createdAt: new Date().toISOString(),
+  },
+];
 
 /* ---------------- Meetings ---------------- */
+
+/**
+ * Resolves a meeting by id. Meetings are first looked up on the meeting API;
+ * when the id belongs to a session (the platform's real meetings), the
+ * session-service is consulted instead so /meet/{sessionId} always works.
+ */
+/** Session ids are UUIDs — instant/demo meetings use other id formats. */
+const isSessionUuid = (id: string): boolean =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
 export const useMeetingQuery = (meetingId: string | null) => {
   const query = useQuery({
     queryKey: meetingKeys.detail(meetingId ?? 'none'),
     queryFn: async () => {
-      const response = await meetingService.getMeeting(meetingId!);
-      return response.data.data;
+      try {
+        const response = await meetingService.getMeeting(meetingId!);
+        return response.data.data;
+      } catch {
+        // Only fall back to the session meeting link when the id could be a
+        // real session UUID — instant/demo meetings (e.g. "meet-instant-…")
+        // have no session behind them, and session-service rejects non-UUID
+        // ids with a 500. This keeps the console/network free of error spam
+        // for the instant-meeting flow (the store copy drives the room).
+        if (!isSessionUuid(meetingId ?? '')) {
+          throw new Error(`No session meeting for ${meetingId}`);
+        }
+        const [sessionResult, linkResult] = await Promise.allSettled([
+          sessionService.getSession(meetingId!),
+          meetingService.getMeetingForSession(meetingId!),
+        ]);
+        if (sessionResult.status === 'rejected') throw sessionResult.reason;
+        const session = sessionResult.value.data.data;
+        const link = linkResult.status === 'fulfilled' ? linkResult.value.data.data : undefined;
+        return buildSessionMeeting(session, link);
+      }
     },
     enabled: Boolean(meetingId),
-    retry: 1,
+    // No retry: the session fallback below already handles missing meetings,
+    // and retrying only multiplies requests against the unrouted /meetings API.
+    retry: 0,
   });
 
   return { ...query, meeting: query.data ?? null, isOffline: query.isError };
 };
 
+/** Upcoming meetings — real sessions with active meeting links (demo fallback). */
 export const useUpcomingMeetingsQuery = () => {
   const query = useQuery({
     queryKey: meetingKeys.upcoming(),
-    queryFn: async () => {
-      const response = await meetingService.getUpcomingMeetings();
-      return response.data.data;
+    queryFn: async (): Promise<{ meetings: Meeting[]; offline: boolean }> => {
+      try {
+        const response = await sessionService.getUpcoming(0, 20);
+        const sessions = response.data.data?.content ?? [];
+        const meetings = sessions
+          .filter((session) =>
+            ['SCHEDULED', 'CONFIRMED', 'PENDING', 'IN_PROGRESS'].includes(session.status),
+          )
+          .map((session) => buildSessionMeeting(session, session.meetingLink));
+        return { meetings, offline: false };
+      } catch {
+        return { meetings: DEMO_UPCOMING_MEETINGS, offline: true };
+      }
     },
     retry: 1,
+    staleTime: 60_000,
   });
 
-  return { ...query, meetings: query.data ?? [], isOffline: query.isError };
+  return {
+    ...query,
+    meetings: query.data?.meetings ?? [],
+    isOffline: query.data?.offline ?? query.isError,
+  };
 };
 
 /* ---------------- Session meeting link ---------------- */
@@ -108,6 +232,11 @@ export const useJoinMeeting = () => {
         participant.videoEnabled = false;
       }
       dispatch(joinMeeting({ meeting, participant }));
+      // Keep the meeting controls in sync with the join mode so the room's
+      // toggle buttons AND the freshly acquired media tracks respect a muted
+      // join (otherwise the camera LED would stay on while the UI says off).
+      dispatch(setControl({ key: 'micOn', value: !options.mutedJoin }));
+      dispatch(setControl({ key: 'camOn', value: !options.mutedJoin }));
       dispatch(
         addMessage({
           id: `meet-local-join-${Date.now()}`,

@@ -9,7 +9,7 @@ lazy-loaded; layouts are eager.
 | --- | --- | --- |
 | `/`, `/mentors` | `MainLayout` (marketing header/footer) | — |
 | `/login`, `/register`, `/forgot-password`, `/reset-password`, `/verify-email` | `AuthLayout` (split screen) | `GuestGuard` (redirects to `/dashboard` when signed in) |
-| `/dashboard`, `/profile`, `/community`, `/sessions`, `/wallet`, `/notifications`, `/settings`, `/mentor/dashboard` | `DashboardLayout` (sidebar + header) | `AuthGuard` |
+| `/dashboard`, `/profile`, `/sessions`, `/wallet`, `/settings`, `/mentor/dashboard` | `DashboardLayout` (sidebar + header) | `AuthGuard` |
 | `/mentor/dashboard` | `DashboardLayout` | `RoleGuard` — `ROLE_MENTOR` |
 | `/admin` | `AdminLayout` | `RoleGuard` — `ROLE_ADMIN` |
 | `/unauthorized`, `*` | `ErrorLayout` | — |

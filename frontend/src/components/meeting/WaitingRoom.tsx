@@ -358,11 +358,11 @@ export const WaitingRoom = ({ meeting, onJoin }: WaitingRoomProps) => {
             onClick={() => handleJoin(true)}
             data-testid="join-muted"
             sx={{
-              color: 'rgba(255,255,255,0.8)',
-              borderColor: 'rgba(255,255,255,0.18)',
+              color: 'rgba(255,255,255,0.95)',
+              borderColor: 'rgba(255,255,255,0.4)',
               borderRadius: 14,
               minHeight: 46,
-              '&:hover': { borderColor: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.05)' },
+              '&:hover': { borderColor: 'rgba(255,255,255,0.7)', background: 'rgba(255,255,255,0.08)' },
             }}
           >
             Join with muted mic & camera

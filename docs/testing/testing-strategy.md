@@ -122,8 +122,6 @@ Tests are executed in the CI pipeline:
 | Session Service | 90% | 80% | 85% |
 | Wallet Service | 90% | 80% | 85% |
 | Payment Service | 90% | 80% | 85% |
-| Communication Service | 85% | 75% | 80% |
-| Community Service | 85% | 75% | 80% |
 | Review Service | 90% | 80% | 85% |
 | Admin Service | 85% | 75% | 80% |
 | **Platform Average** | **87%** | **77%** | **82%** |

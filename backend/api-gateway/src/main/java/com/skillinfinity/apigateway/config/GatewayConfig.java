@@ -29,7 +29,13 @@ public class GatewayConfig {
             ╚══════════════════════════════════════════════════════════╝
             """;
 
-    @Value("${api-gateway.cors.allowed-origins:http://localhost:5173,http://localhost:3000}")
+    // The dockerized frontend is served on http://localhost (port 80) and, before
+    // the API base URL was switched to the same-origin /api/v1 path, the browser
+    // called the gateway cross-origin — without http://localhost in this list every
+    // register/login attempt failed with a CORS 403. The production .env file now
+    // routes all API traffic through the nginx proxy (same-origin), so this list is
+    // a safety net for direct gateway access and local dev servers.
+    @Value("${api-gateway.cors.allowed-origins:http://localhost,http://127.0.0.1,http://localhost:5173,http://localhost:3000}")
     private String allowedOrigins;
 
     @PostConstruct

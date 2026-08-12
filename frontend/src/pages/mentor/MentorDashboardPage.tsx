@@ -9,8 +9,6 @@ import AutoGraphOutlinedIcon from '@mui/icons-material/AutoGraphOutlined';
 import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
 import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
 import PriceChangeOutlinedIcon from '@mui/icons-material/PriceChangeOutlined';
-import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
-import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
 import TrendingUpOutlinedIcon from '@mui/icons-material/TrendingUpOutlined';
 import AccessTimeFilledOutlinedIcon from '@mui/icons-material/AccessTimeFilledOutlined';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
@@ -23,16 +21,17 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Timeline } from '@/components/ui/Timeline';
 import { AreaChart, BarChart, DonutChart } from '@/components/charts';
 import { AnalyticsCard, GradientCard, MentorCard, ProgressCard } from '@/components/mentor';
+import { CommunityImpactCard } from '@/components/mentor/CommunityImpactCard';
+import { ScheduleCommunitySessionCard } from '@/components/mentor/ScheduleCommunitySessionCard';
+import { useCommunityImpactQuery } from '@/features/sessions';
 import { useAppSelector } from '@/store/hooks';
 import { selectUser } from '@/store/selectors';
 import { useDocumentTitle } from '@/hooks';
 import { ROUTES } from '@/constants';
-import { formatCurrency, formatRelativeTime } from '@/utils';
+import { formatRelativeTime } from '@/utils';
 import { useMentorDashboardQuery, useMentorProfileQuery } from '@/features/mentor/hooks';
 import {
   MENTOR_ACTIVITY,
-  MENTOR_MESSAGES,
-  MENTOR_NOTIFICATIONS,
   MENTOR_REVENUE_SERIES,
   MENTOR_REVIEWS,
   MENTOR_SESSION_MIX,
@@ -59,6 +58,7 @@ export const MentorDashboardPage: React.FC = () => {
   const user = useAppSelector(selectUser);
   const { mentor, isOffline } = useMentorProfileQuery();
   const { dashboard } = useMentorDashboardQuery();
+  const { impact: communityImpact, isLoading: impactLoading } = useCommunityImpactQuery(mentor?.id);
 
   const stats = dashboard.statistics;
   const profile = mentor?.profile;
@@ -67,11 +67,10 @@ export const MentorDashboardPage: React.FC = () => {
 
   const metrics = [
     {
-      label: 'Monthly Earnings',
+      label: 'Total Earnings',
       value: stats?.totalEarnings ?? 0,
-      prefix: '$',
+      suffix: ' credits',
       decimals: 0,
-      delta: '+18% vs last month',
       color: '#10B981',
       icon: <MonetizationOnOutlinedIcon />,
     },
@@ -94,7 +93,6 @@ export const MentorDashboardPage: React.FC = () => {
     {
       label: 'Active Students',
       value: stats?.totalStudents ?? 0,
-      delta: '+3 this month',
       color: '#EC4899',
       icon: <GroupOutlinedIcon />,
     },
@@ -143,7 +141,6 @@ export const MentorDashboardPage: React.FC = () => {
               <AnalyticsCard title={metric.label} badge={metric.delta} icon={metric.icon} iconColor={metric.color}>
                 <Stack direction="row" alignItems="baseline" gap={0.75}>
                   <Typography variant="h3" fontWeight={800} sx={{ letterSpacing: '-0.03em' }}>
-                    {metric.prefix}
                     {metric.value.toLocaleString('en-US', {
                       minimumFractionDigits: metric.decimals,
                       maximumFractionDigits: metric.decimals,
@@ -166,13 +163,12 @@ export const MentorDashboardPage: React.FC = () => {
         <Grid size={{ xs: 12, lg: 8 }}>
           <motion.div initial="hidden" animate="visible" variants={fadeUp} style={{ height: '100%' }}>
             <AnalyticsCard
-              title="Monthly Revenue"
-              subtitle="Earnings over the last 7 months"
+              title="Earnings Trend"
+              subtitle="Credits earned over the last 7 months"
               icon={<TrendingUpOutlinedIcon />}
               iconColor="#10B981"
-              badge="+18%"
             >
-              <AreaChart data={[...MENTOR_REVENUE_SERIES]} color="#10B981" suffix=" USD" height={240} />
+              <AreaChart data={[...MENTOR_REVENUE_SERIES]} color="#10B981" suffix=" credits" height={240} />
             </AnalyticsCard>
           </motion.div>
         </Grid>
@@ -352,7 +348,7 @@ export const MentorDashboardPage: React.FC = () => {
                   </Box>
                 </Stack>
                 <Typography variant="h2" fontWeight={800} sx={{ letterSpacing: '-0.03em' }}>
-                  {formatCurrency(stats?.totalEarnings ?? 0)}
+                  {(stats?.totalEarnings ?? 0).toLocaleString('en-IN')} credits
                 </Typography>
                 <Stack direction="row" gap={3} sx={{ mt: 2.5, mb: 3 }}>
                   <Box>
@@ -401,10 +397,23 @@ export const MentorDashboardPage: React.FC = () => {
               subtitle="Sessions per day this week"
               icon={<AutoGraphOutlinedIcon />}
               iconColor="#6D5DF6"
-              badge="+12%"
             >
               <BarChart data={[...MENTOR_WEEKLY_ACTIVITY]} color="#6D5DF6" suffix=" sessions" height={230} />
             </AnalyticsCard>
+          </motion.div>
+        </Grid>
+      </Grid>
+
+      {/* ================= Community impact + schedule ================= */}
+      <Grid container spacing={3} sx={{ mb: 3 }}>
+        <Grid size={{ xs: 12, md: 7 }}>
+          <motion.div initial="hidden" animate="visible" variants={fadeUp} style={{ height: '100%' }}>
+            <CommunityImpactCard impact={communityImpact} loading={impactLoading} />
+          </motion.div>
+        </Grid>
+        <Grid size={{ xs: 12, md: 5 }}>
+          <motion.div initial="hidden" animate="visible" variants={fadeUp} style={{ height: '100%' }}>
+            <ScheduleCommunitySessionCard />
           </motion.div>
         </Grid>
       </Grid>
@@ -457,89 +466,10 @@ export const MentorDashboardPage: React.FC = () => {
             </AnalyticsCard>
           </motion.div>
         </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
-          <motion.div initial="hidden" animate="visible" variants={fadeUp} style={{ height: '100%' }}>
-            <AnalyticsCard
-              title="Messages"
-              subtitle="Recent conversations"
-              icon={<ForumOutlinedIcon />}
-              iconColor="#EC4899"
-              action={
-                <MuiButton component={RouterLink} to={ROUTES.COMMUNITY} size="small" endIcon={<ArrowForwardIcon fontSize="small" />}>
-                  Open
-                </MuiButton>
-              }
-            >
-              <Stack spacing={1.5}>
-                {MENTOR_MESSAGES.map((message) => (
-                  <Box
-                    key={message.id}
-                    sx={{
-                      p: 1.5,
-                      borderRadius: 2.5,
-                      border: 1,
-                      borderColor: 'divider',
-                      transition: 'border-color 0.2s ease, transform 0.2s ease',
-                      '&:hover': { borderColor: 'primary.main', transform: 'translateY(-1px)' },
-                    }}
-                  >
-                    <Stack direction="row" alignItems="center" gap={1.5}>
-                      <Avatar name={message.from} size={36} />
-                      <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                        <Stack direction="row" alignItems="center" gap={1}>
-                          <Typography variant="subtitle2" fontWeight={700} noWrap>
-                            {message.from}
-                          </Typography>
-                          {message.unread && <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'primary.main', flexShrink: 0 }} />}
-                        </Stack>
-                        <Typography variant="caption" color="text.secondary" noWrap>
-                          {message.preview}
-                        </Typography>
-                      </Box>
-                      <Typography variant="caption" color="text.disabled" noWrap>
-                        {message.time}
-                      </Typography>
-                    </Stack>
-                  </Box>
-                ))}
-              </Stack>
-            </AnalyticsCard>
-          </motion.div>
-        </Grid>
       </Grid>
 
-      {/* ================= Notifications + quick actions + profile ================= */}
+      {/* ================= Quick actions + profile ================= */}
       <Grid container spacing={3}>
-        <Grid size={{ xs: 12, lg: 4 }}>
-          <motion.div initial="hidden" animate="visible" variants={fadeUp} style={{ height: '100%' }}>
-            <AnalyticsCard title="Notifications" subtitle="Latest updates" icon={<NotificationsNoneOutlinedIcon />} iconColor="#F59E0B">
-              <Stack spacing={1.5}>
-                {MENTOR_NOTIFICATIONS.map((notification) => (
-                  <Stack key={notification.id} direction="row" alignItems="center" gap={1.5}>
-                    <Box
-                      sx={{
-                        width: 10,
-                        height: 10,
-                        borderRadius: '50%',
-                        bgcolor: notification.unread ? 'primary.main' : 'text.disabled',
-                        boxShadow: notification.unread ? '0 0 0 4px rgba(109,93,246,0.15)' : 'none',
-                        flexShrink: 0,
-                      }}
-                    />
-                    <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                      <Typography variant="body2" fontWeight={notification.unread ? 700 : 500} noWrap>
-                        {notification.title}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {notification.time}
-                      </Typography>
-                    </Box>
-                  </Stack>
-                ))}
-              </Stack>
-            </AnalyticsCard>
-          </motion.div>
-        </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
           <motion.div initial="hidden" animate="visible" variants={fadeUp} style={{ height: '100%' }}>
             <AnalyticsCard title="Quick Actions" subtitle="Manage your studio" icon={<AutoGraphOutlinedIcon />} iconColor="#14B8A6">

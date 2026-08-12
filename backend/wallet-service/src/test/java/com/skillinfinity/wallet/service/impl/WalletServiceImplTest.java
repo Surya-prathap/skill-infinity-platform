@@ -39,6 +39,7 @@ import com.skillinfinity.wallet.repository.WalletBalanceRepository;
 import com.skillinfinity.wallet.repository.WalletLedgerRepository;
 import com.skillinfinity.wallet.repository.WalletRepository;
 import com.skillinfinity.wallet.repository.WalletStatisticsRepository;
+import com.skillinfinity.wallet.repository.WithdrawalRequestRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -78,6 +79,8 @@ class WalletServiceImplTest {
     @Mock
     private WalletStatisticsRepository walletStatisticsRepository;
     @Mock
+    private WithdrawalRequestRepository withdrawalRequestRepository;
+    @Mock
     private WalletMapper walletMapper;
     @Mock
     private WalletEventPublisher eventPublisher;
@@ -115,6 +118,7 @@ class WalletServiceImplTest {
                 walletRepository, walletBalanceRepository, creditTransactionRepository,
                 walletLedgerRepository, rewardRepository,
                 walletAuditRepository, walletStatisticsRepository,
+                withdrawalRequestRepository,
                 walletMapper, eventPublisher
         );
 
@@ -208,20 +212,66 @@ class WalletServiceImplTest {
                 .build();
 
         when(walletRepository.existsByUserId(userId)).thenReturn(false);
-        when(walletRepository.save(any(Wallet.class))).thenAnswer(i -> i.getArgument(0));
+        when(walletRepository.save(any(Wallet.class))).thenAnswer(i -> {
+            Wallet saved = i.getArgument(0);
+            if (saved.getId() == null) saved.setId(walletId);
+            return saved;
+        });
         when(walletBalanceRepository.save(any(WalletBalance.class))).thenAnswer(i -> i.getArgument(0));
+        when(walletBalanceRepository.findByWalletId(walletId)).thenReturn(Optional.of(balance));
         when(walletStatisticsRepository.save(any(WalletStatistics.class))).thenAnswer(i -> i.getArgument(0));
         when(walletAuditRepository.save(any(WalletAudit.class))).thenAnswer(i -> i.getArgument(0));
+        when(creditTransactionRepository.save(any(CreditTransaction.class))).thenAnswer(i -> i.getArgument(0));
+        when(walletLedgerRepository.save(any(WalletLedger.class))).thenAnswer(i -> i.getArgument(0));
+        when(walletStatisticsRepository.findByWalletId(walletId)).thenReturn(Optional.of(statistics));
         when(walletMapper.toWalletResponse(any(Wallet.class))).thenReturn(walletResponse);
 
         WalletResponse result = walletService.createWallet(request);
 
         assertNotNull(result);
         assertEquals(walletId, result.getId());
-        verify(walletRepository, times(1)).save(any(Wallet.class));
-        verify(walletBalanceRepository, times(1)).save(any(WalletBalance.class));
-        verify(walletStatisticsRepository, times(1)).save(any(WalletStatistics.class));
-        verify(walletAuditRepository, times(1)).save(any(WalletAudit.class));
+        verify(walletRepository, atLeastOnce()).save(any(Wallet.class));
+        verify(walletBalanceRepository, atLeastOnce()).save(any(WalletBalance.class));
+        verify(walletStatisticsRepository, atLeastOnce()).save(any(WalletStatistics.class));
+        verify(walletAuditRepository, atLeastOnce()).save(any(WalletAudit.class));
+    }
+
+    @Test
+    void shouldGrantWelcomeCreditsOnWalletCreation() {
+        balance.setCurrentBalance(BigDecimal.ZERO);
+        balance.setAvailableBalance(BigDecimal.ZERO);
+        WalletRequest request = WalletRequest.builder()
+                .userId(userId)
+                .createdBy(userId.toString())
+                .build();
+
+        when(walletRepository.existsByUserId(userId)).thenReturn(false);
+        when(walletRepository.save(any(Wallet.class))).thenAnswer(i -> {
+            Wallet saved = i.getArgument(0);
+            if (saved.getId() == null) saved.setId(walletId);
+            return saved;
+        });
+        when(walletBalanceRepository.save(any(WalletBalance.class))).thenAnswer(i -> i.getArgument(0));
+        when(walletBalanceRepository.findByWalletId(walletId)).thenReturn(Optional.of(balance));
+        when(walletStatisticsRepository.save(any(WalletStatistics.class))).thenAnswer(i -> i.getArgument(0));
+        when(walletAuditRepository.save(any(WalletAudit.class))).thenAnswer(i -> i.getArgument(0));
+        when(creditTransactionRepository.save(any(CreditTransaction.class))).thenAnswer(i -> i.getArgument(0));
+        when(walletLedgerRepository.save(any(WalletLedger.class))).thenAnswer(i -> i.getArgument(0));
+        when(walletStatisticsRepository.findByWalletId(walletId)).thenReturn(Optional.of(statistics));
+        when(walletMapper.toWalletResponse(any(Wallet.class))).thenReturn(walletResponse);
+
+        walletService.createWallet(request);
+
+        verify(creditTransactionRepository, atLeastOnce()).save(transactionCaptor.capture());
+        CreditTransaction welcomeTransaction = transactionCaptor.getValue();
+        assertEquals(TransactionType.PROMOTIONAL_CREDIT, welcomeTransaction.getTransactionType());
+        assertEquals(BigDecimal.valueOf(3), welcomeTransaction.getAmount());
+        assertEquals("WELCOME_CREDITS", welcomeTransaction.getReferenceType());
+
+        verify(walletBalanceRepository, atLeastOnce()).save(balanceCaptor.capture());
+        WalletBalance savedBalance = balanceCaptor.getValue();
+        assertEquals(BigDecimal.valueOf(3), savedBalance.getCurrentBalance());
+        assertEquals(BigDecimal.valueOf(3), savedBalance.getAvailableBalance());
     }
 
     @Test

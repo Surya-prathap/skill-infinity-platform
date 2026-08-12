@@ -134,8 +134,10 @@ export const MentorsPage: React.FC = () => {
             top: -140,
             right: '6%',
             background: 'radial-gradient(circle, rgba(255,255,255,0.22), transparent 70%)',
-            filter: 'blur(30px)',
+            // Blur removed: gradient fades to transparent on its own; animating a
+            // blurred layer forces a full re-raster every animation frame.
             pointerEvents: 'none',
+            willChange: 'transform',
           }}
         />
         <Box sx={{ position: 'relative', maxWidth: 640 }}>

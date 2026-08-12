@@ -1,37 +1,25 @@
 import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { adminService } from '@/services';
+import { adminService, mentorService } from '@/services';
 import { getErrorMessage, showError, showInfo, showSuccess } from '@/utils';
 import { adminKeys } from './queryKeys';
 import { seedDashboard } from './data';
 import type {
   AdminAnalytics,
-  AdminCommunity,
-  AdminCommunityPost,
+  AdminDashboard,
   AdminCoupon,
   AdminMentor,
   AdminPayment,
-  AdminPoll,
   AdminRefund,
   AdminSession,
   AdminSubscription,
   AdminUser,
   AdminWalletTransaction,
-  MonitoredService,
-  AnnouncementTemplate,
-  AuditLog,
-  CreateAnnouncementRequest,
-  FeatureFlag,
   MentorApproval,
-  ModerationQueueItem,
   ModerationReview,
+  MentorSummary,
   PlatformSetting,
-  ReportDefinition,
   RevenueAnalytics,
-  SupportTicket,
-  SystemAnnouncement,
-  TicketStatus,
-  UpdateFeatureFlagRequest,
   UpdateSettingRequest,
   WalletStats,
 } from '@/types';
@@ -81,6 +69,39 @@ const emptyWalletStats = (): WalletStats => ({
 });
 
 /* ============================================================
+   Defensive merging — the backend may return a partial payload
+   (null sections) or fail entirely. Every admin page merges the
+   response over the zeroed defaults so the UI always renders
+   instantly and never crashes on `Object.entries(null)`.
+   ============================================================ */
+
+const mergeDashboard = (data: Partial<AdminDashboard> | undefined): AdminDashboard => ({
+  ...seedDashboard,
+  ...data,
+  userStats: { ...seedDashboard.userStats, ...(data?.userStats ?? {}) },
+  mentorStats: { ...seedDashboard.mentorStats, ...(data?.mentorStats ?? {}) },
+  sessionStats: { ...seedDashboard.sessionStats, ...(data?.sessionStats ?? {}) },
+  revenueStats: { ...seedDashboard.revenueStats, ...(data?.revenueStats ?? {}) },
+  communityStats: { ...seedDashboard.communityStats, ...(data?.communityStats ?? {}) },
+  reviewStats: { ...seedDashboard.reviewStats, ...(data?.reviewStats ?? {}) },
+  recentActivities: data?.recentActivities ?? seedDashboard.recentActivities,
+  systemHealth: { ...seedDashboard.systemHealth, ...(data?.systemHealth ?? {}) },
+});
+
+const mergeAnalytics = (data: Partial<AdminAnalytics> | undefined): AdminAnalytics => {
+  const fallback = emptyAnalytics();
+  return {
+    ...fallback,
+    ...data,
+    revenue: { ...fallback.revenue, ...(data?.revenue ?? {}) },
+    growth: { ...fallback.growth, ...(data?.growth ?? {}) },
+    users: { ...fallback.users, ...(data?.users ?? {}) },
+    sessions: { ...fallback.sessions, ...(data?.sessions ?? {}) },
+    engagement: { ...fallback.engagement, ...(data?.engagement ?? {}) },
+  };
+};
+
+/* ============================================================
    Executive dashboard & analytics
    ============================================================ */
 
@@ -91,11 +112,13 @@ export const useAdminDashboardQuery = () => {
       const response = await adminService.getDashboard();
       return response.data.data;
     },
-    staleTime: 30 * 1000,
-    refetchInterval: 60 * 1000,
+    // No refetchInterval: the backend caches the dashboard for 5 minutes, so
+    // polling every 60s only fires the global loading bar and hits a slow
+    // endpoint for zero freshness benefit.
+    staleTime: 60 * 1000,
     retry: 1,
   });
-  const dashboard = result.data ?? seedDashboard;
+  const dashboard = mergeDashboard(result.data);
   return { ...result, dashboard, isOffline: result.isError };
 };
 
@@ -109,7 +132,7 @@ export const useAdminAnalyticsQuery = () => {
     staleTime: 60 * 1000,
     retry: 1,
   });
-  return { ...result, analytics: (result.data ?? emptyAnalytics()) as AdminAnalytics, isOffline: result.isError };
+  return { ...result, analytics: mergeAnalytics(result.data), isOffline: result.isError };
 };
 
 export const useRevenueAnalyticsQuery = () => {
@@ -177,25 +200,32 @@ export const useAdminUserStatusMutation = () => {
    Mentors
    ============================================================ */
 
-/** Maps an AdminUser row to the AdminMentor shape used by the console.
- * The admin-service mentors endpoint returns AdminUserResponse rows; fields
- * not present there (rating, revenue, hourly rate, expertise) are zeroed
- * rather than fabricated. */
-const toAdminMentor = (user: AdminUser): AdminMentor => ({
-  id: user.id,
-  name: user.name,
-  email: user.email,
-  status: user.status === 'BANNED' ? 'SUSPENDED' : (user.status as AdminMentor['status']),
-  verified: false,
-  rating: 0,
-  reviewCount: 0,
-  sessionsCompleted: user.sessionsCompleted,
+/**
+ * Maps a real mentor row (from mentor-service) to the AdminMentor shape used
+ * by the console. Metrics that mentor-service does not track per mentor
+ * (revenue, hourly rate, response rate, certificates count) stay zeroed rather
+ * than fabricated — the identity/expertise/rating/session columns are real.
+ */
+const toAdminMentor = (mentor: MentorSummary): AdminMentor => ({
+  id: mentor.id,
+  name: mentor.headline || 'Mentor',
+  email: '',
+  status:
+    mentor.status === 'PENDING_VERIFICATION'
+      ? 'PENDING'
+      : mentor.status === 'SUSPENDED'
+        ? 'SUSPENDED'
+        : 'ACTIVE',
+  verified: mentor.verified ?? false,
+  rating: mentor.averageRating,
+  reviewCount: mentor.totalReviews,
+  sessionsCompleted: mentor.totalSessions,
   revenue: 0,
   hourlyRate: 0,
   expertise: [],
   responseRate: 0,
-  joinedAt: user.joinedAt,
-  lastActiveAt: user.lastActiveAt,
+  joinedAt: mentor.createdAt ?? '',
+  lastActiveAt: '',
   certificates: 0,
 });
 
@@ -203,7 +233,7 @@ export const useAdminMentorsQuery = () => {
   const result = useQuery({
     queryKey: adminKeys.mentors(0, 50),
     queryFn: async () => {
-      const response = await adminService.getMentors(0, 50);
+      const response = await mentorService.searchMentors({ page: 0, size: 50 });
       return response.data.data.content.map(toAdminMentor);
     },
     staleTime: 30 * 1000,
@@ -213,32 +243,31 @@ export const useAdminMentorsQuery = () => {
 };
 
 /**
- * Approval queue derived from the real mentor directory (pending mentors).
- * Unavailable approval fields are zeroed/empty rather than fabricated.
+ * Approval queue derived from the REAL mentor directory — mentors that are
+ * still PENDING_VERIFICATION in mentor-service. The mentor summary response
+ * carries the applicant's headline/bio/years/status, which we surface on the
+ * approval cards (name/email are not stored in mentor-service).
  */
 export const useMentorApprovalsQuery = () => {
   const result = useQuery({
     queryKey: adminKeys.mentorApprovals(),
     queryFn: async () => {
-      const response = await adminService.getMentors(0, 200);
-      const mentors = response.data.data.content;
-      return mentors
-        .filter((mentor) => mentor.status === 'PENDING')
-        .map(
-          (mentor): MentorApproval => ({
-            id: mentor.id,
-            name: mentor.name,
-            email: mentor.email,
-            expertise: [],
-            yearsExperience: 0,
-            requestedAt: mentor.joinedAt,
-            verificationScore: 0,
-            certificates: [],
-            bio: '',
-            hourlyRate: 0,
-            status: 'PENDING',
-          }),
-        );
+      const response = await mentorService.getPendingMentors(0, 200);
+      return response.data.data.content.map(
+        (mentor): MentorApproval => ({
+          id: mentor.id,
+          name: mentor.headline || 'Mentor Applicant',
+          email: '',
+          expertise: [],
+          yearsExperience: mentor.yearsOfExperience ?? 0,
+          requestedAt: mentor.createdAt ?? new Date().toISOString(),
+          verificationScore: 0,
+          certificates: [],
+          bio: mentor.bio ?? '',
+          hourlyRate: 0,
+          status: 'PENDING',
+        }),
+      );
     },
     staleTime: 30 * 1000,
     retry: 1,
@@ -253,7 +282,7 @@ export const useMentorApprovalsQuery = () => {
 export const useApproveMentorMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (mentorId: string) => adminService.approveMentor(mentorId).then(() => undefined),
+    mutationFn: (mentorId: string) => mentorService.verifyMentor(mentorId, true).then(() => undefined),
     onMutate: (mentorId) => {
       queryClient.setQueryData<MentorApproval[]>(adminKeys.mentorApprovals(), (old) =>
         old?.map((m) => (m.id === mentorId ? { ...m, status: 'APPROVED' as const } : m)) ?? old,
@@ -268,7 +297,7 @@ export const useRejectMentorMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ mentorId, reason }: { mentorId: string; reason: string }) =>
-      adminService.rejectMentor(mentorId, reason).then(() => undefined),
+      mentorService.verifyMentor(mentorId, false, reason).then(() => undefined),
     onMutate: ({ mentorId }) => {
       queryClient.setQueryData<MentorApproval[]>(adminKeys.mentorApprovals(), (old) =>
         old?.map((m) => (m.id === mentorId ? { ...m, status: 'REJECTED' as const } : m)) ?? old,
@@ -288,12 +317,17 @@ export const useAdminSessionsQuery = () => {
     queryKey: adminKeys.sessions(),
     queryFn: async () => {
       const response = await adminService.getAnalytics();
-      return response.data.data.sessions;
+      return response.data.data;
     },
-    staleTime: 30 * 1000,
+    staleTime: 60 * 1000,
     retry: 1,
   });
-  return { ...result, sessions: [] as AdminSession[], analytics: result.data, isOffline: result.isError };
+  return {
+    ...result,
+    sessions: [] as AdminSession[],
+    analytics: mergeAnalytics(result.data),
+    isOffline: result.isError,
+  };
 };
 
 export const useAdminPaymentsQuery = () => {
@@ -350,51 +384,8 @@ export const useAdminWalletQuery = () => {
 };
 
 /* ============================================================
-   Community & review moderation
+   Review moderation
    ============================================================ */
-
-export const useAdminCommunityQuery = () => {
-  const result = useQuery({
-    queryKey: adminKeys.community(),
-    queryFn: async () => {
-      const response = await adminService.getAnalytics();
-      return response.data.data.engagement;
-    },
-    staleTime: 60 * 1000,
-    retry: 1,
-  });
-  return {
-    ...result,
-    moderationQueue: [] as ModerationQueueItem[],
-    posts: [] as AdminCommunityPost[],
-    communities: [] as AdminCommunity[],
-    polls: [] as AdminPoll[],
-    engagement: result.data,
-    isOffline: result.isError,
-  };
-};
-
-/**
- * Resolves / dismisses a moderation queue item (optimistic).
- * Note: the admin-service has no dedicated moderation endpoint yet, so the
- * action is applied locally and kept in sync when the queue API ships.
- */
-export const useModerationMutation = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (_variables: { itemId: string; status: 'RESOLVED' | 'DISMISSED' }) =>
-      Promise.resolve(undefined as void),
-    onMutate: ({ itemId, status }) => {
-      queryClient.setQueryData<ModerationQueueItem[]>(
-        [...adminKeys.all, 'moderation-queue'] as const,
-        (old) => old?.map((m) => (m.id === itemId ? { ...m, status } : m)) ?? old,
-      );
-    },
-    onSuccess: (_data, variables) =>
-      showSuccess(variables.status === 'RESOLVED' ? 'Content actioned' : 'Report dismissed'),
-    onError: (error) => showError(getErrorMessage(error)),
-  });
-};
 
 export const useAdminReviewsQuery = () => {
   const result = useQuery({
@@ -446,103 +437,6 @@ export const useReviewModerationMutation = () => {
 };
 
 /* ============================================================
-   Support center
-   ============================================================ */
-
-export const useAdminSupportQuery = (status?: TicketStatus) => {
-  const result = useQuery({
-    queryKey: adminKeys.support(status),
-    queryFn: async () => {
-      const response = await adminService.getSupportTickets(status, 0, 100);
-      return response.data.data.content;
-    },
-    staleTime: 30 * 1000,
-    refetchInterval: 60 * 1000,
-    retry: 1,
-  });
-  return { ...result, tickets: (result.data ?? []) as SupportTicket[], isOffline: result.isError };
-};
-
-export const useSupportReplyMutation = (ticketId: string) => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (message: string) => adminService.replyToTicket(ticketId, message).then(() => undefined),
-    onMutate: (message) => {
-      queryClient.setQueryData<SupportTicket[]>(adminKeys.support(undefined), (old) =>
-        old?.map((t) =>
-          t.id === ticketId
-            ? {
-                ...t,
-                status: 'IN_PROGRESS' as TicketStatus,
-                replies: [...t.replies, {
-                  id: `reply-${Date.now()}`,
-                  senderName: 'Support Team',
-                  senderType: 'ADMIN' as const,
-                  message,
-                  internal: false,
-                  createdAt: new Date().toISOString(),
-                }],
-              }
-            : t,
-        ) ?? old,
-      );
-    },
-    onSuccess: () => showSuccess('Reply sent'),
-    onError: (error) => showError(getErrorMessage(error)),
-  });
-};
-
-/* ============================================================
-   Announcements
-   ============================================================ */
-
-export const useAdminAnnouncementsQuery = () => {
-  // The admin-service only exposes announcement creation; the list stays an
-  // honest empty state until a read endpoint ships.
-  const result = useQuery({
-    queryKey: adminKeys.announcements(),
-    queryFn: async () => [] as SystemAnnouncement[],
-    staleTime: 60 * 1000,
-    retry: 1,
-  });
-  return {
-    ...result,
-    announcements: (result.data ?? []) as SystemAnnouncement[],
-    templates: [] as AnnouncementTemplate[],
-    isOffline: result.isError,
-  };
-};
-
-export const useCreateAnnouncementMutation = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (payload: CreateAnnouncementRequest) =>
-      adminService.createAnnouncement(payload).then((r) => r.data.data),
-    onSuccess: (announcement) => {
-      queryClient.setQueryData<SystemAnnouncement[]>(adminKeys.announcements(), (old) =>
-        old ? [announcement, ...old] : [announcement],
-      );
-      showSuccess('Announcement broadcast 🎉');
-    },
-    onError: (error) => showError(getErrorMessage(error)),
-  });
-};
-
-/* ============================================================
-   Reports
-   ============================================================ */
-
-export const useAdminReportsQuery = () => {
-  // The admin-service has no report catalog endpoint, so the reports page
-  // shows an honest empty state until a reporting API ships.
-  return {
-    reports: [] as ReportDefinition[],
-    isOffline: false,
-    isLoading: false,
-  };
-};
-
-/* ============================================================
    Platform settings
    ============================================================ */
 
@@ -574,92 +468,3 @@ export const useUpdateSettingMutation = () => {
   });
 };
 
-/* ============================================================
-   Feature flags
-   ============================================================ */
-
-export const useAdminFeatureFlagsQuery = () => {
-  const result = useQuery({
-    queryKey: adminKeys.featureFlags(),
-    queryFn: async () => {
-      const response = await adminService.getFeatureFlags();
-      return response.data.data;
-    },
-    staleTime: 60 * 1000,
-    retry: 1,
-  });
-  return { ...result, flags: (result.data ?? []) as FeatureFlag[], isOffline: result.isError };
-};
-
-export const useUpdateFeatureFlagMutation = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (payload: UpdateFeatureFlagRequest) =>
-      adminService.updateFeatureFlag(payload).then((r) => r.data.data),
-    onSuccess: (flag) => {
-      queryClient.setQueryData<FeatureFlag[]>(adminKeys.featureFlags(), (old) =>
-        old?.map((f) => (f.featureKey === flag.featureKey ? { ...f, ...flag } : f)) ?? old,
-      );
-      showSuccess(flag.enabled ? 'Feature enabled' : 'Feature disabled');
-    },
-    onError: (error) => showError(getErrorMessage(error)),
-  });
-};
-
-/* ============================================================
-   Audit logs
-   ============================================================ */
-
-export const useAdminAuditLogsQuery = () => {
-  const result = useQuery({
-    queryKey: adminKeys.auditLogs(),
-    queryFn: async () => {
-      const response = await adminService.getAuditLogs(0, 100);
-      return response.data.data.content;
-    },
-    staleTime: 60 * 1000,
-    retry: 1,
-  });
-  return { ...result, logs: (result.data ?? []) as AuditLog[], isOffline: result.isError };
-};
-
-/* ============================================================
-   System monitoring
-   ============================================================ */
-
-export const useAdminMonitoringQuery = () => {
-  const result = useQuery({
-    queryKey: adminKeys.monitoring(),
-    queryFn: async () => {
-      const response = await adminService.getDashboard();
-      const health = response.data.data.systemHealth;
-      return { health };
-    },
-    staleTime: 15 * 1000,
-    refetchInterval: 30 * 1000,
-    retry: 1,
-  });
-  return {
-    ...result,
-    metrics: {
-      apiStatus: 'UP',
-      database: 'UP',
-      redis: 'UP',
-      rabbitmq: 'UP',
-      minio: 'UP',
-      cpuUsage: 0,
-      memoryUsage: 0,
-      storageUsage: 0,
-      responseTimeMs: 0,
-      errorRate: 0,
-      requestsPerMinute: 0,
-      activeSockets: 0,
-      latencySeries: [] as { label: string; value: number }[],
-      requestVolume: [] as { label: string; value: number }[],
-      errorRateSeries: [] as { label: string; value: number }[],
-    },
-    services: [] as MonitoredService[],
-    health: result.data?.health,
-    isOffline: result.isError,
-  };
-};

@@ -1,12 +1,9 @@
 import type {
   AdminAnalytics,
-  AdminCommunity,
-  AdminCommunityPost,
   AdminCoupon,
   AdminDashboard,
   AdminMentor,
   AdminPayment,
-  AdminPoll,
   AdminRefund,
   AdminSession,
   AdminSubscription,
@@ -16,7 +13,6 @@ import type {
   AuditLog,
   FeatureFlag,
   MentorApproval,
-  ModerationQueueItem,
   ModerationReview,
   MonitoredService,
   PlatformSetting,
@@ -71,10 +67,6 @@ export const seedWalletStats: WalletStats = {
   averageBalance: 0,
 };
 export const seedWalletTransactions: AdminWalletTransaction[] = [];
-export const seedModerationQueue: ModerationQueueItem[] = [];
-export const seedCommunityPosts: AdminCommunityPost[] = [];
-export const seedCommunities: AdminCommunity[] = [];
-export const seedPolls: AdminPoll[] = [];
 export const seedModerationReviews: ModerationReview[] = [];
 export const seedReviewAnalytics: ReviewModerationAnalytics = {
   totalReviews: 0,

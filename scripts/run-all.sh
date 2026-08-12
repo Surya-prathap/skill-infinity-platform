@@ -2,7 +2,7 @@
 # ============================================================
 # Skill Infinity - Run ALL services (fast & memory-tuned)
 # ------------------------------------------------------------
-# Starts the 12 backend microservices from PREBUILT jars using
+# Starts the 11 backend microservices from PREBUILT jars using
 # `java -jar` (no Maven/docker rebuilds => much faster startup)
 # with per-service heap limits so the whole platform fits in 8 GB.
 #
@@ -42,23 +42,24 @@ export RABBITMQ_PASSWORD="${RABBITMQ_PASSWORD:-guest}"
 export MYSQL_ROOT_PASSWORD="${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD missing in .env}"
 
 # Shared JVM tuning: G1GC, fast startup (C1-only JIT), compact heap
-# -XX:TieredStopAtLevel=1  => ~30% faster Spring Boot startup, ideal for I/O-bound dev services
-COMMON_OPTS="-XX:+UseG1GC -XX:+TieredCompilation -XX:TieredStopAtLevel=1 -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10"
+# -XX:TieredStopAtLevel=1   => ~30% faster Spring Boot startup, ideal for I/O-bound dev services
+# -XX:MaxMetaspaceSize=192m => caps the (large) metaspace each Spring Boot app allocates so the
+#                              11 JVMs + Docker infra fit in the 8 GB dev machine without swap thrash.
+#                              NOTE: if a service ever dies at startup with OutOfMemoryError: Metaspace,
+#                              raise this cap (it is the first knob to tune).
+COMMON_OPTS="-XX:+UseG1GC -XX:+TieredCompilation -XX:TieredStopAtLevel=1 -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=64m -Xss512k -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10"
 
 # service_name|jar_path|heap|-Xms|extra_env
 SERVICES=(
   "config-server|config-server/target/config-server-1.0.0-SNAPSHOT.jar|192m|64m|SPRING_PROFILES_ACTIVE=native"
   "discovery-server|discovery-server/target/discovery-server-1.0.0-SNAPSHOT.jar|192m|64m|"
-  "api-gateway|api-gateway/target/api-gateway-1.0.0-SNAPSHOT.jar|256m|128m|"
+  "api-gateway|api-gateway/target/api-gateway-1.0.0-SNAPSHOT.jar|192m|96m|JWT_SECRET=$JWT_SECRET"
   "identity-service|identity-service/target/identity-service-1.0.0-SNAPSHOT.jar|256m|96m|JWT_SECRET=$JWT_SECRET IDENTITY_DB_PASSWORD=$MYSQL_ROOT_PASSWORD"
   "user-service|user-service/target/user-service-1.0.0-SNAPSHOT.jar|256m|96m|USER_DB_PASSWORD=$MYSQL_ROOT_PASSWORD"
   "mentor-service|mentor-service/target/mentor-service-1.0.0-SNAPSHOT.jar|256m|96m|MENTOR_DB_PASSWORD=$MYSQL_ROOT_PASSWORD"
   "session-service|session-service/target/session-service-1.0.0-SNAPSHOT.jar|256m|96m|SESSION_DB_PASSWORD=$MYSQL_ROOT_PASSWORD"
   "wallet-service|wallet-service/target/wallet-service-1.0.0-SNAPSHOT.jar|256m|96m|WALLET_DB_PASSWORD=$MYSQL_ROOT_PASSWORD"
   "payment-service|payment-service/target/payment-service-1.0.0-SNAPSHOT.jar|256m|96m|PAYMENT_DB_PASSWORD=$MYSQL_ROOT_PASSWORD"
-  "communication-service|communication-service/target/communication-service-1.0.0-SNAPSHOT.jar|256m|96m|COMMUNICATION_DB_PASSWORD=$MYSQL_ROOT_PASSWORD MANAGEMENT_HEALTH_MAIL_ENABLED=false"
-  "community-service|community-service/target/community-service-1.0.0-SNAPSHOT.jar|256m|96m|COMMUNITY_DB_PASSWORD=$MYSQL_ROOT_PASSWORD"
-  "review-service|review-service/target/review-service-1.0.0-SNAPSHOT.jar|256m|96m|REVIEW_DB_PASSWORD=$MYSQL_ROOT_PASSWORD"
   "admin-service|admin-service/target/admin-service-1.0.0-SNAPSHOT.jar|256m|96m|ADMIN_DB_PASSWORD=$MYSQL_ROOT_PASSWORD"
 )
 
@@ -112,9 +113,23 @@ for i in $(seq 1 60); do
 done
 
 # ------------------------------------------------------------
-# 3. Remaining 11 services in parallel (config+discovery ready)
+# 3. Remaining services in TWO staggered waves (config+discovery ready)
+#    Wave 1 = SERVICES[2..6] (gateway + 4 core services), wave 2 = the rest.
+#    Starting 9 JVMs at once peaks CPU/disk/memory (and Windows Defender
+#    scanning of fat jars) and thrashes the page file on 8 GB dev machines,
+#    which is what made every service take 80-150 s to start. Two waves keep
+#    the cold-start load low. Index-based slicing: any service later appended
+#    to the SERVICES array is picked up automatically.
 # ------------------------------------------------------------
-for entry in "${SERVICES[@]:2}"; do
+echo "   Starting wave 1 (core services)..."
+for entry in "${SERVICES[@]:2:5}"; do
+  IFS='|' read -r name jar xmx xms extra <<< "$entry"
+  start_service "$name" "$jar" "$xmx" "$xms" "$extra"
+done
+echo "   Pausing 12s before wave 2 (spreads peak CPU/disk/memory load)..."
+sleep 12
+echo "   Starting wave 2..."
+for entry in "${SERVICES[@]:7}"; do
   IFS='|' read -r name jar xmx xms extra <<< "$entry"
   start_service "$name" "$jar" "$xmx" "$xms" "$extra"
 done
@@ -122,7 +137,7 @@ done
 # ------------------------------------------------------------
 # 4. Wait for all services to be healthy
 # ------------------------------------------------------------
-PORTS=(8080 8081 8082 8083 8084 8085 8086 8087 8088 8089 8090)
+PORTS=(8080 8081 8082 8083 8084 8085 8086 8090)
 echo "   Waiting for all services to become healthy..."
 ALL_UP=0
 for i in $(seq 1 120); do

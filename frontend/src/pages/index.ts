@@ -15,27 +15,14 @@ export { CreditPurchasePage } from './CreditPurchasePage';
 export { TransactionHistoryPage } from './TransactionHistoryPage';
 export { SessionsPage } from './SessionsPage';
 export { SessionDetailsPage } from './SessionDetailsPage';
-export { NotificationsPage } from './NotificationsPage';
-export { CommunicationPage } from './CommunicationPage';
-export { AnnouncementsPage } from './AnnouncementsPage';
 export { MeetingsPage } from './MeetingsPage';
 export { MeetingPage } from './MeetingPage';
 export { SettingsPage } from './SettingsPage';
 export { NotFoundPage } from './NotFoundPage';
 export { UnauthorizedPage } from './UnauthorizedPage';
 
-/* Community platform */
-export {
-  CommunityHubPage,
-  CommunitiesPage,
-  CommunityDetailsPage,
-  PostDetailsPage,
-  LeaderboardPage,
-  ActivityPage,
-  AchievementsPage,
-  MentorReviewsPage,
-  SearchPage,
-} from './community';
+/* Mentor reviews (backed by review-service) */
+export { MentorReviewsPage } from './reviews';
 
 /* Enterprise Admin Portal (aliased to avoid collisions with user-facing pages). */
 export {
@@ -46,15 +33,8 @@ export {
   SessionsPage as AdminSessionsPage,
   PaymentsPage as AdminPaymentsPage,
   WalletPage as AdminWalletPage,
-  CommunityModerationPage as AdminCommunityPage,
   ReviewsModerationPage as AdminReviewsPage,
-  SupportCenterPage as AdminSupportPage,
-  AnnouncementsPage as AdminAnnouncementsPage,
-  ReportsPage as AdminReportsPage,
   SettingsPage as AdminSettingsPage,
-  FeatureFlagsPage as AdminFeatureFlagsPage,
-  AuditLogsPage as AdminAuditLogsPage,
-  MonitoringPage as AdminMonitoringPage,
 } from './admin';
 
 /* Mentor portal */

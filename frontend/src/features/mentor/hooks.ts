@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
 import { mentorService } from '@/services';
-import { getErrorMessage, showError, showSuccess } from '@/utils';
+import { getErrorMessage, showError, showSuccess, showWarning } from '@/utils';
 import type {
   AchievementRequest,
   AvailabilityRequest,
@@ -201,31 +201,51 @@ export const useBecomeMentorMutation = () => {
         ),
       );
 
+      // Optional steps are best-effort: a slow/flaky backend must never fail the
+      // whole application. If they don't save now, the mentor can add them later
+      // from the studio — the application itself is already submitted.
+      let skippedOptional = false;
+
       if (draft.availability.length > 0) {
-        await mentorService.saveMyAvailability(draft.availability.map(toAvailabilityRequest));
+        try {
+          await mentorService.saveMyAvailability(draft.availability.map(toAvailabilityRequest));
+        } catch (error) {
+          skippedOptional = true;
+          console.warn('Mentor application: availability could not be saved', error);
+        }
       }
 
-      await Promise.all(
-        draft.certifications.map((certification) =>
-          mentorService.addMyCertification({
-            title: certification.title,
-            issuingOrganization: certification.issuingOrganization,
-            credentialId: certification.credentialId || undefined,
-            credentialUrl: certification.credentialUrl || undefined,
-            issueDate: certification.issueDate || undefined,
-            doesNotExpire: certification.doesNotExpire,
-            description: certification.description || undefined,
-          }),
-        ),
-      );
+      try {
+        await Promise.all(
+          draft.certifications.map((certification) =>
+            mentorService.addMyCertification({
+              title: certification.title,
+              issuingOrganization: certification.issuingOrganization,
+              credentialId: certification.credentialId || undefined,
+              credentialUrl: certification.credentialUrl || undefined,
+              issueDate: certification.issueDate || undefined,
+              doesNotExpire: certification.doesNotExpire,
+              description: certification.description || undefined,
+            }),
+          ),
+        );
+      } catch (error) {
+        skippedOptional = true;
+        console.warn('Mentor application: some certifications could not be saved', error);
+      }
 
-      return mentor;
+      return { mentor, skippedOptional };
     },
-    onSuccess: (mentor) => {
+    onSuccess: ({ mentor, skippedOptional }) => {
       queryClient.setQueryData(mentorKeys.profile(), mentor);
       cacheMentor(mentor);
       clearDraft();
-      showSuccess('Welcome to the Mentor Studio! Your application has been submitted.');
+      showSuccess('Your mentor application has been submitted for review!');
+      if (skippedOptional) {
+        showWarning(
+          'Your application was submitted, but some optional details (availability / certifications) could not be saved right now. You can add them once your application is approved.',
+        );
+      }
     },
     onError: (error) => {
       showError(getErrorMessage(error));

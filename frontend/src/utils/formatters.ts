@@ -17,8 +17,13 @@ export const formatTime = (value: string | Date | null | undefined): string =>
 export const formatRelativeTime = (value: string | Date | null | undefined): string =>
   value ? dayjs(value).fromNow() : '—';
 
-export const formatCurrency = (amount: number, currency = 'USD', locale = 'en-US'): string =>
-  new Intl.NumberFormat(locale, { style: 'currency', currency }).format(amount);
+export const formatCurrency = (amount: number, currency = 'INR', locale = 'en-IN'): string =>
+  new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
 
 export const formatNumber = (value: number, locale = 'en-US'): string =>
   new Intl.NumberFormat(locale).format(value);

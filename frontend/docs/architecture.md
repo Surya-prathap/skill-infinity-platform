@@ -8,12 +8,10 @@ Spring Cloud microservices backend through the API Gateway (`:8080`).
 ```
 Browser
   │
-  ├── REST ──► Axios client ──► API Gateway ──► identity-service / user-service / …
-  │                │
-  │                ├── request interceptor  → attach `Bearer <accessToken>`
-  │                └── response interceptor → 401 → refresh queue → retry
-  │
-  └── WS ────► Socket.IO (communication-service) — chat / notifications / presence
+  └── REST ──► Axios client ──► API Gateway ──► identity-service / user-service / …
+                    │
+                    ├── request interceptor  → attach `Bearer <accessToken>`
+                    └── response interceptor → 401 → refresh queue → retry
 ```
 
 ## Layering & Rules

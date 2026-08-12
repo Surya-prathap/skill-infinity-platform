@@ -28,8 +28,10 @@ describe('DashboardPage', () => {
 
     expect(await screen.findByText('Sessions Completed')).toBeInTheDocument();
     expect(screen.getByText('Learning Hours')).toBeInTheDocument();
-    expect(screen.getByText('Credits Earned')).toBeInTheDocument();
-    expect(screen.getByText('Mentor Rating')).toBeInTheDocument();
+    // "Wallet Balance" / "Upcoming Sessions" appear on both the stat cards
+    // and the section headers.
+    expect(screen.getAllByText('Wallet Balance').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Upcoming Sessions').length).toBeGreaterThan(0);
   });
 
   it('renders the learning progress chart and profile completion', async () => {
@@ -44,11 +46,10 @@ describe('DashboardPage', () => {
     const { store } = renderWithProviders(<DashboardPage />);
     store.dispatch(setCredentials(mockAuth));
 
-    expect(await screen.findByText('Upcoming Sessions')).toBeInTheDocument();
-    expect(screen.getByText('Wallet Balance')).toBeInTheDocument();
+    expect(screen.getAllByText('Upcoming Sessions').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Wallet Balance').length).toBeGreaterThan(0);
     expect(screen.getByText('Recent Activity')).toBeInTheDocument();
-    expect(screen.getByText('Recent Reviews')).toBeInTheDocument();
+    expect(screen.getByText('Top Reviews')).toBeInTheDocument();
     expect(screen.getByText('Recommended Mentors')).toBeInTheDocument();
-    expect(screen.getByText('Community Activity')).toBeInTheDocument();
   });
 });

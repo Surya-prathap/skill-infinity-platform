@@ -203,9 +203,6 @@ jobs:
           - session-service
           - wallet-service
           - payment-service
-          - community-service
-          - communication-service
-          - review-service
           - admin-service
 
     steps:

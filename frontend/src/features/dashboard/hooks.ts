@@ -1,10 +1,9 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { communityService, reviewService } from '@/services';
+import { reviewService } from '@/services';
 import { useUpcomingSessionsQuery, useSessionHistoryQuery } from '@/features/sessions';
 import { useWalletBalanceQuery } from '@/features/wallet';
 import { useMentorSearch } from '@/features/marketplace';
-import type { ActivityItem } from '@/types';
 import dayjs from 'dayjs';
 
 /** Chart point used by AreaChart / BarChart. */
@@ -13,34 +12,22 @@ export interface ChartPoint {
   value: number;
 }
 
-const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-const emptyActivity: ActivityItem[] = [];
-
 /**
  * Aggregates every dashboard widget from the real backend services:
  * upcoming sessions, session history (stats + weekly progress), wallet
- * balance, top-rated mentors, community activity and top reviews.
+ * balance, top-rated mentors and top reviews.
  */
 export const useDashboardData = () => {
   const upcoming = useUpcomingSessionsQuery(0, 10);
-  const history = useSessionHistoryQuery(0, 100);
+  // 50 recent sessions is plenty for the stats + 8-week progress chart and
+  // keeps the dashboard payload small.
+  const history = useSessionHistoryQuery(0, 50);
   const wallet = useWalletBalanceQuery();
   const mentors = useMentorSearch({
     page: 0,
     size: 4,
     sortBy: 'RATING',
     sortDirection: 'DESC',
-  });
-
-  const activityQuery = useQuery({
-    queryKey: ['dashboard', 'activity'],
-    queryFn: async (): Promise<ActivityItem[]> => {
-      const response = await communityService.getActivity(30);
-      return response.data.data;
-    },
-    retry: 1,
-    staleTime: 5 * 60 * 1000,
   });
 
   const reviewsQuery = useQuery({
@@ -83,7 +70,6 @@ export const useDashboardData = () => {
       {
         label: 'Wallet Balance',
         value: wallet.balance?.currentBalance ?? 0,
-        prefix: wallet.balance?.currency === 'USD' ? '$' : '',
         suffix: '',
         delta: 'Credits available',
         color: '#F59E0B',
@@ -116,28 +102,12 @@ export const useDashboardData = () => {
     return buckets;
   }, [completed]);
 
-  /* ---------------- Community activity (grouped by weekday) ---------------- */
-  const communityActivity = useMemo<ChartPoint[]>(() => {
-    const counts = DAY_LABELS.map((label) => ({ label, value: 0 }));
-    const now = dayjs();
-    (activityQuery.data ?? emptyActivity).forEach((item) => {
-      const at = dayjs(item.createdAt);
-      if (at.isAfter(now.subtract(7, 'day'))) {
-        const index = at.day();
-        counts[index].value += 1;
-      }
-    });
-    // Rotate so Monday comes first.
-    return [...counts.slice(1), ...counts.slice(0, 1)];
-  }, [activityQuery.data]);
-
   const isOffline =
     upcoming.isError || history.isError || wallet.isError || mentors.isError;
 
   return {
     stats,
     learningProgress,
-    communityActivity,
     upcomingSessions,
     isOffline,
     // Raw query results for panels that render items directly.
@@ -145,7 +115,6 @@ export const useDashboardData = () => {
     historyQuery: history,
     walletQuery: wallet,
     mentorsQuery: mentors,
-    activityQuery,
     reviewsQuery,
   };
 };

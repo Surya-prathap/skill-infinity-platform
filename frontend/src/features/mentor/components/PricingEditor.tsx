@@ -17,11 +17,11 @@ interface PricingEditorProps {
 
 const toFormValues = (initial: PricingDraft | null): PricingFormValues => ({
   sessionType: initial?.sessionType ?? '',
-  price: initial?.price ?? 50,
+  price: initial?.price ?? 3,
   originalPrice: initial?.originalPrice ?? null,
-  currency: initial?.currency ?? 'USD',
+  currency: initial?.currency ?? 'INR',
   discountPercentage: initial?.discountPercentage ?? null,
-  durationMinutes: initial?.durationMinutes ?? 60,
+  durationMinutes: initial?.durationMinutes ?? 30,
   isFree: initial?.isFree ?? false,
   description: initial?.description ?? '',
 });
@@ -36,7 +36,7 @@ export const PricingEditor: React.FC<PricingEditorProps> = ({ initial, onCancel,
   return (
     <EditorShell
       title={initial ? 'Edit pricing plan' : 'Add pricing plan'}
-      subtitle="Charge per session in your preferred currency"
+      subtitle="Sessions are paid with credits · 1 credit = 10 minutes"
       icon={<PriceChangeOutlinedIcon />}
       iconColor="#14B8A6"
       submitLabel={initial ? 'Save changes' : 'Add plan'}
@@ -46,7 +46,7 @@ export const PricingEditor: React.FC<PricingEditorProps> = ({ initial, onCancel,
           sessionType: values.sessionType ?? '',
           price: Number(values.price),
           originalPrice: toOptionalNumber(values.originalPrice),
-          currency: values.currency ?? 'USD',
+          currency: values.currency ?? 'INR',
           discountPercentage: toOptionalNumber(values.discountPercentage),
           durationMinutes: Number(values.durationMinutes),
           isFree: values.isFree,
@@ -65,10 +65,10 @@ export const PricingEditor: React.FC<PricingEditorProps> = ({ initial, onCancel,
         </Grid>
         <Grid container spacing={2}>
           <Grid size={{ xs: 12, sm: 4 }}>
-            <FormInput name="price" control={control} label="Price per session" type="number" required />
+            <FormInput name="price" control={control} label="Credits per session" type="number" helperText="1 credit = 10 minutes" required />
           </Grid>
           <Grid size={{ xs: 12, sm: 4 }}>
-            <FormInput name="originalPrice" control={control} label="Original price (optional)" type="number" />
+            <FormInput name="originalPrice" control={control} label="Original credits (optional)" type="number" />
           </Grid>
           <Grid size={{ xs: 12, sm: 4 }}>
             <FormSelect name="currency" control={control} label="Currency" options={CURRENCIES} required />

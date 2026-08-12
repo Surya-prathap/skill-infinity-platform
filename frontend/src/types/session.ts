@@ -50,6 +50,10 @@ export interface Session {
   price?: number;
   currency?: string;
   free?: boolean;
+  /** True for free community mentoring sessions. */
+  community?: boolean;
+  /** Number of participants (community sessions). */
+  participantCount?: number;
   recordingUrl?: string;
   notes?: string;
   outcome?: string;
@@ -95,8 +99,36 @@ export interface BookingRequest {
   preferredStartTime: string;
   preferredEndTime: string;
   durationMinutes: number;
+  /** Session cost in credits (1 credit = 10 minutes). */
+  credits?: number;
   timezone?: string;
   learnerMessage?: string;
+}
+
+export interface CommunitySessionRequest {
+  topic: string;
+  description?: string;
+  startTime: string;
+  endTime: string;
+  timezone?: string;
+  maxParticipants?: number;
+}
+
+export interface CommunityAllowance {
+  limit: number;
+  used: number;
+  remaining: number;
+  month: string;
+}
+
+export interface CommunityImpact {
+  completedSessions: number;
+  learnersHelped: number;
+  communityHours: number;
+  level: number;
+  levelLabel?: string | null;
+  nextLevelAt: number;
+  nextLevelLabel?: string | null;
 }
 
 export interface BookingResponse {

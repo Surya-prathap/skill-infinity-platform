@@ -9,11 +9,9 @@ Thank you for considering contributing to Skill Infinity. This document outlines
 - `feature/day-3-mentor` - Mentor Service
 - `feature/day-4-session` - Session Service
 - `feature/day-5-wallet` - Wallet Service
-- `feature/day-6-community` - Community Service
-- `feature/day-7-communication` - Communication Service
-- `feature/day-8-admin` - Admin Service
-- `feature/day-9-testing` - Testing
-- `feature/day-10-release` - Release
+- `feature/day-6-admin` - Admin Service
+- `feature/day-7-testing` - Testing
+- `feature/day-8-release` - Release
 
 ## Commit Format
 - `feat:` New feature

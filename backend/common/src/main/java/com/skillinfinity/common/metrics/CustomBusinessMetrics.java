@@ -54,18 +54,6 @@ public class CustomBusinessMetrics {
     @Getter
     private final Counter walletDebitCounter;
 
-    // Community metrics
-    @Getter
-    private final Counter postCreatedCounter;
-    @Getter
-    private final Counter commentAddedCounter;
-
-    // Notification metrics
-    @Getter
-    private final Counter notificationSentCounter;
-    @Getter
-    private final Counter emailSentCounter;
-
     // Admin metrics
     @Getter
     private final Counter adminActionCounter;
@@ -132,22 +120,6 @@ public class CustomBusinessMetrics {
 
         this.walletDebitCounter = Counter.builder("skillinfinity.wallet.debits")
                 .description("Total wallet debit operations")
-                .register(meterRegistry);
-
-        this.postCreatedCounter = Counter.builder("skillinfinity.community.posts")
-                .description("Total posts created")
-                .register(meterRegistry);
-
-        this.commentAddedCounter = Counter.builder("skillinfinity.community.comments")
-                .description("Total comments added")
-                .register(meterRegistry);
-
-        this.notificationSentCounter = Counter.builder("skillinfinity.notifications.sent")
-                .description("Total notifications sent")
-                .register(meterRegistry);
-
-        this.emailSentCounter = Counter.builder("skillinfinity.emails.sent")
-                .description("Total emails sent")
                 .register(meterRegistry);
 
         this.adminActionCounter = Counter.builder("skillinfinity.admin.actions")

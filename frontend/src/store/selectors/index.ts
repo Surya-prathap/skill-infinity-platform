@@ -43,11 +43,6 @@ export const selectResolvedThemeMode = (state: RootState): 'light' | 'dark' => {
   return mode;
 };
 
-/* ---------------- Notifications ---------------- */
-export const selectNotifications = (state: RootState) => state.notifications.items;
-export const selectUnreadCount = (state: RootState) => state.notifications.unreadCount;
-export const selectNotificationsLoading = (state: RootState) => state.notifications.loading;
-
 /* ---------------- Settings ---------------- */
 export const selectSettings = (state: RootState) => state.settings;
 export const selectLanguage = (state: RootState) => state.settings.language;
@@ -65,52 +60,6 @@ export const selectPageLoading = (state: RootState) => state.loading.pageLoading
 /* ---------------- Admin ---------------- */
 export const selectAdminSidebarCollapsed = (state: RootState) => state.admin.sidebarCollapsed;
 export const selectAdminEnvironment = (state: RootState) => state.admin.environment;
-
-/* ---------------- Community ---------------- */
-export const selectCommunityDrafts = (state: RootState) => state.community.drafts;
-export const selectCommunityDraft = (key: string) => (state: RootState) =>
-  state.community.drafts[key] ?? null;
-export const selectCommunityLiveEvents = (state: RootState) => state.community.liveEvents;
-
-/* ---------------- Chat / Communication ---------------- */
-export const selectChatConversations = (state: RootState) => state.chat.conversations;
-export const selectChatActiveConversationId = (state: RootState) => state.chat.activeConversationId;
-export const selectChatMessages = (state: RootState) => state.chat.messages;
-export const selectChatTyping = (state: RootState) => state.chat.typing;
-export const selectChatPresence = (state: RootState) => state.chat.presence;
-export const selectChatUnreadCounts = (state: RootState) => state.chat.unreadCounts;
-export const selectSocketStatus = (state: RootState) => state.chat.socketStatus;
-export const selectOwnPresence = (state: RootState) => state.chat.ownPresence;
-
-export const selectChatActiveConversation = createSelector(
-  [selectChatConversations, selectChatActiveConversationId],
-  (conversations, activeId) =>
-    activeId ? conversations.find((conversation) => conversation.id === activeId) ?? null : null,
-);
-
-export const selectMessagesForConversation = createSelector(
-  [selectChatMessages, (_: RootState, conversationId: string) => conversationId],
-  (messages, conversationId) => messages[conversationId] ?? [],
-);
-
-export const selectTypingForConversation = createSelector(
-  [selectChatTyping, (_: RootState, conversationId: string) => conversationId],
-  (typing, conversationId) => typing[conversationId] ?? [],
-);
-
-export const selectPresenceForUser = createSelector(
-  [selectChatPresence, (_: RootState, userId: string) => userId],
-  (presence, userId) => presence[userId] ?? null,
-);
-
-export const selectTotalUnread = createSelector([selectChatUnreadCounts], (unreadCounts) =>
-  Object.values(unreadCounts).reduce((sum, count) => sum + count, 0),
-);
-
-export const selectUnreadForConversation = createSelector(
-  [selectChatUnreadCounts, (_: RootState, conversationId: string) => conversationId],
-  (unreadCounts, conversationId) => unreadCounts[conversationId] ?? 0,
-);
 
 /* ---------------- Meeting ---------------- */
 export const selectMeeting = (state: RootState) => state.meeting.meeting;

@@ -27,12 +27,17 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
-      timeout: 2000ms
+      # Generous timeout: on the constrained Docker host a cold-starting JVM
+      # can take >2s to open a pooled Redis connection while other services
+      # are still booting; too tight a timeout turns every @Cacheable call
+      # into a 500 (cache failures are handled gracefully regardless).
+      timeout: 5000ms
       lettuce:
         pool:
-          max-active: 8
+          max-active: 16
           max-idle: 4
           min-idle: 2
+          max-wait: 1500ms
   rabbitmq:
     host: ${RABBITMQ_HOST:localhost}
     port: ${RABBITMQ_PORT:5672}
@@ -72,6 +77,8 @@ management:
   metrics:
     tags:
       application: ${spring.application.name}
+  tracing:
+    enabled: false
 
 info:
   app:

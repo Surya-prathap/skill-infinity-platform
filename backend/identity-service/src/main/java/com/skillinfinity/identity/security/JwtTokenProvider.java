@@ -40,6 +40,7 @@ public class JwtTokenProvider {
         Date expiryDate = new Date(now.getTime() + accessTokenExpiration);
 
         return Jwts.builder()
+                .id(UUID.randomUUID().toString())
                 .subject(user.getId().toString())
                 .claim("email", user.getEmail())
                 .claim("username", user.getUsername())
@@ -54,7 +55,11 @@ public class JwtTokenProvider {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + refreshTokenExpiration);
 
+        // Unique jti per token: two tokens minted within the same second would
+        // otherwise be byte-identical (fixed secret + second-granularity iat),
+        // violating refresh_tokens.token's unique constraint on fast logins.
         return Jwts.builder()
+                .id(UUID.randomUUID().toString())
                 .subject(userId.toString())
                 .claim("type", "refresh")
                 .issuedAt(now)

@@ -333,6 +333,19 @@ public class MentorServiceImpl implements MentorService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public PageResponse<MentorSummaryResponse> getPendingMentors(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "createdAt"));
+        Page<Mentor> mentorPage = mentorRepository.findByStatus(MentorStatus.PENDING_VERIFICATION, pageable);
+
+        List<MentorSummaryResponse> content = mentorPage.getContent().stream()
+                .map(mentorMapper::toMentorSummaryResponse)
+                .toList();
+
+        return PageResponse.of(content, page, size, mentorPage.getTotalElements());
+    }
+
+    @Override
     @Transactional
     @CacheEvict(value = "mentorProfiles", key = "#mentorId")
     public ExpertiseResponse addExpertise(UUID mentorId, ExpertiseRequest request) {
@@ -588,7 +601,7 @@ public class MentorServiceImpl implements MentorService {
                 .sessionType(request.getSessionType())
                 .price(request.getPrice() != null ? request.getPrice() : BigDecimal.ZERO)
                 .originalPrice(request.getOriginalPrice())
-                .currency(request.getCurrency() != null ? request.getCurrency() : "USD")
+                .currency(request.getCurrency() != null ? request.getCurrency() : "INR")
                 .discountPercentage(request.getDiscountPercentage())
                 .durationMinutes(request.getDurationMinutes())
                 .isFree(request.isFree())

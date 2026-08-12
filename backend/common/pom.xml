@@ -74,10 +74,35 @@
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-jsr310</artifactId>
         </dependency>
+        <!--
+          Redis serializer support (RedisJsonSerializer in common.util). Marked
+          optional so modules that do not use Redis caching are not forced to
+          pull it in; every caching service already declares starter-data-redis.
+        -->
+        <dependency>
+            <groupId>org.springframework.data</groupId>
+            <artifactId>spring-data-redis</artifactId>
+            <optional>true</optional>
+        </dependency>
         <dependency>
             <groupId>jakarta.servlet</groupId>
             <artifactId>jakarta.servlet-api</artifactId>
             <scope>provided</scope>
+        </dependency>
+        <!--
+          Spring Security support for the gateway header-trust filter
+          (GatewayHeaderAuthenticationFilter). Marked optional so downstream
+          modules that do not use security are not forced to pull it in.
+        -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-core</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-web</artifactId>
+            <optional>true</optional>
         </dependency>
     </dependencies>
 

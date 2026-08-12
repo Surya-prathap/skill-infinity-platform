@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Box, Button as MuiButton, Chip, Grid, LinearProgress } from '@mui/material';
+import { Alert, Box, Button as MuiButton, Chip, Grid, LinearProgress, Skeleton } from '@mui/material';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -11,6 +11,7 @@ import WorkspacePremiumOutlinedIcon from '@mui/icons-material/WorkspacePremiumOu
 import WorkOutlineOutlinedIcon from '@mui/icons-material/WorkOutlineOutlined';
 import BoltOutlinedIcon from '@mui/icons-material/BoltOutlined';
 import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
+import RefreshOutlinedIcon from '@mui/icons-material/RefreshOutlined';
 import PriceChangeOutlinedIcon from '@mui/icons-material/PriceChangeOutlined';
 import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
 import StarIcon from '@mui/icons-material/Star';
@@ -26,8 +27,8 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { markSubmitted, resetWizard, setStep, updateDraft } from '@/store/slices/mentorSlice';
 import { selectMentorDraft, selectMentorStep } from '@/store/selectors';
 import { useAuth, useDocumentTitle } from '@/hooks';
-import { ROUTES } from '@/constants';
-import { formatCurrency, formatDate, showError } from '@/utils';
+import { ROLES, ROUTES } from '@/constants';
+import { formatDate, showError } from '@/utils';
 import {
   DAYS_OF_WEEK,
   SESSION_TYPES,
@@ -40,7 +41,7 @@ import {
   toOptionalNumber,
   type PersonalFormValues,
 } from '@/features/mentor/schemas';
-import { useBecomeMentorMutation, useCategoriesQuery } from '@/features/mentor/hooks';
+import { useBecomeMentorMutation, useCategoriesQuery, useMentorProfileQuery } from '@/features/mentor/hooks';
 import {
   availabilityToDraft,
   persistDraft,
@@ -95,12 +96,13 @@ export const MentorRegistrationPage: React.FC = () => {
   useDocumentTitle('Become a Mentor');
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, hasRole } = useAuth();
 
   const step = useAppSelector(selectMentorStep);
   const draft = useAppSelector(selectMentorDraft);
-  const { categories } = useCategoriesQuery();
+  const { categories, isLoading: categoriesLoading, isError: categoriesError, isFetching: categoriesFetching, refetch: refetchCategories } = useCategoriesQuery();
   const becomeMentor = useBecomeMentorMutation();
+  const { mentor: existingMentor } = useMentorProfileQuery();
 
   const [lastSaved, setLastSaved] = useState<string | null>(draft.savedAt);
   const [verificationFile, setVerificationFile] = useState<{
@@ -122,6 +124,15 @@ export const MentorRegistrationPage: React.FC = () => {
     }, 600);
     return () => window.clearTimeout(timer);
   }, [draft]);
+
+  /* ---------------- Redirect users who already have an application ---------------- */
+  useEffect(() => {
+    if (hasRole([ROLES.MENTOR])) {
+      navigate(ROUTES.MENTOR_DASHBOARD, { replace: true });
+    } else if (existingMentor?.status === 'PENDING_VERIFICATION') {
+      navigate(ROUTES.MENTOR_APPLICATION_SUBMITTED, { replace: true });
+    }
+  }, [hasRole, existingMentor?.status, navigate]);
 
   /* ---------------- Personal form ---------------- */
   const personalForm = useForm<PersonalFormValues>({
@@ -281,7 +292,7 @@ export const MentorRegistrationPage: React.FC = () => {
       await becomeMentor.mutateAsync({ ...draft, expertise: expertiseEntries });
       dispatch(markSubmitted());
       dispatch(resetWizard());
-      navigate(ROUTES.MENTOR_DASHBOARD);
+      navigate(ROUTES.MENTOR_APPLICATION_SUBMITTED);
     } catch {
       // Toast handled by the mutation.
     }
@@ -621,7 +632,35 @@ export const MentorRegistrationPage: React.FC = () => {
                   Select the domains you teach. Choosing a category adds it to your profile;
                   specific skills are captured in the expertise step.
                 </Typography>
-                <Grid container spacing={2}>
+                {categoriesLoading ? (
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: '1fr 1fr 1fr' }, gap: 2 }}>
+                    {[0, 1, 2, 3, 4, 5].map((i) => (
+                      <Skeleton key={i} variant="rounded" height={136} sx={{ borderRadius: 3 }} />
+                    ))}
+                  </Box>
+                ) : categoriesError ? (
+                  <Box sx={{ textAlign: 'center', py: 6 }}>
+                    <Alert severity="error" sx={{ borderRadius: 2.5, mb: 2.5, maxWidth: 520, mx: 'auto' }}>
+                      We couldn't load the available categories. Check your connection and try again — your
+                      selections below are safe.
+                    </Alert>
+                    <MuiButton
+                      variant="outlined"
+                      startIcon={<RefreshOutlinedIcon />}
+                      onClick={() => void refetchCategories()}
+                      disabled={categoriesFetching}
+                      loading={categoriesFetching}
+                    >
+                      Retry
+                    </MuiButton>
+                  </Box>
+                ) : categories.length === 0 ? (
+                  <Alert severity="info" sx={{ borderRadius: 2.5 }}>
+                    No categories are available right now. You can still continue — use the “Custom skill”
+                    option in the Expertise step to add what you teach.
+                  </Alert>
+                ) : (
+                  <Grid container spacing={2}>
                   {categories.map((category) => {
                     const selected = draft.categories.includes(category.id);
                     return (
@@ -706,7 +745,8 @@ export const MentorRegistrationPage: React.FC = () => {
                       </Grid>
                     );
                   })}
-                </Grid>
+                  </Grid>
+                )}
               </Box>
             )}
 
@@ -732,7 +772,7 @@ export const MentorRegistrationPage: React.FC = () => {
                       </Typography>
                     </Box>
                     <Typography variant="subtitle1" fontWeight={800} sx={{ color: 'primary.main' }}>
-                      {item.isFree ? 'Free' : formatCurrency(item.price, item.currency)}
+                      {item.isFree ? 'Free' : `${item.price} credits`}
                     </Typography>
                   </Stack>
                 )}
@@ -1026,7 +1066,7 @@ export const MentorRegistrationPage: React.FC = () => {
                           <PreviewRow
                             key={plan.id}
                             title={SESSION_TYPE_LABEL[plan.sessionType] ?? plan.sessionType}
-                            subtitle={`${plan.durationMinutes} min · ${plan.isFree ? 'Free' : formatCurrency(plan.price, plan.currency)}${plan.discountPercentage ? ` · ${plan.discountPercentage}% off` : ''}`}
+                            subtitle={`${plan.durationMinutes} min · ${plan.isFree ? 'Free' : `${plan.price} credits`}${plan.discountPercentage ? ` · ${plan.discountPercentage}% off` : ''}`}
                           />
                         ))}
                       </PreviewSection>

@@ -66,4 +66,24 @@ public interface SessionRepository extends JpaRepository<Session, UUID> {
 
     boolean existsByMentorIdAndStartTimeAndEndTimeAndStatusNotIn(
             UUID mentorId, LocalDateTime startTime, LocalDateTime endTime, List<SessionStatus> statuses);
+
+    // ============================================================
+    // Community sessions
+    // ============================================================
+
+    @Query("SELECT s FROM Session s WHERE s.community = true AND s.status = 'SCHEDULED' AND s.startTime >= :now ORDER BY s.startTime ASC")
+    Page<Session> findUpcomingCommunitySessions(@Param("now") LocalDateTime now, Pageable pageable);
+
+    @Query("SELECT COUNT(s) FROM Session s WHERE s.community = true AND s.mentorId = :mentorId AND s.status = 'COMPLETED'")
+    long countCompletedCommunityByMentor(@Param("mentorId") UUID mentorId);
+
+    @Query("SELECT COALESCE(SUM(s.durationMinutes), 0) FROM Session s WHERE s.community = true AND s.mentorId = :mentorId AND s.status = 'COMPLETED'")
+    long sumCommunityMinutesByMentor(@Param("mentorId") UUID mentorId);
+
+    @Query("SELECT COUNT(s) FROM Session s WHERE s.community = true AND s.mentorId = :mentorId AND s.status = 'COMPLETED' AND s.startTime >= :monthStart")
+    long countCompletedCommunityByMentorSince(@Param("mentorId") UUID mentorId,
+                                               @Param("monthStart") LocalDateTime monthStart);
+
+    @Query("SELECT s FROM Session s WHERE s.community = true AND s.mentorId = :mentorId AND s.status = 'COMPLETED'")
+    List<Session> findCompletedCommunityByMentor(@Param("mentorId") UUID mentorId);
 }

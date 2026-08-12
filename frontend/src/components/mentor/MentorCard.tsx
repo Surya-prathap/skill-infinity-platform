@@ -181,7 +181,7 @@ export const MentorCard: React.FC<MentorCardProps> = ({
               <Typography variant="caption" color="text.secondary" fontWeight={600}>
                 From{' '}
                 <Box component="span" sx={{ color: 'primary.main', fontWeight: 800, fontSize: '0.95rem' }}>
-                  {mentor.pricingList[0].currency ?? 'USD'} {mentor.pricingList[0].price}
+                  {mentor.pricingList[0].price} credits
                 </Box>{' '}
                 · {sessionTypeLabel(mentor.pricingList[0].sessionType)}
               </Typography>

@@ -88,18 +88,21 @@ public class AdminController {
     }
 
     @PutMapping("/mentors/{id}/approve")
-    @Operation(summary = "Approve mentor", description = "Approve a mentor application")
-    public ResponseEntity<ApiResponse<Void>> approveMentor(@PathVariable UUID id) {
-        adminService.approveMentor(id);
+    @Operation(summary = "Approve mentor", description = "Approve a mentor application (forwards to mentor-service)")
+    public ResponseEntity<ApiResponse<Void>> approveMentor(
+            @PathVariable UUID id,
+            Principal principal) {
+        adminService.approveMentor(id, extractUserId(principal));
         return ResponseEntity.ok(ApiResponse.success("Mentor approved", null));
     }
 
     @PutMapping("/mentors/{id}/reject")
-    @Operation(summary = "Reject mentor", description = "Reject a mentor application")
+    @Operation(summary = "Reject mentor", description = "Reject a mentor application (forwards to mentor-service)")
     public ResponseEntity<ApiResponse<Void>> rejectMentor(
             @PathVariable UUID id,
-            @RequestParam String reason) {
-        adminService.rejectMentor(id, reason);
+            @RequestParam String reason,
+            Principal principal) {
+        adminService.rejectMentor(id, reason, extractUserId(principal));
         return ResponseEntity.ok(ApiResponse.success("Mentor rejected", null));
     }
 

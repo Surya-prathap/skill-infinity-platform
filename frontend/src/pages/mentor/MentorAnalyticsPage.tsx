@@ -46,7 +46,7 @@ export const MentorAnalyticsPage: React.FC = () => {
     prefix?: string;
     suffix?: string;
     decimals?: number;
-    delta: string;
+    delta?: string;
     color: string;
     icon: React.ReactNode;
   }> = [
@@ -61,7 +61,6 @@ export const MentorAnalyticsPage: React.FC = () => {
       label: 'Completion Rate',
       value: completionRate,
       suffix: '%',
-      delta: '+4% vs last quarter',
       color: '#10B981',
       icon: <TrendingUpOutlinedIcon />,
     },
@@ -77,7 +76,6 @@ export const MentorAnalyticsPage: React.FC = () => {
     {
       label: 'Total Students',
       value: stats?.totalStudents ?? 0,
-      delta: '+28% this year',
       color: '#EC4899',
       icon: <GroupOutlinedIcon />,
     },
@@ -191,15 +189,14 @@ export const MentorAnalyticsPage: React.FC = () => {
           >
             <AnalyticsCard
               title="Revenue Trend"
-              subtitle="Monthly earnings — last 7 months"
+              subtitle="Monthly earnings in credits"
               icon={<MonetizationOnOutlinedIcon />}
               iconColor="#10B981"
-              badge="+18%"
             >
               <AreaChart
                 data={[...MENTOR_REVENUE_SERIES]}
                 color="#10B981"
-                suffix=" USD"
+                suffix=" credits"
                 height={260}
               />
             </AnalyticsCard>
@@ -261,7 +258,6 @@ export const MentorAnalyticsPage: React.FC = () => {
               subtitle="Completed sessions per month"
               icon={<EventAvailableOutlinedIcon />}
               iconColor="#6D5DF6"
-              badge="+17%"
             >
               <BarChart
                 data={[...ANALYTICS_SESSION_TREND]}
@@ -284,7 +280,6 @@ export const MentorAnalyticsPage: React.FC = () => {
               subtitle="Active learners over time"
               icon={<GroupOutlinedIcon />}
               iconColor="#EC4899"
-              badge="+28%"
             >
               <AreaChart
                 data={[...ANALYTICS_STUDENT_GROWTH]}
@@ -307,7 +302,6 @@ export const MentorAnalyticsPage: React.FC = () => {
               subtitle="New bookings per week"
               icon={<AutoGraphOutlinedIcon />}
               iconColor="#14B8A6"
-              badge="+31%"
             >
               <BarChart
                 data={[...ANALYTICS_BOOKING_TRENDS]}
@@ -426,7 +420,6 @@ export const MentorAnalyticsPage: React.FC = () => {
                       suffix={metric.suffix}
                       color={metric.color}
                       hoverable={false}
-                      hint="Rolling 30-day window"
                     />
                   </Grid>
                 ))}
@@ -453,15 +446,6 @@ export const MentorAnalyticsPage: React.FC = () => {
                 value={stats?.responseRate ?? 0}
                 sublabel="Requests you respond to"
                 color="#14B8A6"
-              />
-              <ProgressCard
-                label="Learner retention"
-                value={Math.min(
-                  100,
-                  Math.round(((stats?.totalStudents ?? 0) / Math.max(total, 1)) * 100),
-                )}
-                sublabel="Students returning for sessions"
-                color="#F59E0B"
               />
             </Stack>
           </motion.div>

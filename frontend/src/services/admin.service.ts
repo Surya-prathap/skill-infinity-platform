@@ -5,16 +5,10 @@ import type {
   AdminDashboard,
   AdminUser,
   ApiResponse,
-  CreateAnnouncementRequest,
-  FeatureFlag,
   PageResponse,
   PlatformSetting,
   RevenueAnalytics,
-  SupportTicket,
-  SystemAnnouncement,
-  UpdateFeatureFlagRequest,
   UpdateSettingRequest,
-  AuditLog,
 } from '@/types';
 
 const resolve = (template: string, params: Record<string, string>): string =>
@@ -75,45 +69,12 @@ export const adminService = {
       { params: { action } },
     ),
 
-  /* ---------------- Announcements ---------------- */
-  createAnnouncement: (payload: CreateAnnouncementRequest) =>
-    apiClient.post<ApiResponse<SystemAnnouncement>>(
-      API_ENDPOINTS.ADMIN.ANNOUNCEMENTS,
-      payload,
-    ),
-
-  /* ---------------- Support center ---------------- */
-  getSupportTickets: (status?: string, page = 0, size = 20) =>
-    apiClient.get<ApiResponse<PageResponse<SupportTicket>>>(API_ENDPOINTS.ADMIN.SUPPORT, {
-      params: { status, page, size },
-    }),
-
-  replyToTicket: (ticketId: string, message: string) =>
-    apiClient.post<ApiResponse<SupportTicket>>(
-      API_ENDPOINTS.ADMIN.SUPPORT_REPLY,
-      undefined,
-      { params: { ticketId, message } },
-    ),
-
-  /* ---------------- Audit logs ---------------- */
-  getAuditLogs: (page = 0, size = 20) =>
-    apiClient.get<ApiResponse<PageResponse<AuditLog>>>(API_ENDPOINTS.ADMIN.AUDIT, {
-      params: { page, size },
-    }),
-
   /* ---------------- Platform settings ---------------- */
   getSettings: () =>
     apiClient.get<ApiResponse<PlatformSetting[]>>(API_ENDPOINTS.ADMIN.SETTINGS),
 
   updateSetting: (payload: UpdateSettingRequest) =>
     apiClient.put<ApiResponse<PlatformSetting>>(API_ENDPOINTS.ADMIN.SETTINGS, payload),
-
-  /* ---------------- Feature flags ---------------- */
-  getFeatureFlags: () =>
-    apiClient.get<ApiResponse<FeatureFlag[]>>(API_ENDPOINTS.ADMIN.FEATURE_FLAGS),
-
-  updateFeatureFlag: (payload: UpdateFeatureFlagRequest) =>
-    apiClient.put<ApiResponse<FeatureFlag>>(API_ENDPOINTS.ADMIN.FEATURE_FLAGS, payload),
 };
 
 export default adminService;

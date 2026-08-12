@@ -47,7 +47,7 @@ class SessionMapperTest {
                 .topic("Java Programming")
                 .category("Technology")
                 .price(99.99)
-                .currency("USD")
+                .currency("INR")
                 .free(false)
                 .build();
 
@@ -69,7 +69,7 @@ class SessionMapperTest {
         assertEquals("Java Programming", session.getTopic());
         assertEquals("Technology", session.getCategory());
         assertEquals(99.99, session.getPrice());
-        assertEquals("USD", session.getCurrency());
+        assertEquals("INR", session.getCurrency());
         assertFalse(session.isFree());
         assertEquals(0, session.getRescheduleCount());
     }
@@ -96,7 +96,7 @@ class SessionMapperTest {
                 .status(SessionStatus.SCHEDULED)
                 .topic("Testing")
                 .price(0)
-                .currency("USD")
+                .currency("INR")
                 .free(true)
                 .rescheduleCount(0)
                 .build();

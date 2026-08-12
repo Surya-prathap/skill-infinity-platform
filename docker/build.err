@@ -1,0 +1,9 @@
+ Image docker-session-service Building 
+ Image docker-payment-service Building 
+ Image docker-wallet-service Building 
+target wallet-service: DeadlineExceeded: context deadline exceeded
+
+
+
+View build details: docker-desktop://dashboard/build/default/default/r0wdjcorc0nsnlug4l0iuf6gw
+

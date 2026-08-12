@@ -73,6 +73,12 @@ public class SessionResponse {
     @Schema(description = "Whether the session is free")
     private boolean free;
 
+    /** True for free community mentoring sessions. */
+    private boolean community;
+
+    /** Number of participants (community sessions). */
+    private Integer participantCount;
+
     @Schema(description = "Recording URL")
     private String recordingUrl;
 

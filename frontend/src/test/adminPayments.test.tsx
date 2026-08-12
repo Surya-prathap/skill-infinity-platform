@@ -20,33 +20,32 @@ describe('PaymentsPage', () => {
     expect(screen.getByText('Revenue Trend')).toBeInTheDocument();
   });
 
-  it('renders all section tabs with counts', async () => {
+  it('renders all section tabs with honest zero counts', async () => {
     renderWithProviders(<PaymentsPage />);
 
-    expect(await screen.findByRole('tab', { name: 'Transactions (18)' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Refunds (5)' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Subscriptions (6)' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Coupons (5)' })).toBeInTheDocument();
+    expect(await screen.findByRole('tab', { name: 'Transactions (0)' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Refunds (0)' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Subscriptions (0)' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Coupons (0)' })).toBeInTheDocument();
   });
 
-  it('switches to refunds and shows pending refund approvals', async () => {
+  it('switches to refunds and shows the honest empty state', async () => {
     const user = userEvent.setup();
     renderWithProviders(<PaymentsPage />);
 
-    await user.click(await screen.findByRole('tab', { name: 'Refunds (5)' }));
+    await user.click(await screen.findByRole('tab', { name: 'Refunds (0)' }));
 
-    expect(await screen.findByText('Chloe Martin')).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: /Approve/i }).length).toBeGreaterThan(0);
+    expect(await screen.findByText('No records found')).toBeInTheDocument();
+    expect(screen.getByText('Try adjusting your search or filters.')).toBeInTheDocument();
   });
 
-  it('searches transactions by customer name', async () => {
+  it('searches transactions and keeps the empty state without results', async () => {
     const user = userEvent.setup();
     renderWithProviders(<PaymentsPage />);
 
     const search = await screen.findByPlaceholderText('Search transactions…');
     await user.type(search, 'Emma');
 
-    expect(await screen.findByText('Emma Wilson')).toBeInTheDocument();
-    expect(screen.queryByText('Sarah Chen')).not.toBeInTheDocument();
+    expect(await screen.findByText('No records found')).toBeInTheDocument();
   });
 });

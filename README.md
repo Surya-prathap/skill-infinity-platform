@@ -38,10 +38,10 @@ Skill Infinity is an enterprise-grade knowledge-sharing platform that connects l
 │  │ Identity │ │  User  │ │  Mentor │ │  Session │ │  Wallet │  │
 │  │ Service  │ │Service │ │ Service │ │ Service  │ │ Service │  │
 │  └──────────┘ └────────┘ └─────────┘ └──────────┘ └─────────┘  │
-│  ┌──────────┐ ┌────────┐ ┌─────────┐ ┌──────────┐ ┌─────────┐  │
-│  │ Payment  │ │Community│ │Communic.│ │  Review  │ │  Admin  │  │
-│  │ Service  │ │Service │ │ Service │ │ Service  │ │ Service │  │
-│  └──────────┘ └────────┘ └─────────┘ └──────────┘ └─────────┘  │
+│  ┌──────────┐ ┌──────────────┐ ┌───────────┐ ┌────────────┐  │
+│  │ Payment  │ │    Review    │ │   Admin   │ │            │  │
+│  │ Service  │ │    Service   │ │  Service  │ │            │  │
+│  └──────────┘ └──────────────┘ └───────────┘ └────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
        │
 ┌──────▼──────────────────────────────────────────────────────────┐
@@ -80,8 +80,6 @@ skill-infinity/
 │   ├── session-service/        # (placeholder)
 │   ├── wallet-service/         # (placeholder)
 │   ├── payment-service/        # (placeholder)
-│   ├── community-service/      # (placeholder)
-│   ├── communication-service/  # (placeholder)
 │   ├── review-service/         # (placeholder)
 │   ├── admin-service/          # (placeholder)
 │   └── pom.xml
@@ -242,8 +240,6 @@ See [.env.example](.env.example) for all configurable environment variables.
 - **Session** — Booking, scheduling, history
 - **Wallet** — Credits, transactions, rewards
 - **Payment** — Credit purchase, refunds
-- **Community** — Posts, comments, likes
-- **Communication** — Chat, notifications, email
 - **Review** — Ratings, feedback
 - **Admin** — Dashboard, analytics, moderation
 

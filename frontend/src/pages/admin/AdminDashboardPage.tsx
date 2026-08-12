@@ -6,13 +6,9 @@ import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
 import SchoolOutlinedIcon from '@mui/icons-material/SchoolOutlined';
 import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
 import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
-import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
-import TrendingUpOutlinedIcon from '@mui/icons-material/TrendingUpOutlined';
 import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
 import StarOutlinedIcon from '@mui/icons-material/StarOutlined';
 import BoltOutlinedIcon from '@mui/icons-material/BoltOutlined';
-import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
-import FavoriteBorderOutlinedIcon from '@mui/icons-material/FavoriteBorderOutlined';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import HealthAndSafetyOutlinedIcon from '@mui/icons-material/HealthAndSafetyOutlined';
 import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOutlined';
@@ -56,26 +52,19 @@ export const AdminDashboardPage: React.FC = () => {
 
   const kpis = [
     { label: 'Total Users', value: userStats.totalUsers, icon: <PeopleAltOutlinedIcon />, color: '#6D5DF6', delta: growth.userGrowthRate, deltaLabel: `vs previous period · ${formatCompactNumber(userStats.dailyRegistrations)} new today`, sparkline: weeklyRegistration, index: 0 },
-    { label: 'Active Users', value: userStats.activeUsersToday, icon: <BoltOutlinedIcon />, color: '#3B82F6', delta: 4.1, deltaLabel: 'active in the last 24h', sparkline: [42, 48, 45, 56, 52, 61, 58, 66, 71, 68, 75, 79], index: 1 },
-    { label: 'Mentors', value: mentorStats.totalMentors, icon: <SchoolOutlinedIcon />, color: '#14B8A6', delta: growth.mentorGrowthRate, deltaLabel: `${mentorStats.pendingApprovals} awaiting approval`, sparkline: [28, 30, 29, 33, 36, 34, 38, 41, 40, 44, 46, 47], index: 2 },
-    { label: 'Total Sessions', value: sessionStats.totalSessions, icon: <EventAvailableOutlinedIcon />, color: '#F59E0B', delta: growth.sessionGrowthRate, deltaLabel: `${formatCompactNumber(sessionStats.activeSessions)} live right now`, sparkline: [52, 60, 58, 64, 70, 68, 77, 74, 82, 88, 91, 96], index: 3 },
-    { label: 'Monthly Revenue', value: revenueStats.monthlyRevenue, prefix: '$', icon: <PaymentsOutlinedIcon />, color: '#10B981', delta: growth.revenueGrowthRate, deltaLabel: `${formatCurrency(revenueStats.totalRevenue)} all-time`, sparkline: revenuePoints.slice(-12).map((p) => p.value / 1000), index: 4 },
-    { label: 'Wallet Credits', value: 384200, icon: <AccountBalanceWalletOutlinedIcon />, color: '#A855F7', delta: 6.2, deltaLabel: 'credits outstanding across 8.4k wallets', sparkline: [30, 34, 33, 38, 41, 40, 45, 47, 46, 51, 54, 57], index: 5 },
-    { label: 'Communities', value: communityStats.totalCommunities, icon: <ForumOutlinedIcon />, color: '#0EA5E9', delta: 3.4, deltaLabel: `${formatCompactNumber(communityStats.totalPosts)} posts published`, sparkline: [12, 13, 15, 14, 16, 18, 17, 19, 21, 20, 22, 24], index: 6 },
-    { label: 'Reviews', value: reviewStats.totalReviews, icon: <StarOutlinedIcon />, color: '#EC4899', delta: 8.7, deltaLabel: `${reviewStats.pendingReviews} pending moderation`, sparkline: [40, 44, 42, 47, 51, 49, 55, 58, 57, 62, 66, 71], index: 7 },
-  ];
-
-  const growthTiles = [
-    { label: 'Engagement Score', value: '87.4', icon: <FavoriteBorderOutlinedIcon />, color: '#EF4444', delta: '+2.1' },
-    { label: 'Conversion Rate', value: '9.2%', icon: <TrendingUpOutlinedIcon />, color: '#10B981', delta: '+0.4' },
-    { label: 'Live Visitors', value: '1,284', icon: <VisibilityOutlinedIcon />, color: '#3B82F6', delta: '+12%' },
-    { label: 'Avg. Rating', value: engagement.averageRating.toFixed(1), icon: <StarOutlinedIcon />, color: '#F59E0B', delta: '+0.1' },
+    { label: 'Active Users', value: userStats.activeUsersToday, icon: <BoltOutlinedIcon />, color: '#3B82F6', deltaLabel: 'active in the last 24h', index: 1 },
+    { label: 'Mentors', value: mentorStats.totalMentors, icon: <SchoolOutlinedIcon />, color: '#14B8A6', delta: growth.mentorGrowthRate, deltaLabel: `${mentorStats.pendingApprovals} awaiting approval`, index: 2 },
+    { label: 'Total Sessions', value: sessionStats.totalSessions, icon: <EventAvailableOutlinedIcon />, color: '#F59E0B', delta: growth.sessionGrowthRate, deltaLabel: `${formatCompactNumber(sessionStats.activeSessions)} live right now`, index: 3 },
+    { label: 'Monthly Revenue', value: revenueStats.monthlyRevenue, prefix: '₹', icon: <PaymentsOutlinedIcon />, color: '#10B981', delta: growth.revenueGrowthRate, deltaLabel: `${formatCurrency(revenueStats.totalRevenue)} all-time`, sparkline: revenuePoints.slice(-12).map((p) => p.value / 1000), index: 4 },
+    { label: 'Communities', value: communityStats.totalCommunities, icon: <ForumOutlinedIcon />, color: '#0EA5E9', deltaLabel: `${formatCompactNumber(communityStats.totalPosts)} posts published`, index: 5 },
+    { label: 'Reviews', value: reviewStats.totalReviews, icon: <StarOutlinedIcon />, color: '#EC4899', deltaLabel: `${reviewStats.pendingReviews} pending moderation`, index: 6 },
+    { label: 'Avg. Rating', value: engagement.averageRating, decimals: 1, icon: <StarOutlinedIcon />, color: '#F59E0B', deltaLabel: `${formatCompactNumber(engagement.totalReviews)} reviews`, index: 7 },
   ];
 
   const quickActions = [
     { label: 'New announcement', icon: <AddCircleOutlineOutlinedIcon />, path: ROUTES.ADMIN_ANNOUNCEMENTS },
     { label: 'Review mentors', icon: <SchoolOutlinedIcon />, path: ROUTES.ADMIN_MENTORS },
-    { label: 'Moderation queue', icon: <GroupsOutlinedIcon />, path: ROUTES.ADMIN_COMMUNITY },
+    { label: 'Review moderation', icon: <GroupsOutlinedIcon />, path: ROUTES.ADMIN_REVIEWS },
     { label: 'Generate report', icon: <FileDownloadOutlinedIcon />, path: ROUTES.ADMIN_REPORTS },
   ];
 
@@ -119,24 +108,6 @@ export const AdminDashboardPage: React.FC = () => {
         ))}
       </Grid>
 
-      {/* Growth snapshot */}
-      <Grid container spacing={3} sx={{ mt: 1 }}>
-        {growthTiles.map((tile, index) => (
-          <Grid key={tile.label} size={{ xs: 6, sm: 3 }}>
-            <DashboardWidget title={tile.label} icon={tile.icon} index={index}>
-              <Stack direction="row" alignItems="baseline" justifyContent="space-between">
-                <Typography variant="h4" fontWeight={800}>
-                  {tile.value}
-                </Typography>
-                <Typography variant="caption" fontWeight={700} color="success.main">
-                  {tile.delta}
-                </Typography>
-              </Stack>
-            </DashboardWidget>
-          </Grid>
-        ))}
-      </Grid>
-
       {/* Charts row */}
       <Grid container spacing={3} sx={{ mt: 1 }}>
         <Grid size={{ xs: 12, lg: 8 }}>
@@ -157,7 +128,7 @@ export const AdminDashboardPage: React.FC = () => {
               </Stack>
             }
           >
-            <AreaChart data={revenuePoints} height={280} color="#6D5DF6" suffix="$" />
+            <AreaChart data={revenuePoints} height={280} color="#6D5DF6" />
           </ChartCard>
         </Grid>
         <Grid size={{ xs: 12, lg: 4 }}>

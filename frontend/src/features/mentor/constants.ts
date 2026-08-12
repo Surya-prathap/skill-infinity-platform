@@ -29,15 +29,9 @@ export const DAY_SHORT_LABELS: Record<string, string> = {
 
 /* ---------------- Currencies ---------------- */
 
+/** The platform operates in INR (₹) — no multi-currency pricing. */
 export const CURRENCIES: SelectOption[] = [
-  { label: 'USD — US Dollar', value: 'USD' },
-  { label: 'EUR — Euro', value: 'EUR' },
-  { label: 'GBP — British Pound', value: 'GBP' },
-  { label: 'INR — Indian Rupee', value: 'INR' },
-  { label: 'AED — UAE Dirham', value: 'AED' },
-  { label: 'SGD — Singapore Dollar', value: 'SGD' },
-  { label: 'CAD — Canadian Dollar', value: 'CAD' },
-  { label: 'AUD — Australian Dollar', value: 'AUD' },
+  { label: 'INR — Indian Rupee (₹)', value: 'INR' },
 ];
 
 /* ---------------- Session durations ---------------- */

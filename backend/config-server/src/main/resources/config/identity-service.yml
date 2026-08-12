@@ -43,6 +43,7 @@ spring:
           max-active: 16
           max-idle: 8
           min-idle: 4
+          max-wait: 1500ms
 
 app:
   jwt:
@@ -104,8 +105,7 @@ management:
       prometheus:
         enabled: true
   tracing:
-    sampling:
-      probability: ${TRACING_SAMPLE_RATE:0.1}
+    enabled: false
 
 springdoc:
   api-docs:

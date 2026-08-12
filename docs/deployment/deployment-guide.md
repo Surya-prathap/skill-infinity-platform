@@ -109,8 +109,6 @@ scrape_configs:
         - 'session-service:8084'
         - 'wallet-service:8085'
         - 'payment-service:8086'
-        - 'community-service:8087'
-        - 'communication-service:8088'
         - 'review-service:8089'
         - 'admin-service:8090'
 ```

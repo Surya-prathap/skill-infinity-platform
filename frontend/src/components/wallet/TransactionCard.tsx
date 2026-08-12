@@ -35,6 +35,13 @@ interface TransactionCardProps {
 export const TransactionCard: React.FC<TransactionCardProps> = ({ transaction, index = 0 }) => {
   const credit = isCredit(transaction.transactionType);
   const color = credit ? '#10B981' : '#EF4444';
+  // Wallet-service transactions are denominated in credits; payment-service
+  // transactions carry a real currency code (INR).
+  const creditDenominated =
+    !transaction.currency || transaction.currency === 'CREDITS';
+  const amountLabel = creditDenominated
+    ? `${Math.abs(transaction.amount).toLocaleString('en-IN')} credits`
+    : formatCurrency(Math.abs(transaction.amount), transaction.currency);
 
   return (
     <motion.div
@@ -90,7 +97,7 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({ transaction, i
         <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
           <Typography variant="subtitle1" fontWeight={800} sx={{ color }}>
             {credit ? '+' : '−'}
-            {formatCurrency(Math.abs(transaction.amount), transaction.currency ?? 'USD')}
+            {amountLabel}
           </Typography>
           <StatusBadge
             label={transaction.status}

@@ -5,12 +5,15 @@ import com.skillinfinity.common.dto.PageResponse;
 import com.skillinfinity.session.dto.request.AttendanceRequest;
 import com.skillinfinity.session.dto.request.BookingRequest;
 import com.skillinfinity.session.dto.request.CancellationRequest;
+import com.skillinfinity.session.dto.request.CommunitySessionRequest;
 import com.skillinfinity.session.dto.request.RescheduleRequestDto;
 import com.skillinfinity.session.dto.request.SearchRequest;
 import com.skillinfinity.session.dto.request.SessionRequest;
 import com.skillinfinity.session.dto.response.AttendanceResponse;
 import com.skillinfinity.session.dto.response.BookingResponse;
 import com.skillinfinity.session.dto.response.CalendarResponse;
+import com.skillinfinity.session.dto.response.CommunityAllowanceResponse;
+import com.skillinfinity.session.dto.response.CommunityImpactResponse;
 import com.skillinfinity.session.dto.response.MeetingResponse;
 import com.skillinfinity.session.dto.response.SessionResponse;
 import com.skillinfinity.session.service.SessionService;
@@ -79,6 +82,56 @@ public class SessionController {
     @Operation(summary = "Get session by ID", description = "Returns session details for the specified session ID")
     public ResponseEntity<ApiResponse<SessionResponse>> getSessionById(@PathVariable UUID id) {
         SessionResponse response = sessionService.getSessionById(id);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    // ============================================================
+    // Community Sessions
+    // ============================================================
+
+    @PostMapping("/community")
+    @Operation(summary = "Create community session", description = "Mentor schedules a free community mentoring session")
+    public ResponseEntity<ApiResponse<SessionResponse>> createCommunitySession(
+            @RequestHeader("X-User-ID") UUID mentorId,
+            @Valid @RequestBody CommunitySessionRequest request) {
+        log.info("Create community session request from mentor: {}", mentorId);
+        SessionResponse response = sessionService.createCommunitySession(request, mentorId);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Community session scheduled successfully", response));
+    }
+
+    @GetMapping("/community/upcoming")
+    @Operation(summary = "Upcoming community sessions", description = "Lists free community sessions open for joining")
+    public ResponseEntity<ApiResponse<PageResponse<SessionResponse>>> getUpcomingCommunitySessions(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        PageResponse<SessionResponse> response = sessionService.getUpcomingCommunitySessions(page, size);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @PostMapping("/{id}/join")
+    @Operation(summary = "Join community session", description = "Learner joins a free community session (3 per calendar month)")
+    public ResponseEntity<ApiResponse<SessionResponse>> joinCommunitySession(
+            @PathVariable UUID id,
+            @RequestHeader("X-User-ID") UUID userId) {
+        log.info("Join community session request from learner: {}", userId);
+        SessionResponse response = sessionService.joinCommunitySession(id, userId);
+        return ResponseEntity.ok(ApiResponse.success("Joined community session successfully", response));
+    }
+
+    @GetMapping("/community/allowance")
+    @Operation(summary = "Community session allowance", description = "Learner's free community sessions used/remaining this month")
+    public ResponseEntity<ApiResponse<CommunityAllowanceResponse>> getCommunityAllowance(
+            @RequestHeader("X-User-ID") UUID userId) {
+        CommunityAllowanceResponse response = sessionService.getCommunityAllowance(userId);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @GetMapping("/community/impact/{mentorId}")
+    @Operation(summary = "Mentor community impact", description = "Mentor's real community contribution statistics and recognition level")
+    public ResponseEntity<ApiResponse<CommunityImpactResponse>> getMentorCommunityImpact(
+            @PathVariable UUID mentorId) {
+        CommunityImpactResponse response = sessionService.getMentorCommunityImpact(mentorId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 

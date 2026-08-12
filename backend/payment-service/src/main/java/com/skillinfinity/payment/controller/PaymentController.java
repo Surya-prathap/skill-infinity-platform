@@ -9,8 +9,10 @@ import com.skillinfinity.payment.dto.request.PaymentRequest;
 import com.skillinfinity.payment.dto.request.RefundRequest;
 import com.skillinfinity.payment.dto.request.SubscriptionRequest;
 import com.skillinfinity.payment.dto.response.InvoiceResponse;
+import com.skillinfinity.payment.dto.response.MySubscriptionResponse;
 import com.skillinfinity.payment.dto.response.PaymentResponse;
 import com.skillinfinity.payment.dto.response.ReceiptResponse;
+import com.skillinfinity.payment.dto.response.SubscriptionPlanResponse;
 import com.skillinfinity.payment.dto.response.TransactionResponse;
 import com.skillinfinity.payment.service.CouponService;
 import com.skillinfinity.payment.service.PaymentService;
@@ -33,6 +35,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -180,6 +183,21 @@ public class PaymentController {
         PaymentResponse response = subscriptionService.purchaseSubscription(userId, request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Subscription purchased successfully", response));
+    }
+
+    @GetMapping("/subscription/plans")
+    @Operation(summary = "List subscription plans", description = "Returns all active learner/mentor subscription plans")
+    public ResponseEntity<ApiResponse<List<SubscriptionPlanResponse>>> getSubscriptionPlans() {
+        List<SubscriptionPlanResponse> plans = subscriptionService.getActivePlans();
+        return ResponseEntity.ok(ApiResponse.success(plans));
+    }
+
+    @GetMapping("/subscription/mine")
+    @Operation(summary = "My subscription", description = "Returns the authenticated user's current active subscription, if any")
+    public ResponseEntity<ApiResponse<MySubscriptionResponse>> getMySubscription(
+            @RequestHeader("X-User-ID") UUID userId) {
+        MySubscriptionResponse subscription = subscriptionService.getMySubscription(userId);
+        return ResponseEntity.ok(ApiResponse.success(subscription));
     }
 
     @PostMapping("/subscription/{id}/cancel")

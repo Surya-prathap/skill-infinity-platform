@@ -31,9 +31,6 @@
         <module>session-service</module>
         <module>wallet-service</module>
         <module>payment-service</module>
-        <module>community-service</module>
-        <module>communication-service</module>
-        <module>review-service</module>
         <module>admin-service</module>
     </modules>
 

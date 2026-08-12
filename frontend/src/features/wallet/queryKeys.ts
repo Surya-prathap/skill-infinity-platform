@@ -6,4 +6,6 @@ export const walletKeys = {
   statement: (startDate: string, endDate: string) =>
     [...walletKeys.all, 'statement', startDate, endDate] as const,
   statistics: () => [...walletKeys.all, 'statistics'] as const,
+  withdrawals: (page: number, size: number) =>
+    [...walletKeys.all, 'withdrawals', page, size] as const,
 } as const;

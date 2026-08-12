@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Enterprise Meeting Platform is a premium, production-ready video/voice calling experience built into the Skill Infinity platform. It rivals Google Meet, Zoom, and Microsoft Teams with a polished UI, real-time WebRTC integration, and seamless integration with the existing Communication Center and Session Booking modules.
+The Enterprise Meeting Platform is a premium, production-ready video/voice calling experience built into the Skill Infinity platform. It rivals Google Meet, Zoom, and Microsoft Teams with a polished UI, real-time WebRTC integration, and seamless integration with the Session Booking module.
 
 ## Architecture
 
@@ -43,15 +43,9 @@ The meeting state lives in `store/slices/meetingSlice.ts` (Redux) which manages:
 | `peer.ts` | `PeerConnectionManager` — RTCPeerConnection per remote participant, offer/answer/ICE, media control, cleanup |
 | `simulation.ts` | `SimulatedMeetingDriver` — lifelike offline demo: participants join, speak, react, chat, stats tick |
 
-### Socket signaling (`socket/meetingSocket.ts`)
+### Signaling
 
-Connects to the backend communication-service via Socket.IO for:
-
-- `meeting:join` / `meeting:leave` — participant presence
-- `meeting:state` — audio/video/screen/hand state changes
-- `meeting:signal` — WebRTC offer/answer/ICE-candidate exchange
-
-When the backend is unreachable, the platform falls back to the `SimulatedMeetingDriver`.
+The meeting platform runs on the `SimulatedMeetingDriver` (`webrtc/simulation.ts`): participants join, speak, react, chat and produce realistic call stats without a backend. (The former Socket.IO signaling path that depended on the removed communication-service has been deleted.)
 
 ## Key Components
 
@@ -84,10 +78,6 @@ The meeting room supports these visual layouts:
 - **Presentation** — shared screen large + side column (when screen sharing is active)
 
 ## Integration Points
-
-### Communication Center
-
-The `ChatHeader` in the Communication Center now has working voice/video call buttons that navigate to `/meet/:meetingId`, creating an instant meeting.
 
 ### Session Booking
 
@@ -122,11 +112,10 @@ When the backend signaling socket is unavailable:
 Test files:
 - `src/test/meetingSlice.test.ts` — Redux reducer tests (setMeeting, joinMeeting, participantJoined, etc.)
 - `src/test/meetingComponents.test.tsx` — Component tests (controls, tiles, grid, dialogs, waiting room, panels, etc.)
-- `src/test/meetingSocket.test.ts` — Socket emitter tests
 
 Run all meeting tests:
 ```bash
-npx vitest run src/test/meetingSlice.test.ts src/test/meetingComponents.test.tsx src/test/meetingSocket.test.ts
+npx vitest run src/test/meetingSlice.test.ts src/test/meetingComponents.test.tsx
 ```
 
 ## Development Notes

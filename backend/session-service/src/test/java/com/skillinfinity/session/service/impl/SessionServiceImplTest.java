@@ -22,6 +22,7 @@ import com.skillinfinity.session.entity.SessionParticipant;
 import com.skillinfinity.session.entity.SessionReminder;
 import com.skillinfinity.session.enumeration.AttendanceStatus;
 import com.skillinfinity.session.enumeration.BookingStatus;
+import com.skillinfinity.session.client.WalletClient;
 import com.skillinfinity.session.enumeration.SessionStatus;
 import com.skillinfinity.session.event.SessionEventPublisher;
 import com.skillinfinity.session.exception.BookingNotFoundException;
@@ -92,6 +93,8 @@ class SessionServiceImplTest {
     private SessionMapper sessionMapper;
     @Mock
     private SessionEventPublisher eventPublisher;
+    @Mock
+    private WalletClient walletClient;
 
     @Captor
     private ArgumentCaptor<Session> sessionCaptor;
@@ -132,7 +135,7 @@ class SessionServiceImplTest {
                 cancellationRepository, rescheduleRequestRepository, meetingLinkRepository,
                 attendanceRepository, sessionHistoryRepository, sessionReminderRepository,
                 sessionNotesRepository, calendarEventRepository,
-                sessionMapper, eventPublisher
+                sessionMapper, eventPublisher, walletClient
         );
 
         userId = UUID.randomUUID();
@@ -155,7 +158,7 @@ class SessionServiceImplTest {
                 .topic("Testing")
                 .category("Technology")
                 .price(0)
-                .currency("USD")
+                .currency("INR")
                 .free(true)
                 .build();
 
@@ -174,7 +177,7 @@ class SessionServiceImplTest {
                 .status(SessionStatus.SCHEDULED)
                 .topic("Testing")
                 .price(0)
-                .currency("USD")
+                .currency("INR")
                 .free(true)
                 .rescheduleCount(0)
                 .build();
@@ -494,7 +497,7 @@ class SessionServiceImplTest {
         assertNotNull(session.getEndedAt());
         assertNotNull(session.getCompletedAt());
         verify(eventPublisher, times(1)).publishSessionCompleted(
-                any(), any(), any(), any(), any(), any(), any());
+                any(), any(), any(), any(), any(), any(), any(), anyDouble(), anyBoolean());
     }
 
     @Test

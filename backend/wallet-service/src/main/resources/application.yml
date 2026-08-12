@@ -107,3 +107,11 @@ wallet:
   transaction:
     id-prefix: "TXN"
     id-length: 12
+
+app:
+  withdrawal:
+    credit-value-inr: 10
+    platform-fee-percent: 10.0
+    min-credits: 10
+  earning:
+    learning-credit-percent: 50.0

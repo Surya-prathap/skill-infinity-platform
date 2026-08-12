@@ -1,6 +1,19 @@
 server:
   port: ${API_GATEWAY_PORT:8080}
 
+# CORS origins allowed to call the gateway directly (cross-origin browser
+# access). The dockerized frontend proxies /api/v1 same-origin through nginx,
+# but local dev servers (Vite on 5173, etc.) and direct gateway calls need the
+# browser origin listed here or the browser blocks the request with a CORS 403.
+api-gateway:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost,http://127.0.0.1,http://localhost:5173,http://localhost:3000}
+
+app:
+  jwt:
+    # Shared with identity-service — must match the signing key used to mint tokens.
+    secret: ${JWT_SECRET:skill-infinity-dev-secret-change-me-in-production-0123456789}
+
 spring:
   cloud:
     gateway:
@@ -13,12 +26,6 @@ spring:
     redis:
       host: ${REDIS_HOST:redis}
       port: ${REDIS_PORT:6379}
-
-  rabbitmq:
-    host: ${RABBITMQ_HOST:rabbitmq}
-    port: ${RABBITMQ_AMQP_PORT:5672}
-    username: ${RABBITMQ_USER:guest}
-    password: ${RABBITMQ_PASSWORD:guest}
 
 eureka:
   client:
@@ -35,3 +42,13 @@ management:
       probes:
         enabled: true
       show-details: always
+  tracing:
+    enabled: false
+      group:
+        readiness:
+          # Skip the slow discoveryComposite/Eureka remote-status fetch — the
+          # gateway only needs its own readiness + redis to be "ready", and the
+          # compose healthcheck polls this endpoint every 10-15s.
+          include:
+            - readinessState
+            - redis

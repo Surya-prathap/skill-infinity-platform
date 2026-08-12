@@ -31,9 +31,4 @@ public class ExternalEventConsumer {
     public void handleReviewCreatedEvent(Map<String, Object> event) {
         log.info("Received review created event: {}", event.get("eventId"));
     }
-
-    @RabbitListener(queues = "${admin.community.post.created.queue:admin.community.post.created.queue}")
-    public void handleCommunityPostCreatedEvent(Map<String, Object> event) {
-        log.info("Received community post created event: {}", event.get("eventId"));
-    }
 }

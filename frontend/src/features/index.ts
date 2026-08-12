@@ -13,7 +13,7 @@ export * from './marketplace';
 export * from './sessions';
 export * from './wallet';
 export * from './payments';
-export * from './communication';
+export * from './reviews';
 export * from './meeting';
-/* Admin and community hooks are imported from their own feature modules
-   directly to avoid name collisions with other domains. */
+/* Admin hooks are imported from their own feature module directly to avoid
+   name collisions with other domains. */

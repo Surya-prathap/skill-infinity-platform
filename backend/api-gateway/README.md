@@ -25,9 +25,6 @@ Client (Browser/App) → API Gateway (:8080) → Eureka Service Discovery
                               ├── session-service
                               ├── wallet-service
                               ├── payment-service
-                              ├── community-service
-                              ├── communication-service
-                              ├── review-service
                               └── admin-service
 ```
 
@@ -50,7 +47,7 @@ Client (Browser/App) → API Gateway (:8080) → Eureka Service Discovery
 | Spring Cloud Netflix Eureka Client | Service registration and discovery |
 | Spring Boot Actuator | Health checks and monitoring |
 | Spring Boot Validation | Request validation |
-| Common Library | Shared DTOs and utilities |
+| Common Library | **Deliberately NOT a dependency** - it pulls in `spring-boot-starter-web` (servlet/Tomcat), AMQP, tracing etc. that conflict with the reactive gateway stack |
 
 ## Environment Variables
 
@@ -72,9 +69,7 @@ Client (Browser/App) → API Gateway (:8080) → Eureka Service Discovery
 | session-service | lb://session-service | /api/v1/sessions/** |
 | wallet-service | lb://wallet-service | /api/v1/wallet/** |
 | payment-service | lb://payment-service | /api/v1/payments/** |
-| community-service | lb://community-service | /api/v1/community/** |
-| communication-service | lb://communication-service | /api/v1/communication/** |
-| review-service | lb://review-service | /api/v1/reviews/** |
+| session-service | lb://session-service | /api/v1/reviews/** (reviews hosted here) |
 | admin-service | lb://admin-service | /api/v1/admin/** |
 
 ## Running Instructions

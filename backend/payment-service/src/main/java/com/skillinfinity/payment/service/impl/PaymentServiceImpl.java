@@ -93,7 +93,10 @@ public class PaymentServiceImpl implements PaymentService {
             totalAmount = BigDecimal.ZERO;
         }
 
-        BigDecimal credits = totalAmount;
+        // The number of credits is supplied by the credit-pack purchase request
+        // (e.g. 10 credits for ₹109). Fall back to the amount only for legacy
+        // callers that did not specify an explicit credit count.
+        BigDecimal credits = request.getCredits() != null ? request.getCredits() : totalAmount;
 
         PaymentGateway gateway;
         try {

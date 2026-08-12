@@ -4,12 +4,15 @@ import com.skillinfinity.common.dto.PageResponse;
 import com.skillinfinity.session.dto.request.AttendanceRequest;
 import com.skillinfinity.session.dto.request.BookingRequest;
 import com.skillinfinity.session.dto.request.CancellationRequest;
+import com.skillinfinity.session.dto.request.CommunitySessionRequest;
 import com.skillinfinity.session.dto.request.RescheduleRequestDto;
 import com.skillinfinity.session.dto.request.SearchRequest;
 import com.skillinfinity.session.dto.request.SessionRequest;
 import com.skillinfinity.session.dto.response.AttendanceResponse;
 import com.skillinfinity.session.dto.response.BookingResponse;
 import com.skillinfinity.session.dto.response.CalendarResponse;
+import com.skillinfinity.session.dto.response.CommunityAllowanceResponse;
+import com.skillinfinity.session.dto.response.CommunityImpactResponse;
 import com.skillinfinity.session.dto.response.MeetingResponse;
 import com.skillinfinity.session.dto.response.SessionResponse;
 
@@ -67,4 +70,15 @@ public interface SessionService {
     CalendarResponse getCalendar(UUID userId, String startDate, String endDate);
 
     String exportCalendarIcs(UUID userId);
+
+    // Community sessions
+    SessionResponse createCommunitySession(CommunitySessionRequest request, UUID mentorId);
+
+    PageResponse<SessionResponse> getUpcomingCommunitySessions(int page, int size);
+
+    SessionResponse joinCommunitySession(UUID sessionId, UUID userId);
+
+    CommunityAllowanceResponse getCommunityAllowance(UUID userId);
+
+    CommunityImpactResponse getMentorCommunityImpact(UUID mentorId);
 }

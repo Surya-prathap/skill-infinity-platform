@@ -25,7 +25,7 @@ export const InvoicePreview: React.FC<InvoicePreviewProps> = ({
   discount = 0,
   tax = 0,
   total,
-  currency = 'USD',
+  currency = 'INR',
   couponCode,
   lines,
 }) => {

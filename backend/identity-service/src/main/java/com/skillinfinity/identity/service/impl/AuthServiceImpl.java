@@ -1,6 +1,7 @@
 package com.skillinfinity.identity.service.impl;
 
 import com.skillinfinity.common.exception.BadRequestException;
+import com.skillinfinity.common.exception.ConflictException;
 import com.skillinfinity.common.exception.ResourceNotFoundException;
 import com.skillinfinity.identity.dto.request.ChangePasswordRequest;
 import com.skillinfinity.identity.dto.request.LoginRequest;
@@ -49,12 +50,12 @@ public class AuthServiceImpl implements AuthService {
     public AuthResponse register(RegisterRequest request) {
         if (userCredentialRepository.existsByEmail(request.getEmail())) {
             log.warn("Registration failed: email already exists - {}", request.getEmail());
-            throw new BadRequestException("Email already registered: " + request.getEmail());
+            throw new ConflictException("This account is already registered. Please sign in instead.");
         }
 
         if (request.getUsername() != null && userCredentialRepository.existsByUsername(request.getUsername())) {
             log.warn("Registration failed: username already exists - {}", request.getUsername());
-            throw new BadRequestException("Username already taken: " + request.getUsername());
+            throw new ConflictException("This username is already taken. Please sign in instead.");
         }
 
         Role learnerRole = roleRepository.findByName("ROLE_LEARNER")

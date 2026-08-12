@@ -4,6 +4,7 @@ import type {
   ApiResponse,
   CouponValidationRequest,
   Invoice,
+  MySubscription,
   PageResponse,
   Payment,
   PaymentConfirmationRequest,
@@ -11,6 +12,7 @@ import type {
   PaymentInitRequest,
   Receipt,
   RefundRequest,
+  SubscriptionPlan,
 } from '@/types';
 
 const resolve = (template: string, params: Record<string, string>): string =>
@@ -57,6 +59,19 @@ export const paymentService = {
   getReceipt: (receiptId: string) =>
     apiClient.get<ApiResponse<Receipt>>(
       resolve(API_ENDPOINTS.PAYMENTS.RECEIPT, { receiptId }),
+    ),
+
+  /* ---------------- Subscriptions ---------------- */
+
+  getSubscriptionPlans: () =>
+    apiClient.get<ApiResponse<SubscriptionPlan[]>>(API_ENDPOINTS.PAYMENTS.SUBSCRIPTION_PLANS),
+
+  getMySubscription: () =>
+    apiClient.get<ApiResponse<MySubscription | null>>(API_ENDPOINTS.PAYMENTS.SUBSCRIPTION_MINE),
+
+  cancelSubscription: (subscriptionId: string) =>
+    apiClient.post<ApiResponse<null>>(
+      resolve(API_ENDPOINTS.PAYMENTS.SUBSCRIPTION_CANCEL, { subscriptionId }),
     ),
 };
 

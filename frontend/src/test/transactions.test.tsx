@@ -9,12 +9,12 @@ describe('TransactionHistoryPage', () => {
     window.localStorage.clear();
   });
 
-  it('renders the transaction timeline with wallet rows', async () => {
+  it('renders the transaction timeline with an honest empty state', async () => {
     renderWithProviders(<TransactionHistoryPage />);
 
     expect(await screen.findByText('Wallet transactions')).toBeInTheDocument();
-    expect(screen.getByText('Credit top-up — Pro Pack')).toBeInTheDocument();
-    expect(screen.getByText('Session with Alex Rivera')).toBeInTheDocument();
+    // No fabricated transaction rows — the page shows a real empty state.
+    expect(await screen.findByText('No transactions found')).toBeInTheDocument();
   });
 
   it('switches to the payments tab', async () => {
@@ -22,16 +22,16 @@ describe('TransactionHistoryPage', () => {
 
     fireEvent.click(await screen.findByText('Payments'));
 
-    expect(await screen.findByText('Credit top-up — Pro Pack')).toBeInTheDocument();
+    expect(await screen.findByText('No transactions found')).toBeInTheDocument();
   });
 
-  it('filters transactions by search term', async () => {
+  it('keeps the search box and filter available', async () => {
     renderWithProviders(<TransactionHistoryPage />);
 
     const search = await screen.findByPlaceholderText('Search transactions…');
     fireEvent.change(search, { target: { value: 'Alex' } });
 
-    expect(screen.getByText('Session with Alex Rivera')).toBeInTheDocument();
-    expect(screen.queryByText('Credit top-up — Pro Pack')).not.toBeInTheDocument();
+    expect(search).toHaveValue('Alex');
+    expect(await screen.findByText('No transactions found')).toBeInTheDocument();
   });
 });

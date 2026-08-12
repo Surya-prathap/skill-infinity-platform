@@ -76,8 +76,8 @@ const createAppThemeOptions = (mode: 'light' | 'dark'): ThemeOptions => {
       background,
       text: {
         primary: isDark ? '#E6E9F2' : '#0F172A',
-        secondary: isDark ? '#9AA3B8' : '#55627A',
-        disabled: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(15,23,42,0.38)',
+        secondary: isDark ? '#A8B1C6' : '#55627A',
+        disabled: isDark ? 'rgba(255,255,255,0.38)' : 'rgba(15,23,42,0.42)',
       },
       divider,
       action: {
@@ -169,6 +169,17 @@ const createAppThemeOptions = (mode: 'light' | 'dark'): ThemeOptions => {
             '&:hover': { backgroundColor: alpha(primary.main, isDark ? 0.12 : 0.08) },
           },
         },
+        // Keep the primary outline clearly visible in both themes so
+        // secondary actions never blend into the background.
+        variants: [
+          {
+            props: { variant: 'outlined', color: 'primary' },
+            style: {
+              borderColor: isDark ? 'rgba(142,128,255,0.65)' : 'rgba(109,93,246,0.55)',
+              '&:hover': { borderColor: 'currentColor' },
+            },
+          },
+        ],
       },
       MuiIconButton: {
         styleOverrides: {

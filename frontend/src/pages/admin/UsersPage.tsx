@@ -118,7 +118,7 @@ export const UsersPage: React.FC = () => {
     },
     { id: 'sessionsCompleted', label: 'Sessions', align: 'center', sortable: true, sortValue: (row) => row.sessionsCompleted },
     { id: 'totalSpend', label: 'Spend', align: 'right', sortable: true, sortValue: (row) => row.totalSpend, render: (row) => <Typography variant="body2" fontWeight={700}>{formatCurrency(row.totalSpend)}</Typography> },
-    { id: 'walletBalance', label: 'Wallet', align: 'right', sortable: true, sortValue: (row) => row.walletBalance, render: (row) => <Typography variant="body2">{formatCurrency(row.walletBalance)}</Typography> },
+    { id: 'walletBalance', label: 'Wallet', align: 'right', sortable: true, sortValue: (row) => row.walletBalance, render: (row) => <Typography variant="body2">{row.walletBalance.toLocaleString('en-IN')} credits</Typography> },
     { id: 'joinedAt', label: 'Joined', sortable: true, sortValue: (row) => row.joinedAt, render: (row) => <Typography variant="caption" color="text.secondary">{formatRelativeTime(row.joinedAt)}</Typography> },
     {
       id: 'actions',

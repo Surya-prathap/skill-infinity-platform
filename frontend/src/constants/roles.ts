@@ -1,4 +1,5 @@
 import type { Role } from '@/types';
+import { ROUTES } from './routes';
 
 /**
  * Role constants — match the identity-service SecurityConstants (ROLE_ prefix).
@@ -21,4 +22,15 @@ export const ROLE_LABELS: Record<Role, string> = {
 export const hasRole = (roles: Role[] | undefined, required: Role[]): boolean => {
   if (!roles || roles.length === 0) return false;
   return required.some((role) => roles.includes(role));
+};
+
+/**
+ * The landing route a signed-in user should be sent to after login, based on
+ * their roles: admins go to the admin console, mentors to the mentor studio,
+ * everyone else to the learner dashboard.
+ */
+export const getHomeRoute = (roles: readonly Role[] | undefined): string => {
+  if (roles?.includes(ROLES.ADMIN)) return ROUTES.ADMIN;
+  if (roles?.includes(ROLES.MENTOR)) return ROUTES.MENTOR_DASHBOARD;
+  return ROUTES.DASHBOARD;
 };

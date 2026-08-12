@@ -199,8 +199,11 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
       <Box sx={{ p: mini ? 1 : 1.5, display: 'flex', alignItems: 'center', gap: 1.25 }}>
         {mini ? (
           <Tooltip title={`${displayName} — Sign out`} placement="right">
-            <IconButton onClick={handleLogout} sx={{ mx: 'auto' }}>
-              <LogoutIcon fontSize="small" color="action" />
+            <IconButton
+              onClick={handleLogout}
+              sx={{ mx: 'auto', color: 'text.secondary', '&:hover': { color: 'error.main' } }}
+            >
+              <LogoutIcon fontSize="small" />
             </IconButton>
           </Tooltip>
         ) : (

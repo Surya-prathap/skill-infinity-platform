@@ -11,6 +11,8 @@ import type {
   WalletBalance,
   WalletStatistics,
   WalletTransaction,
+  Withdrawal,
+  WithdrawalRequest,
 } from '@/types';
 import { walletKeys } from './queryKeys';
 
@@ -163,6 +165,83 @@ export const useConfirmPaymentMutation = () => {
       paymentService.confirmPayment(payload).then((response) => response.data.data),
     onSuccess: () => {
       showSuccess('Payment completed successfully.');
+      void queryClient.invalidateQueries({ queryKey: walletKeys.all });
+    },
+    onError: (error) => showError(getErrorMessage(error)),
+  });
+};
+
+/* ============================================================
+   Withdrawals — convert withdrawable credits into INR
+   ============================================================ */
+
+/** The authenticated user's withdrawal requests. */
+export const useWithdrawalsQuery = (page = 0, size = 20) => {
+  const query = useQuery({
+    queryKey: walletKeys.withdrawals(page, size),
+    queryFn: async () => {
+      const response = await walletService.getWithdrawals(page, size);
+      return response.data.data;
+    },
+    retry: 1,
+  });
+
+  const data = (query.data ?? emptyPage(page, size)) as PageResponse<Withdrawal>;
+  return { ...query, data, isOffline: query.isError };
+};
+
+/** Request a withdrawal of withdrawable credits (1 credit = ₹10, 10% fee). */
+export const useRequestWithdrawalMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: WithdrawalRequest): Promise<Withdrawal> =>
+      walletService.requestWithdrawal(payload).then((response) => response.data.data),
+    onSuccess: () => {
+      showSuccess('Withdrawal requested — pending admin review.');
+      void queryClient.invalidateQueries({ queryKey: walletKeys.all });
+    },
+    onError: (error) => showError(getErrorMessage(error)),
+  });
+};
+
+/* ============================================================
+   Admin withdrawal review (wallet-service admin endpoints)
+   ============================================================ */
+
+export const useAdminWithdrawalsQuery = (page = 0, size = 50) => {
+  const query = useQuery({
+    queryKey: [...walletKeys.all, 'admin', 'withdrawals', page, size],
+    queryFn: async () => {
+      const response = await walletService.adminGetWithdrawals(page, size);
+      return response.data.data;
+    },
+    retry: 1,
+  });
+
+  const data = (query.data ?? emptyPage(page, size)) as PageResponse<Withdrawal>;
+  return { ...query, data, isOffline: query.isError };
+};
+
+export const useApproveWithdrawalMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (withdrawalId: string): Promise<Withdrawal> =>
+      walletService.adminApproveWithdrawal(withdrawalId).then((response) => response.data.data),
+    onSuccess: () => {
+      showSuccess('Withdrawal approved.');
+      void queryClient.invalidateQueries({ queryKey: walletKeys.all });
+    },
+    onError: (error) => showError(getErrorMessage(error)),
+  });
+};
+
+export const useRejectWithdrawalMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ withdrawalId, reason }: { withdrawalId: string; reason: string }): Promise<Withdrawal> =>
+      walletService.adminRejectWithdrawal(withdrawalId, reason).then((response) => response.data.data),
+    onSuccess: () => {
+      showSuccess('Withdrawal rejected — credits returned to the mentor.');
       void queryClient.invalidateQueries({ queryKey: walletKeys.all });
     },
     onError: (error) => showError(getErrorMessage(error)),

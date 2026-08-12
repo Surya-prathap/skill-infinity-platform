@@ -64,13 +64,22 @@ export const useMeetingMedia = (): UseMeetingMediaResult => {
       streamRef.current = result.stream;
       setLocalStream(result.stream);
       dispatch(setMeetingError(null));
+      // Apply the current toggle state to the freshly acquired tracks so a
+      // muted join (or a camera/mic switched off before joining) actually
+      // stops capturing — no hidden camera LED or live mic while muted.
+      result.stream.getAudioTracks().forEach((track) => {
+        track.enabled = controls.micOn;
+      });
+      result.stream.getVideoTracks().forEach((track) => {
+        track.enabled = controls.camOn;
+      });
       applyLevels();
       // Live audio level meter for the premium speaking indicator.
       meterRef.current?.stop();
       meterRef.current = new AudioLevelMeter(result.stream, setAudioLevel);
       meterRef.current.start();
     }
-  }, [devices.audioInput, devices.videoInput, dispatch, applyLevels]);
+  }, [devices.audioInput, devices.videoInput, controls.micOn, controls.camOn, dispatch, applyLevels]);
 
   const stopMedia = useCallback(() => {
     meterRef.current?.stop();

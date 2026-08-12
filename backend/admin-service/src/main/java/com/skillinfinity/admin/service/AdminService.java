@@ -30,8 +30,11 @@ public interface AdminService {
     void assignRole(UUID userId, String role);
 
     // Mentor Management
-    void approveMentor(UUID mentorId);
-    void rejectMentor(UUID mentorId, String reason);
+    // Approval decisions are forwarded to the mentor-service (PUT /mentors/{id}/verify),
+    // which owns mentor status and publishes the ROLE_MENTOR grant event. The adminId is
+    // recorded by mentor-service as the reviewer.
+    void approveMentor(UUID mentorId, UUID adminId);
+    void rejectMentor(UUID mentorId, String reason, UUID adminId);
     void suspendMentor(UUID mentorId);
 
     // Session Management

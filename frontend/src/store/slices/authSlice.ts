@@ -18,7 +18,7 @@ const initialState: AuthState = {
   user: null,
   status: 'idle',
   error: null,
-  rememberMe: true,
+  rememberMe: false,
 };
 
 const toUser = (payload: AuthResponse): AuthUser => ({
@@ -140,8 +140,16 @@ const authSlice = createSlice({
         state.status = 'loading';
         state.error = null;
       })
-      .addCase(register.fulfilled, (state, action) => {
-        applyAuth(state, action.payload);
+      .addCase(register.fulfilled, (state) => {
+        // Registration creates the account but does NOT sign the user in —
+        // they must log in explicitly with their new credentials. The backend
+        // returns tokens for a smooth future, but they are deliberately
+        // discarded here so no session is established on register.
+        state.accessToken = null;
+        state.refreshToken = null;
+        state.user = null;
+        state.status = 'unauthenticated';
+        state.error = null;
       })
       .addCase(register.rejected, (state, action) => {
         state.status = 'unauthenticated';

@@ -1,11 +1,10 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { setConnectionStatus, setMeetingError } from '@/store/slices/meetingSlice';
-import { selectMeetingStatus, selectMeeting } from '@/store/selectors';
+import { setMeetingError } from '@/store/slices/meetingSlice';
+import { selectMeetingStatus, selectMeeting, selectUser } from '@/store/selectors';
 import { useJoinMeeting, useResolveMeeting } from '@/features/meeting';
-import { connectMeetingSocket, disconnectMeetingSocket, isMeetingSocketLive } from '@/socket/meetingSocket';
 import { WaitingRoom, MeetingRoom } from '@/components/meeting';
 import type { Meeting } from '@/types';
 
@@ -17,6 +16,7 @@ export const MeetingPage = () => {
   const { meeting, isOffline } = useResolveMeeting(meetingId ?? null);
   const status = useAppSelector(selectMeetingStatus);
   const storeMeeting = useAppSelector(selectMeeting);
+  const currentUser = useAppSelector(selectUser);
   const { join, leave } = useJoinMeeting();
 
   const effectiveMeeting: Meeting | null = storeMeeting ?? meeting ?? null;
@@ -24,31 +24,23 @@ export const MeetingPage = () => {
   /* ---------------- Join flow ---------------- */
   const handleJoin = useCallback(
     (mutedJoin: boolean) => {
-      if (!meeting) return;
+      // Use the effective meeting (store copy from the meetings hub, or the
+      // resolved API meeting). The query result alone can still be loading
+      // while the waiting room is already visible, which used to make the
+      // "Join now" button silently do nothing.
+      if (!effectiveMeeting) return;
       dispatch(setMeetingError(null));
 
-      // Connect the real signaling path when the socket is live.
-      const live = isMeetingSocketLive();
-      if (live) {
-        connectMeetingSocket(dispatch, meeting.id);
-        dispatch(setConnectionStatus('connected'));
-      }
-
-      join(meeting, { mutedJoin, role: meeting.hostId === 'user-me' ? 'HOST' : 'LEARNER' });
+      // The meeting platform runs on the simulated signaling driver
+      // (webrtc/simulation.ts) — the communication-service socket layer was
+      // removed from the platform.
+      const isHost = effectiveMeeting.hostId === 'user-me' || currentUser?.userId === effectiveMeeting.hostId;
+      join(effectiveMeeting, { mutedJoin, role: isHost ? 'HOST' : 'LEARNER' });
     },
-    [meeting, dispatch, join],
-  );
-
-  /* ---------------- Cleanup ---------------- */
-  useEffect(
-    () => () => {
-      disconnectMeetingSocket();
-    },
-    [],
+    [effectiveMeeting, dispatch, join, currentUser],
   );
 
   const handleEnded = useCallback(() => {
-    disconnectMeetingSocket();
     leave();
   }, [leave]);
 

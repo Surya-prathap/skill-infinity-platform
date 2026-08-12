@@ -1,16 +1,29 @@
 import { useState } from 'react';
 import { Box, Container } from '@mui/material';
-import { Outlet } from 'react-router-dom';
-import { DashboardHeader, DashboardSidebar } from '@/components/common';
-import { DASHBOARD_NAV } from '@/constants/navigation';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { DashboardHeader, DashboardSidebar, RoleSync } from '@/components/common';
+import { getDashboardNav } from '@/constants/navigation';
+import { ROLES, ROUTES } from '@/constants';
+import { useAppSelector } from '@/store/hooks';
+import { selectUserRoles } from '@/store/selectors';
 
 export const DashboardLayout: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const location = useLocation();
+  const roles = useAppSelector(selectUserRoles);
+
+  // Mentors have a completely separate dashboard — never land on the learner
+  // dashboard even when /dashboard is opened directly.
+  if (roles.includes(ROLES.MENTOR) && location.pathname === ROUTES.DASHBOARD) {
+    return <Navigate to={ROUTES.MENTOR_DASHBOARD} replace />;
+  }
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
+      {/* Watches for role changes (e.g. learner → mentor) and redirects to the matching dashboard. */}
+      <RoleSync />
       <DashboardSidebar
-        items={DASHBOARD_NAV}
+        items={getDashboardNav(roles)}
         open={mobileOpen}
         onClose={() => setMobileOpen(false)}
       />

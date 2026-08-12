@@ -10,7 +10,7 @@ import { Typography } from '@/components/ui/Typography';
 import { Stack } from '@/components/ui/Stack';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Avatar } from '@/components/ui/Avatar';
-import { formatCurrency, formatDateTime } from '@/utils';
+import { formatDateTime } from '@/utils';
 import { ROUTES } from '@/constants';
 import type { Session } from '@/types';
 
@@ -39,6 +39,15 @@ export const SessionCard: React.FC<SessionCardProps> = ({ session, index = 0 }) 
   const [mentorFirst, mentorLast] = (session.mentorName ?? 'Mentor').split(' ');
 
   const open = () => navigate(ROUTES.SESSION_DETAILS.replace(':sessionId', session.id));
+
+  /**
+   * Session meetings always run in the app's meeting room (/meet/{sessionId}) —
+   * the room resolves the session and its meeting link. Legacy external join
+   * URLs in the database are ignored so joining never opens a dead link.
+   */
+  const openJoin = () => {
+    navigate(`/meet/${session.id}`);
+  };
 
   return (
     <motion.div
@@ -109,7 +118,7 @@ export const SessionCard: React.FC<SessionCardProps> = ({ session, index = 0 }) 
               {session.durationMinutes} min
             </Typography>
           </Stack>
-          {session.meetingLink?.active && (
+          {isUpcoming && (
             <Stack direction="row" alignItems="center" gap={0.5} sx={{ color: 'success.main' }}>
               <VideoCallOutlinedIcon sx={{ fontSize: 15 }} />
               <Typography variant="caption" fontWeight={600}>
@@ -131,12 +140,12 @@ export const SessionCard: React.FC<SessionCardProps> = ({ session, index = 0 }) 
           <Button fullWidth variant="contained" size="small" onClick={open}>
             {isUpcoming ? 'View details' : 'View summary'}
           </Button>
-          {isUpcoming && session.meetingLink?.active && (
+          {isUpcoming && (
             <Button
               fullWidth
               variant="outlined"
               size="small"
-              onClick={() => window.open(session.meetingLink?.joinUrl, '_blank')}
+              onClick={openJoin}
               startIcon={<VideoCallOutlinedIcon />}
             >
               Join
@@ -146,7 +155,7 @@ export const SessionCard: React.FC<SessionCardProps> = ({ session, index = 0 }) 
 
         {session.price !== undefined && session.price > 0 && (
           <Typography variant="caption" color="text.secondary" sx={{ mt: 1.5 }}>
-            {formatCurrency(session.price)}
+            {session.price} credits
           </Typography>
         )}
       </Card>

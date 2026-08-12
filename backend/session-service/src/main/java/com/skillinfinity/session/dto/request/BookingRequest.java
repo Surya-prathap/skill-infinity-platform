@@ -54,6 +54,9 @@ public class BookingRequest {
     @Schema(description = "Session duration in minutes", example = "60")
     private int durationMinutes;
 
+    @Schema(description = "Session cost in credits (1 credit = 10 minutes)", example = "6")
+    private double credits;
+
     @Schema(description = "Timezone", example = "America/New_York")
     private String timezone;
 

@@ -281,55 +281,6 @@ export interface WalletStats {
 }
 
 /* ============================================================
-   Community moderation
-   ============================================================ */
-
-export interface ModerationQueueItem {
-  id: string;
-  targetType: 'POST' | 'COMMENT' | 'REVIEW' | 'COMMUNITY' | 'POLL';
-  content: string;
-  author: string;
-  reason: string;
-  status: 'PENDING' | 'RESOLVED' | 'DISMISSED';
-  reportedAt: string;
-  reports: number;
-  risk: 'LOW' | 'MEDIUM' | 'HIGH';
-}
-
-export interface AdminCommunityPost {
-  id: string;
-  title: string;
-  community: string;
-  author: string;
-  status: 'PUBLISHED' | 'PINNED' | 'HIDDEN' | 'REPORTED';
-  likes: number;
-  comments: number;
-  shares: number;
-  createdAt: string;
-}
-
-export interface AdminCommunity {
-  id: string;
-  name: string;
-  category: string;
-  members: number;
-  posts: number;
-  moderators: number;
-  status: 'ACTIVE' | 'RESTRICTED' | 'ARCHIVED';
-  createdAt: string;
-}
-
-export interface AdminPoll {
-  id: string;
-  question: string;
-  community: string;
-  votes: number;
-  options: number;
-  status: 'OPEN' | 'CLOSED';
-  endsAt: string;
-}
-
-/* ============================================================
    Review moderation
    ============================================================ */
 
@@ -559,7 +510,6 @@ export type ReportType =
   | 'USERS'
   | 'MENTORS'
   | 'SESSIONS'
-  | 'COMMUNITY'
   | 'REVIEWS'
   | 'WALLET'
   | 'SUPPORT';

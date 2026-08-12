@@ -17,7 +17,11 @@ COPY --from=builder /workspace/discovery-server/target/discovery-server-1.0.0-SN
 RUN mkdir -p /app/logs && chown -R skillinfinity:skillinfinity /app/logs
 
 ENV JAVA_OPTS="-XX:+UseG1GC \
-    -XX:MaxRAMPercentage=50.0 \
+    -XX:MaxRAMPercentage=40.0 \
+    -XX:MaxMetaspaceSize=192m \
+    -XX:ReservedCodeCacheSize=48m \
+    -XX:MaxDirectMemorySize=32m \
+    -Xss512k \
     -XX:+HeapDumpOnOutOfMemoryError \
     -XX:HeapDumpPath=/tmp/heapdump.hprof \
     -Djava.security.egd=file:/dev/./urandom \

@@ -72,6 +72,15 @@ public class Session {
     @Column(name = "is_free", nullable = false)
     private boolean free;
 
+    /**
+     * True for free community mentoring sessions (spec: 3 per learner per
+     * month). Community sessions cost 0 credits and contribute to the
+     * mentor's community recognition rather than the credit economy.
+     */
+    @Column(name = "is_community", nullable = false)
+    @Builder.Default
+    private boolean community = false;
+
     @Column(name = "recording_url", length = 500)
     private String recordingUrl;
 

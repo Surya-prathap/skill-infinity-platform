@@ -10,7 +10,6 @@ export const adminKeys = {
   payments: () => [...adminKeys.all, 'payments'] as const,
   refunds: () => [...adminKeys.all, 'refunds'] as const,
   wallet: () => [...adminKeys.all, 'wallet'] as const,
-  community: () => [...adminKeys.all, 'community'] as const,
   reviews: () => [...adminKeys.all, 'reviews'] as const,
   support: (status?: string) => [...adminKeys.all, 'support', status ?? 'all'] as const,
   ticket: (ticketId: string) => [...adminKeys.all, 'ticket', ticketId] as const,

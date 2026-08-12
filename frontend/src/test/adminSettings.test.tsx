@@ -1,8 +1,56 @@
-import { describe, expect, it, afterEach } from 'vitest';
+import { describe, expect, it, afterEach, vi } from 'vitest';
 import { cleanup, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SettingsPage } from '@/pages/admin/SettingsPage';
 import { renderWithProviders } from './testUtils';
+
+const SETTINGS = [
+  {
+    settingKey: 'platform.name',
+    settingValue: 'Skill Infinity',
+    dataType: 'STRING',
+    category: 'platform',
+    description: 'Platform display name',
+    encrypted: false,
+  },
+  {
+    settingKey: 'platform.maintenance_mode',
+    settingValue: 'false',
+    dataType: 'BOOLEAN',
+    category: 'platform',
+    description: 'Enable maintenance mode',
+    encrypted: false,
+  },
+  {
+    settingKey: 'auth.jwt_expiry_minutes',
+    settingValue: '15',
+    dataType: 'NUMBER',
+    category: 'authentication',
+    description: 'JWT access token lifetime',
+    encrypted: false,
+  },
+  {
+    settingKey: 'auth.max_login_attempts',
+    settingValue: '5',
+    dataType: 'NUMBER',
+    category: 'authentication',
+    description: 'Maximum login attempts',
+    encrypted: false,
+  },
+  {
+    settingKey: 'registration.email_verification_required',
+    settingValue: 'true',
+    dataType: 'BOOLEAN',
+    category: 'registration',
+    description: 'Require email verification on signup',
+    encrypted: false,
+  },
+];
+
+vi.mock('@/features/admin', () => ({
+  useAdminSettingsQuery: () => ({ settings: SETTINGS, isLoading: false, isError: false }),
+  useUpdateSettingMutation: () => ({ mutate: vi.fn(), isPending: false }),
+}));
 
 describe('SettingsPage', () => {
   afterEach(() => {
@@ -15,10 +63,9 @@ describe('SettingsPage', () => {
 
     expect(await screen.findByText('Platform Settings')).toBeInTheDocument();
     expect(screen.getByText('Live')).toBeInTheDocument();
-    // 'Authentication' is both the first category tab and the active panel heading.
+    // 'Authentication' is both a category tab and the active panel heading.
     expect(screen.getAllByText('Authentication').length).toBeGreaterThan(0);
-    expect(screen.getByRole('tab', { name: /Payments/i })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: /Community/i })).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: /Payments/i })).not.toBeInTheDocument();
   });
 
   it('shows configuration keys for the active category', async () => {

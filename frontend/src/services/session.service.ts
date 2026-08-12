@@ -6,6 +6,9 @@ import type {
   BookingResponse,
   CalendarData,
   CancellationRequest,
+  CommunityAllowance,
+  CommunityImpact,
+  CommunitySessionRequest,
   MeetingInfo,
   PageResponse,
   RescheduleRequest,
@@ -95,6 +98,29 @@ export const sessionService = {
   getMeetingLink: (sessionId: string) =>
     apiClient.get<ApiResponse<MeetingInfo>>(
       resolve(API_ENDPOINTS.SESSIONS.MEETING, { sessionId }),
+    ),
+
+  /* ---------------- Community sessions ---------------- */
+
+  createCommunitySession: (payload: CommunitySessionRequest) =>
+    apiClient.post<ApiResponse<Session>>(API_ENDPOINTS.SESSIONS.COMMUNITY, payload),
+
+  getUpcomingCommunitySessions: (page = 0, size = 20) =>
+    apiClient.get<ApiResponse<PageResponse<Session>>>(
+      `${API_ENDPOINTS.SESSIONS.COMMUNITY_UPCOMING}?page=${page}&size=${size}`,
+    ),
+
+  joinCommunitySession: (sessionId: string) =>
+    apiClient.post<ApiResponse<Session>>(
+      resolve(API_ENDPOINTS.SESSIONS.COMMUNITY_JOIN, { sessionId }),
+    ),
+
+  getCommunityAllowance: () =>
+    apiClient.get<ApiResponse<CommunityAllowance>>(API_ENDPOINTS.SESSIONS.COMMUNITY_ALLOWANCE),
+
+  getMentorCommunityImpact: (mentorId: string) =>
+    apiClient.get<ApiResponse<CommunityImpact>>(
+      resolve(API_ENDPOINTS.SESSIONS.COMMUNITY_IMPACT, { mentorId }),
     ),
 };
 

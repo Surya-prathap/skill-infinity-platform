@@ -129,7 +129,7 @@ export const useRecentSearches = () => {
 export const useContactMentor = () =>
   useMutation({
     mutationFn: async ({ mentorId, message }: { mentorId: string; message: string }) => {
-      // Reserved for the communication-service chat API.
+      // Reserved for a future direct-messaging API.
       void mentorId;
       void message;
       throw new Error('Direct messaging is not available yet.');

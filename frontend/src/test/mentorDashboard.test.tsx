@@ -19,7 +19,7 @@ describe('MentorDashboardPage', () => {
   it('renders the analytics metric cards', async () => {
     renderWithProviders(<MentorDashboardPage />);
 
-    expect(await screen.findByText('Monthly Earnings')).toBeInTheDocument();
+    expect(await screen.findByText('Total Earnings')).toBeInTheDocument();
     expect(await screen.findByText('Sessions Completed')).toBeInTheDocument();
     expect(await screen.findByText('Average Rating')).toBeInTheDocument();
     expect(await screen.findByText('Active Students')).toBeInTheDocument();
@@ -28,7 +28,7 @@ describe('MentorDashboardPage', () => {
   it('renders charts, sessions, wallet and communication widgets', async () => {
     renderWithProviders(<MentorDashboardPage />);
 
-    expect(await screen.findByText('Monthly Revenue')).toBeInTheDocument();
+    expect(await screen.findByText('Earnings Trend')).toBeInTheDocument();
     expect(await screen.findByText('Session Mix')).toBeInTheDocument();
     expect(await screen.findByText("Today's Sessions")).toBeInTheDocument();
     expect(await screen.findByText('Upcoming Sessions')).toBeInTheDocument();
@@ -36,8 +36,6 @@ describe('MentorDashboardPage', () => {
     expect(await screen.findByText('Weekly Activity')).toBeInTheDocument();
     expect(await screen.findByText('Recent Reviews')).toBeInTheDocument();
     expect(await screen.findByText('Recent Activity')).toBeInTheDocument();
-    expect(await screen.findByText('Messages')).toBeInTheDocument();
-    expect(await screen.findByText('Notifications')).toBeInTheDocument();
     expect(await screen.findByText('Quick Actions')).toBeInTheDocument();
   });
 

@@ -4,7 +4,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import MenuIcon from '@mui/icons-material/Menu';
 import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
 import { AdminSidebar, AdminCommandPalette } from '@/components/admin';
-import { Breadcrumbs, PageTransition, ThemeToggle, NotificationBell, ProfileMenu } from '@/components/common';
+import { Breadcrumbs, PageTransition, ThemeToggle, ProfileMenu } from '@/components/common';
 import { Typography } from '@/components/ui/Typography';
 import { useAppSelector } from '@/store/hooks';
 import { selectAdminEnvironment } from '@/store/selectors';
@@ -150,7 +150,6 @@ export const AdminLayout: React.FC = () => {
             </Tooltip>
 
             <ThemeToggle />
-            <NotificationBell />
             <ProfileMenu />
           </Toolbar>
         </AppBar>

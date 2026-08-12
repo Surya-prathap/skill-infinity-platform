@@ -56,6 +56,15 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
+        <!--
+          RabbitMQ — consumes domain events from other services. In particular
+          the mentor-service `mentor.verified` event, which is how a user gains
+          the ROLE_MENTOR role ONLY after an admin approves their application.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-amqp</artifactId>
+        </dependency>
 
         <!-- Spring Cloud -->
         <dependency>

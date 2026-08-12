@@ -24,6 +24,12 @@ spring:
       host: ${REDIS_HOST:redis}
       port: ${REDIS_PORT:6379}
       timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 4
+          min-idle: 2
+          max-wait: 1500ms
 
   rabbitmq:
     host: ${RABBITMQ_HOST:rabbitmq}
@@ -51,6 +57,8 @@ management:
   info:
     env:
       enabled: true
+  tracing:
+    enabled: false
 
 springdoc:
   api-docs:

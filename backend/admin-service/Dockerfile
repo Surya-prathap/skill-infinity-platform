@@ -13,7 +13,11 @@ WORKDIR /app
 COPY --from=builder /workspace/admin-service/target/admin-service-1.0.0-SNAPSHOT.jar /app/app.jar
 
 ENV JAVA_OPTS="-XX:+UseG1GC \
-    -XX:MaxRAMPercentage=50.0 \
+    -XX:MaxRAMPercentage=40.0 \
+    -XX:MaxMetaspaceSize=192m \
+    -XX:ReservedCodeCacheSize=48m \
+    -XX:MaxDirectMemorySize=32m \
+    -Xss512k \
     -XX:+HeapDumpOnOutOfMemoryError \
     -XX:HeapDumpPath=/tmp/heapdump.hprof \
     -Djava.security.egd=file:/dev/./urandom \

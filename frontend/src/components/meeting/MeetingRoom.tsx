@@ -25,6 +25,7 @@ import {
   selectMeetingUnreadChat,
 } from '@/store/selectors';
 import { useMeetingMedia } from './useMeetingMedia';
+import { SimulatedMeetingDriver } from '@/webrtc';
 import { MeetingHeader } from './MeetingHeader';
 import { MeetingControls } from './MeetingControls';
 import { ParticipantGrid } from './ParticipantGrid';
@@ -75,6 +76,17 @@ export const MeetingRoom = ({ onEnded }: MeetingRoomProps) => {
   useEffect(() => {
     void startMedia();
   }, [startMedia]);
+
+  /* Live simulated signaling: fills the room with participants, chat,
+     reactions and realistic call stats while the platform runs without a
+     WebRTC signaling backend. Stopped automatically on leave/end. */
+  useEffect(() => {
+    if (!meeting?.id) return;
+    const driver = new SimulatedMeetingDriver(dispatch, meeting.id);
+    driver.start();
+    return () => driver.stop();
+  }, [dispatch, meeting?.id]);
+
   const [captionsVisible, setCaptionsVisible] = useState(false);
   const [captionIndex, setCaptionIndex] = useState(0);
 

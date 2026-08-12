@@ -16,7 +16,7 @@ interface MeetingChatProps {
 
 const QUICK_EMOJIS = ['👍', '❤️', '😂', '👏', '🎉', '🔥'];
 
-/** In-meeting chat — integrates with the Communication Center patterns. */
+/** In-meeting chat panel. */
 export const MeetingChat = ({ onClose }: MeetingChatProps) => {
   const dispatch = useAppDispatch();
   const { userId, userName } = useCurrentUserIdentity();

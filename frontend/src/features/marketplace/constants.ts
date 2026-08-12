@@ -19,10 +19,10 @@ export const EXPERIENCE_OPTIONS = [
 ];
 
 export const PRICE_RANGES = [
-  { label: 'Under $25', value: 25 },
-  { label: 'Under $50', value: 50 },
-  { label: 'Under $75', value: 75 },
-  { label: 'Under $100', value: 100 },
+  { label: 'Under 3 credits', value: 3 },
+  { label: 'Under 5 credits', value: 5 },
+  { label: 'Under 10 credits', value: 10 },
+  { label: 'Under 20 credits', value: 20 },
 ];
 
 export const LANGUAGE_OPTIONS = [

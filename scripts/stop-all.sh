@@ -18,9 +18,6 @@ SERVICE_JARS=(
   "session-service-1.0.0-SNAPSHOT.jar"
   "wallet-service-1.0.0-SNAPSHOT.jar"
   "payment-service-1.0.0-SNAPSHOT.jar"
-  "communication-service-1.0.0-SNAPSHOT.jar"
-  "community-service-1.0.0-SNAPSHOT.jar"
-  "review-service-1.0.0-SNAPSHOT.jar"
   "admin-service-1.0.0-SNAPSHOT.jar"
 )
 

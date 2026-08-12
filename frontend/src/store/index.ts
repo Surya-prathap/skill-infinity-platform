@@ -22,13 +22,10 @@ import {
   authReducer,
   userReducer,
   themeReducer,
-  notificationsReducer,
   settingsReducer,
   loadingReducer,
   mentorReducer,
-  chatReducer,
   meetingReducer,
-  communityReducer,
   adminReducer,
   type AuthState,
 } from './slices';
@@ -37,13 +34,10 @@ const rootReducer = combineReducers({
   auth: authReducer,
   user: userReducer,
   theme: themeReducer,
-  notifications: notificationsReducer,
   settings: settingsReducer,
   loading: loadingReducer,
   mentor: mentorReducer,
-  chat: chatReducer,
   meeting: meetingReducer,
-  community: communityReducer,
   admin: adminReducer,
 });
 
@@ -53,7 +47,7 @@ const resetAuthState: AuthState = {
   user: null,
   status: 'unauthenticated',
   error: null,
-  rememberMe: true,
+  rememberMe: false,
 };
 
 /**
@@ -77,6 +71,11 @@ const authPersistTransform = createTransform<AuthState, AuthState>(
 const persistConfig = {
   key: PERSIST_KEYS.ROOT,
   storage,
+  // Bumped so stale v1 sessions (persisted before "require explicit login")
+  // are discarded on first boot after this change — the app opens on the
+  // login screen instead of silently restoring the previous user.
+  version: 2,
+  migrate: async () => undefined,
   whitelist: ['auth', 'theme', 'settings'],
   transforms: [authPersistTransform],
 };

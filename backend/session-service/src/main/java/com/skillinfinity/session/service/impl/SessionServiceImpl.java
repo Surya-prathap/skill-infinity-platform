@@ -2,15 +2,19 @@ package com.skillinfinity.session.service.impl;
 
 import com.skillinfinity.common.dto.PageResponse;
 import com.skillinfinity.common.exception.BadRequestException;
+import com.skillinfinity.session.client.WalletClient;
 import com.skillinfinity.session.dto.request.AttendanceRequest;
 import com.skillinfinity.session.dto.request.BookingRequest;
 import com.skillinfinity.session.dto.request.CancellationRequest;
+import com.skillinfinity.session.dto.request.CommunitySessionRequest;
 import com.skillinfinity.session.dto.request.RescheduleRequestDto;
 import com.skillinfinity.session.dto.request.SearchRequest;
 import com.skillinfinity.session.dto.request.SessionRequest;
 import com.skillinfinity.session.dto.response.AttendanceResponse;
 import com.skillinfinity.session.dto.response.BookingResponse;
 import com.skillinfinity.session.dto.response.CalendarResponse;
+import com.skillinfinity.session.dto.response.CommunityAllowanceResponse;
+import com.skillinfinity.session.dto.response.CommunityImpactResponse;
 import com.skillinfinity.session.dto.response.MeetingResponse;
 import com.skillinfinity.session.dto.response.SessionResponse;
 import com.skillinfinity.session.entity.Attendance;
@@ -52,6 +56,7 @@ import com.skillinfinity.session.repository.SessionRepository;
 import com.skillinfinity.session.service.SessionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
@@ -61,10 +66,14 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -84,9 +93,23 @@ public class SessionServiceImpl implements SessionService {
     private final CalendarEventRepository calendarEventRepository;
     private final SessionMapper sessionMapper;
     private final SessionEventPublisher eventPublisher;
+    private final WalletClient walletClient;
 
     private static final int MAX_SESSIONS_PER_DAY = 5;
     private static final int MAX_RESCHEDULE_COUNT = 3;
+
+    /**
+     * Community recognition levels (configurable via env/application.yml).
+     * Earned through real contribution — never purchasable.
+     */
+    @Value("${community.recognition.thresholds:5,15,30,50}")
+    private List<Integer> recognitionThresholds;
+
+    @Value("${community.recognition.labels:Community Mentor,Active Contributor,Community Champion,Community Leader}")
+    private List<String> recognitionLabels;
+
+    @Value("${community.allowance.per-month:3}")
+    private int communityMonthlyAllowance;
 
     // ============================================================
     // Session CRUD
@@ -220,6 +243,7 @@ public class SessionServiceImpl implements SessionService {
                 .preferredStartTime(request.getPreferredStartTime())
                 .preferredEndTime(request.getPreferredEndTime())
                 .durationMinutes(request.getDurationMinutes())
+                .price(request.getCredits())
                 .timezone(request.getTimezone())
                 .status(BookingStatus.PENDING)
                 .learnerMessage(request.getLearnerMessage())
@@ -229,6 +253,11 @@ public class SessionServiceImpl implements SessionService {
                 .build();
 
         booking = bookingRepository.save(booking);
+
+        // Reserve the learner's credits (Welcome → Purchased → Learning).
+        // Throws "Insufficient credits…" from the wallet when the balance is short.
+        walletClient.freezeCredits(request.getLearnerId(), request.getCredits(),
+                booking.getId(), "Booking hold for session: " + request.getTopic());
 
         eventPublisher.publishSessionBooked(null, request.getMentorId(), request.getLearnerId(),
                 booking.getId(), request.getMentorName(), request.getLearnerName(),
@@ -292,6 +321,10 @@ public class SessionServiceImpl implements SessionService {
         booking.setUpdatedBy(mentorId.toString());
         booking = bookingRepository.save(booking);
 
+        // Release the learner's booking hold.
+        walletClient.releaseCredits(booking.getLearnerId(), booking.getPrice(),
+                booking.getId(), "Booking rejected by mentor");
+
         eventPublisher.publishSessionRejected(null, booking.getMentorId(),
                 booking.getLearnerId(), booking.getId(),
                 booking.getMentorName(), booking.getLearnerName(),
@@ -346,7 +379,8 @@ public class SessionServiceImpl implements SessionService {
 
         eventPublisher.publishSessionCompleted(sessionId, session.getMentorId(),
                 session.getLearnerId(), session.getBookingId(),
-                session.getMentorName(), session.getLearnerName(), session.getTopic());
+                session.getMentorName(), session.getLearnerName(), session.getTopic(),
+                session.isCommunity() ? 0 : session.getPrice(), session.isCommunity());
 
         log.info("Session ended: sessionId={}", sessionId);
         return sessionMapper.toResponse(session);
@@ -373,6 +407,11 @@ public class SessionServiceImpl implements SessionService {
         session = sessionRepository.save(session);
 
         createSessionHistory(sessionId, userId, "COMPLETED", session.getStatus().name(), "COMPLETED", "Session completed");
+
+        eventPublisher.publishSessionCompleted(sessionId, session.getMentorId(),
+                session.getLearnerId(), session.getBookingId(),
+                session.getMentorName(), session.getLearnerName(), session.getTopic(),
+                session.isCommunity() ? 0 : session.getPrice(), session.isCommunity());
 
         return sessionMapper.toResponse(session);
     }
@@ -460,6 +499,10 @@ public class SessionServiceImpl implements SessionService {
 
         cancellationRepository.save(cancellation);
 
+        // Release the learner's booking hold on cancellation.
+        walletClient.releaseCredits(session.getLearnerId(), session.getPrice(),
+                session.getId(), "Session cancelled");
+
         session.setStatus(SessionStatus.CANCELLED);
         session.setCancellationReason(request.getReason());
         session.setCancelledBy(userId);
@@ -501,6 +544,8 @@ public class SessionServiceImpl implements SessionService {
         List<SessionResponse> content = sessionPage.getContent().stream()
                 .map(sessionMapper::toResponse)
                 .toList();
+
+        attachMeetingLinks(content);
 
         return PageResponse.of(content, page, size, sessionPage.getTotalElements());
     }
@@ -674,8 +719,200 @@ public class SessionServiceImpl implements SessionService {
     }
 
     // ============================================================
+    // Community Sessions
+    // ============================================================
+
+    @Override
+    @Transactional
+    @CacheEvict(value = {"upcomingSessions", "mentorSchedule"}, allEntries = true)
+    public SessionResponse createCommunitySession(CommunitySessionRequest request, UUID mentorId) {
+        validateSessionTime(request.getStartTime(), request.getEndTime());
+
+        Session session = Session.builder()
+                .title(request.getTopic())
+                .description(request.getDescription())
+                .mentorId(mentorId)
+                .learnerId(mentorId) // host fills the slot; real learners join as participants
+                .startTime(request.getStartTime())
+                .endTime(request.getEndTime())
+                .durationMinutes((int) ChronoUnit.MINUTES.between(request.getStartTime(), request.getEndTime()))
+                .timezone(request.getTimezone())
+                .status(SessionStatus.SCHEDULED)
+                .topic(request.getTopic())
+                .price(0)
+                .currency("INR")
+                .free(true)
+                .community(true)
+                .createdBy(mentorId.toString())
+                .updatedBy(mentorId.toString())
+                .build();
+        session = sessionRepository.save(session);
+
+        SessionParticipant host = SessionParticipant.builder()
+                .sessionId(session.getId())
+                .userId(mentorId)
+                .role("MENTOR")
+                .attendanceStatus(AttendanceStatus.NOT_MARKED)
+                .isHost(true)
+                .hasConsent(true)
+                .joinedAt(LocalDateTime.now())
+                .createdBy(mentorId.toString())
+                .updatedBy(mentorId.toString())
+                .build();
+        sessionParticipantRepository.save(host);
+
+        createSessionHistory(session.getId(), mentorId, "CREATED", null, "SCHEDULED",
+                "Community session scheduled");
+        createMeetingLink(session);
+        scheduleReminders(session);
+
+        log.info("Community session created: sessionId={}, mentorId={}", session.getId(), mentorId);
+        return sessionMapper.toResponse(session);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<SessionResponse> getUpcomingCommunitySessions(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "startTime"));
+        Page<Session> sessions = sessionRepository.findUpcomingCommunitySessions(LocalDateTime.now(), pageable);
+
+        List<SessionResponse> content = sessions.getContent().stream()
+                .map(s -> {
+                    SessionResponse response = sessionMapper.toResponse(s);
+                    response.setParticipantCount((int) sessionParticipantRepository.countBySessionId(s.getId()));
+                    return response;
+                })
+                .toList();
+
+        attachMeetingLinks(content);
+
+        return PageResponse.of(content, page, size, sessions.getTotalElements());
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(value = {"upcomingSessions", "sessionDetails"}, allEntries = true)
+    public SessionResponse joinCommunitySession(UUID sessionId, UUID userId) {
+        Session session = findSessionById(sessionId);
+        if (!session.isCommunity()) {
+            throw new BadRequestException("This session is not a community session");
+        }
+        if (session.getStatus() != SessionStatus.SCHEDULED) {
+            throw new BadRequestException("This community session is no longer open for joining");
+        }
+        if (session.getStartTime().isBefore(LocalDateTime.now())) {
+            throw new BadRequestException("This community session has already started");
+        }
+        if (session.getMentorId().equals(userId)) {
+            throw new BadRequestException("You cannot join your own community session");
+        }
+        if (sessionParticipantRepository.existsBySessionIdAndUserId(sessionId, userId)) {
+            throw new BadRequestException("You have already joined this community session");
+        }
+
+        CommunityAllowanceResponse allowance = getCommunityAllowance(userId);
+        if (allowance.getRemaining() <= 0) {
+            throw new BadRequestException("You have used your " + allowance.getLimit()
+                    + " free community sessions for this month. Book a professional session or try again next month.");
+        }
+
+        SessionParticipant learner = SessionParticipant.builder()
+                .sessionId(sessionId)
+                .userId(userId)
+                .role("LEARNER")
+                .attendanceStatus(AttendanceStatus.NOT_MARKED)
+                .isHost(false)
+                .hasConsent(true)
+                .joinedAt(LocalDateTime.now())
+                .createdBy(userId.toString())
+                .updatedBy(userId.toString())
+                .build();
+        sessionParticipantRepository.save(learner);
+
+        log.info("Learner {} joined community session {}", userId, sessionId);
+        SessionResponse response = sessionMapper.toResponse(session);
+        response.setParticipantCount((int) sessionParticipantRepository.countBySessionId(sessionId));
+        return response;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CommunityAllowanceResponse getCommunityAllowance(UUID userId) {
+        LocalDateTime monthStart = LocalDate.now().withDayOfMonth(1).atStartOfDay();
+        long used = sessionParticipantRepository
+                .countByUserIdAndRoleAndJoinedAtGreaterThanEqual(userId, "LEARNER", monthStart);
+        int remaining = Math.max(0, communityMonthlyAllowance - (int) used);
+        return CommunityAllowanceResponse.builder()
+                .limit(communityMonthlyAllowance)
+                .used((int) used)
+                .remaining(remaining)
+                .month(LocalDate.now().getMonth().name() + " " + LocalDate.now().getYear())
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CommunityImpactResponse getMentorCommunityImpact(UUID mentorId) {
+        long completed = sessionRepository.countCompletedCommunityByMentor(mentorId);
+        long learnersHelped = sessionParticipantRepository.countDistinctCommunityLearners(mentorId);
+        long minutes = sessionRepository.sumCommunityMinutesByMentor(mentorId);
+        double hours = Math.round(minutes / 60.0 * 10.0) / 10.0;
+
+        int level = 0;
+        for (int i = 0; i < recognitionThresholds.size(); i++) {
+            if (completed >= recognitionThresholds.get(i)) {
+                level = i + 1;
+            }
+        }
+
+        String label = (level > 0 && level <= recognitionLabels.size())
+                ? recognitionLabels.get(level - 1) : null;
+        long nextLevelAt = 0;
+        String nextLabel = null;
+        if (level < recognitionThresholds.size()) {
+            nextLevelAt = recognitionThresholds.get(level);
+            nextLabel = recognitionLabels.get(level);
+        }
+
+        log.info("Community impact queried: mentorId={}, completed={}, learners={}, hours={}, level={}",
+                mentorId, completed, learnersHelped, hours, level);
+        return CommunityImpactResponse.builder()
+                .completedSessions(completed)
+                .learnersHelped(learnersHelped)
+                .communityHours(hours)
+                .level(level)
+                .levelLabel(label)
+                .nextLevelAt(nextLevelAt)
+                .nextLevelLabel(nextLabel)
+                .build();
+    }
+
+    // ============================================================
     // Private Helper Methods
     // ============================================================
+
+    /**
+     * Attaches each session's active meeting link so the UI can render the
+     * "Join session" action directly from list responses (batched in a single
+     * query to avoid N+1 lookups).
+     */
+    private void attachMeetingLinks(List<SessionResponse> responses) {
+        if (responses.isEmpty()) {
+            return;
+        }
+        List<UUID> sessionIds = responses.stream()
+                .map(SessionResponse::getId)
+                .toList();
+        Map<UUID, MeetingLink> linksBySession = meetingLinkRepository
+                .findBySessionIdInAndActiveTrue(sessionIds).stream()
+                .collect(Collectors.toMap(MeetingLink::getSessionId, Function.identity(), (a, b) -> a));
+        responses.forEach(response -> {
+            MeetingLink link = linksBySession.get(response.getId());
+            if (link != null) {
+                response.setMeetingLink(sessionMapper.toMeetingResponse(link));
+            }
+        });
+    }
 
     private Session findSessionById(UUID sessionId) {
         return sessionRepository.findById(sessionId)
@@ -751,9 +988,9 @@ public class SessionServiceImpl implements SessionService {
                 .timezone(booking.getTimezone())
                 .status(SessionStatus.APPROVED)
                 .topic(booking.getTopic())
-                .price(0)
-                .currency("USD")
-                .free(true)
+                .price(booking.getPrice())
+                .currency("INR")
+                .free(booking.getPrice() <= 0)
                 .bookingId(booking.getId())
                 .createdBy(booking.getCreatedBy())
                 .updatedBy(booking.getUpdatedBy())
@@ -799,13 +1036,20 @@ public class SessionServiceImpl implements SessionService {
         sessionParticipantRepository.save(learnerParticipant);
     }
 
+    /**
+     * Creates the meeting link for a session. The join URL points at the
+     * platform's own meeting room ({@code /meet/<sessionId>}) so learners and
+     * mentors attend the session inside the app — the frontend meeting room
+     * resolves the session id and starts the call there.
+     */
     private void createMeetingLink(Session session) {
+        String roomPath = "/meet/" + session.getId();
         MeetingLink meetingLink = MeetingLink.builder()
                 .sessionId(session.getId())
                 .provider(MeetingProvider.CUSTOM)
-                .meetingId(UUID.randomUUID().toString())
-                .meetingUrl("https://meet.skillinfinity.com/" + session.getId())
-                .joinUrl("https://meet.skillinfinity.com/join/" + session.getId())
+                .meetingId(session.getId().toString())
+                .meetingUrl(roomPath)
+                .joinUrl(roomPath)
                 .active(true)
                 .build();
 

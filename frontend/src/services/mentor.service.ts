@@ -58,6 +58,22 @@ export const mentorService = {
       resolve(API_ENDPOINTS.MENTORS.PUBLIC_PROFILE, { mentorId }),
     ),
 
+  /* ---------------- Admin: verification ---------------- */
+
+  /** Pending mentor applications (admin only). */
+  getPendingMentors: (page = 0, size = 200) =>
+    apiClient.get<ApiResponse<PageResponse<MentorSummary>>>(API_ENDPOINTS.MENTORS.PENDING, {
+      params: { page, size },
+    }),
+
+  /** Verify (approve) or reject a mentor application (admin only). */
+  verifyMentor: (mentorId: string, verified: boolean, rejectionReason?: string) =>
+    apiClient.put<ApiResponse<Mentor>>(
+      resolve(API_ENDPOINTS.MENTORS.VERIFY, { mentorId }),
+      undefined,
+      { params: { verified, ...(rejectionReason ? { rejectionReason } : {}) } },
+    ),
+
   getMentorAvailability: (mentorId: string) =>
     apiClient.get<ApiResponse<MentorAvailability[]>>(
       resolve(API_ENDPOINTS.MENTORS.AVAILABILITY_BY_ID, { mentorId }),

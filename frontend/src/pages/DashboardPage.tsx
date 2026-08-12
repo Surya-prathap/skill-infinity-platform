@@ -12,14 +12,13 @@ import {
   SectionHeader,
   Timeline,
 } from '@/components';
-import { AreaChart, BarChart } from '@/components/charts';
+import { AreaChart } from '@/components/charts';
 import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
 import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
 import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
 import StarOutlineOutlinedIcon from '@mui/icons-material/StarOutlineOutlined';
 import AccessTimeFilledOutlinedIcon from '@mui/icons-material/AccessTimeFilledOutlined';
 import AutoGraphOutlinedIcon from '@mui/icons-material/AutoGraphOutlined';
-import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
 import ExploreOutlinedIcon from '@mui/icons-material/ExploreOutlined';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import ArrowUpwardOutlinedIcon from '@mui/icons-material/ArrowUpwardOutlined';
@@ -31,9 +30,7 @@ import { useAuth, useDocumentTitle } from '@/hooks';
 import { ROUTES } from '@/constants';
 import { computeProfileCompletion, useProfileQuery } from '@/features/profile';
 import { useDashboardData } from '@/features/dashboard';
-import { useAppSelector } from '@/store/hooks';
-import { selectNotifications } from '@/store/selectors';
-import { formatCurrency } from '@/utils';
+import { useCommunityAllowanceQuery } from '@/features/sessions';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 22 },
@@ -53,13 +50,14 @@ export const DashboardPage: React.FC = () => {
   const { profile, isOffline } = useProfileQuery();
   const completion = computeProfileCompletion(profile);
   const dashboard = useDashboardData();
-  const notifications = useAppSelector(selectNotifications);
 
   const hour = dayjs().hour();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
   const firstName = profile?.firstName || user?.firstName || user?.username || 'there';
 
-  const { stats, learningProgress, communityActivity, upcomingSessions, mentorsQuery, reviewsQuery } = dashboard;
+  const { stats, learningProgress, upcomingSessions, mentorsQuery, reviewsQuery } = dashboard;
+
+  const communityAllowance = useCommunityAllowanceQuery().allowance;
 
   const recommendedMentors = mentorsQuery.data.content;
 
@@ -89,8 +87,6 @@ export const DashboardPage: React.FC = () => {
   });
 
   const walletBalance = dashboard.walletQuery.balance?.currentBalance ?? 0;
-  const walletCurrency = dashboard.walletQuery.balance?.currency ?? 'USD';
-  const walletPrefix = walletCurrency === 'USD' ? '$' : '';
 
   return (
     <Box>
@@ -119,8 +115,10 @@ export const DashboardPage: React.FC = () => {
             top: -140,
             right: '6%',
             background: 'radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%)',
-            filter: 'blur(30px)',
+            // No filter: blur() — the gradient fades out on its own and animating
+            // a blurred layer re-rasterizes every frame (expensive).
             pointerEvents: 'none',
+            willChange: 'transform',
           }}
         />
         <Box sx={{ position: 'relative' }}>
@@ -193,7 +191,6 @@ export const DashboardPage: React.FC = () => {
               <MetricCard
                 label={stat.label}
                 value={stat.value}
-                prefix={stat.prefix ?? ''}
                 suffix={stat.suffix}
                 decimals={stat.decimals ?? 0}
                 delta={stat.delta}
@@ -261,14 +258,25 @@ export const DashboardPage: React.FC = () => {
                 title="Upcoming Sessions"
                 subtitle="Your next live sessions"
                 action={
-                  <Button
-                    component={RouterLink}
-                    to={ROUTES.SESSIONS}
-                    size="small"
-                    endIcon={<ArrowForwardIcon fontSize="small" />}
-                  >
-                    View all
-                  </Button>
+                  <>
+                    {communityAllowance && (
+                      <Chip
+                        label={`${communityAllowance.remaining} free community session${communityAllowance.remaining === 1 ? '' : 's'} left this month`}
+                        size="small"
+                        color={communityAllowance.remaining > 0 ? 'success' : 'error'}
+                        variant="outlined"
+                        sx={{ fontWeight: 700, mr: 1 }}
+                      />
+                    )}
+                    <Button
+                      component={RouterLink}
+                      to={ROUTES.SESSIONS}
+                      size="small"
+                      endIcon={<ArrowForwardIcon fontSize="small" />}
+                    >
+                      View all
+                    </Button>
+                  </>
                 }
               />
               {upcomingSessions.length === 0 ? (
@@ -365,10 +373,44 @@ export const DashboardPage: React.FC = () => {
                     Wallet Balance
                   </Typography>
                 </Stack>
-                <AnimatedNumber value={walletBalance} prefix={walletPrefix} variant="h3" />
-                <Typography variant="body2" sx={{ opacity: 0.85, mb: 2 }}>
-                  ≈ {formatCurrency(walletBalance, walletCurrency)} in credits
+                <AnimatedNumber value={walletBalance} variant="h3" />
+                <Typography variant="body2" sx={{ opacity: 0.85, mb: 1.5 }}>
+                  {walletBalance.toLocaleString('en-IN')} credits available
                 </Typography>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 1,
+                    mb: 2,
+                  }}
+                >
+                  {[
+                    { label: 'Welcome', value: dashboard.walletQuery.balance?.welcomeBalance ?? 0, color: '#34D399' },
+                    { label: 'Purchased', value: dashboard.walletQuery.balance?.purchasedBalance ?? 0, color: '#60A5FA' },
+                    { label: 'Learning', value: dashboard.walletQuery.balance?.learningBalance ?? 0, color: '#FBBF24' },
+                    { label: 'Withdrawable', value: dashboard.walletQuery.balance?.withdrawableBalance ?? 0, color: '#F9A8D4' },
+                  ].map((bucket) => (
+                    <Box
+                      key={bucket.label}
+                      sx={{
+                        borderRadius: 2,
+                        px: 1.25,
+                        py: 0.5,
+                        bgcolor: 'rgba(255,255,255,0.12)',
+                        border: '1px solid rgba(255,255,255,0.18)',
+                        backdropFilter: 'blur(8px)',
+                      }}
+                    >
+                      <Typography variant="caption" sx={{ opacity: 0.75, mr: 0.5 }}>
+                        {bucket.label}
+                      </Typography>
+                      <Typography variant="caption" fontWeight={800} sx={{ color: bucket.color }}>
+                        {bucket.value.toLocaleString('en-IN')}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
                 <Stack direction="row" spacing={1.5}>
                   <Button
                     component={RouterLink}
@@ -506,99 +548,6 @@ export const DashboardPage: React.FC = () => {
                     No mentors yet.
                   </Typography>
                 )}
-              </Stack>
-            </Card>
-          </motion.div>
-        </Grid>
-      </Grid>
-
-      {/* ================= Community activity + notifications ================= */}
-      <Grid container spacing={3}>
-        <Grid size={{ xs: 12, lg: 7 }}>
-          <motion.div initial="hidden" animate="visible" variants={fadeUp} style={{ height: '100%' }}>
-            <Card sx={{ p: { xs: 2.5, md: 3.5 }, height: '100%' }}>
-              <SectionHeader
-                icon={<ForumOutlinedIcon />}
-                iconColor="#14B8A6"
-                title="Community Activity"
-                subtitle="Your actions over the last 7 days"
-                action={
-                  <Button component={RouterLink} to={ROUTES.COMMUNITY} size="small" endIcon={<ArrowForwardIcon fontSize="small" />}>
-                    Open Community
-                  </Button>
-                }
-              />
-              <BarChart data={[...communityActivity]} color="#14B8A6" suffix=" actions" height={210} />
-            </Card>
-          </motion.div>
-        </Grid>
-        <Grid size={{ xs: 12, lg: 5 }}>
-          <motion.div initial="hidden" animate="visible" variants={fadeUp} style={{ height: '100%' }}>
-            <Card sx={{ p: { xs: 2.5, md: 3.5 }, height: '100%' }}>
-              <SectionHeader
-                icon={<NotificationsNoneOutlinedIcon />}
-                iconColor="#F59E0B"
-                title="Notifications"
-                subtitle="Latest updates"
-                action={
-                  <Button component={RouterLink} to={ROUTES.NOTIFICATIONS} size="small" endIcon={<ArrowForwardIcon fontSize="small" />}>
-                    View all
-                  </Button>
-                }
-              />
-              <Stack spacing={1.5}>
-                {notifications.length ? (
-                  notifications.slice(0, 4).map((notification) => (
-                    <Stack key={notification.id} direction="row" alignItems="center" gap={1.5}>
-                      <Box
-                        sx={{
-                          width: 10,
-                          height: 10,
-                          borderRadius: '50%',
-                          bgcolor: notification.read ? 'text.disabled' : 'primary.main',
-                          boxShadow: notification.read ? 'none' : '0 0 0 4px rgba(109,93,246,0.15)',
-                          flexShrink: 0,
-                        }}
-                      />
-                      <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                        <Typography
-                          variant="body2"
-                          fontWeight={notification.read ? 500 : 700}
-                          noWrap
-                        >
-                          {notification.title}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {notification.createdAt ? dayjs(notification.createdAt).fromNow() : 'Now'}
-                        </Typography>
-                      </Box>
-                    </Stack>
-                  ))
-                ) : (
-                  <Typography variant="body2" color="text.secondary" sx={{ py: 3, textAlign: 'center' }}>
-                    You're all caught up.
-                  </Typography>
-                )}
-              </Stack>
-              <Stack direction="row" spacing={1.5} sx={{ mt: 3 }}>
-                <Button
-                  component={RouterLink}
-                  to={ROUTES.MENTORS}
-                  fullWidth
-                  variant="contained"
-                  startIcon={<ExploreOutlinedIcon />}
-                >
-                  Find a Mentor
-                </Button>
-                <Button
-                  component={RouterLink}
-                  to={ROUTES.WALLET}
-                  fullWidth
-                  variant="outlined"
-                  startIcon={<AccountBalanceWalletOutlinedIcon />}
-                >
-                  Top Up Credits
-                </Button>
               </Stack>
             </Card>
           </motion.div>

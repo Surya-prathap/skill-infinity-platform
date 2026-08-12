@@ -91,6 +91,8 @@ export interface PaymentTransaction {
 
 export interface PaymentInitRequest {
   amount: number;
+  /** Number of credits purchased with this payment (pack credits, not INR). */
+  credits?: number;
   currency?: string;
   description?: string;
   referenceId?: string;
@@ -125,4 +127,32 @@ export interface CouponValidationRequest {
   couponCode: string;
   amount: number;
   userId?: string;
+}
+
+/* ---------------- Subscriptions ---------------- */
+
+export interface SubscriptionPlan {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  currency?: string;
+  durationDays?: number;
+  maxSessionsPerMonth?: number;
+  features?: string[];
+  active?: boolean;
+}
+
+export interface MySubscription {
+  subscriptionId: string;
+  plan: SubscriptionPlan;
+  status: string;
+  startedAt?: string;
+  expiresAt?: string;
+  autoRenew?: boolean;
+}
+
+export interface SubscriptionPurchaseRequest {
+  planId: string;
+  couponCode?: string;
 }

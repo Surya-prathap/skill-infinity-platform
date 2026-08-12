@@ -10,19 +10,18 @@ describe('UsersPage', () => {
     window.localStorage.clear();
   });
 
-  it('renders the header, stats strip and user table', async () => {
+  it('renders the header, stats strip and empty state', async () => {
     renderWithProviders(<UsersPage />);
 
     expect(await screen.findByText('User Management')).toBeInTheDocument();
     expect(screen.getByText('Total users')).toBeInTheDocument();
     expect(screen.getByText('Active')).toBeInTheDocument();
     expect(screen.getByText('Suspended')).toBeInTheDocument();
-    expect(await screen.findByText('All users (24)')).toBeInTheDocument();
-    expect(screen.getByText('Sarah Chen')).toBeInTheDocument();
-    expect(screen.getByText('Alex Rivera')).toBeInTheDocument();
+    // No users exist in the backend yet, so an honest empty state is shown.
+    expect(await screen.findByText('No users match your filters')).toBeInTheDocument();
   });
 
-  it('searches users by name', async () => {
+  it('searches without results and keeps the empty state', async () => {
     const user = userEvent.setup();
     renderWithProviders(<UsersPage />);
 
@@ -30,12 +29,11 @@ describe('UsersPage', () => {
     await user.type(search, 'Priya');
 
     await waitFor(() => {
-      expect(screen.getByText('Priya Sharma')).toBeInTheDocument();
+      expect(screen.getByText('No users match your filters')).toBeInTheDocument();
     });
-    expect(screen.queryByText('Sarah Chen')).not.toBeInTheDocument();
   });
 
-  it('opens the filter drawer and applies a role filter', async () => {
+  it('opens the filter drawer', async () => {
     const user = userEvent.setup();
     renderWithProviders(<UsersPage />);
 
@@ -46,18 +44,8 @@ describe('UsersPage', () => {
     await user.click(screen.getByRole('button', { name: 'Apply filters' }));
 
     await waitFor(() => {
-      // Only ROLE_MENTOR users remain (Alex Rivera, Emma Wilson, …).
-      expect(screen.getByText('Alex Rivera')).toBeInTheDocument();
-      expect(screen.queryByText('Sarah Chen')).not.toBeInTheDocument();
+      // No seed users exist, so filtering still yields the empty state.
+      expect(screen.getByText('No users match your filters')).toBeInTheDocument();
     });
-  });
-
-  it('opens the user drawer when a row is clicked', async () => {
-    const user = userEvent.setup();
-    renderWithProviders(<UsersPage />);
-
-    await user.click(await screen.findByText('Sarah Chen'));
-
-    expect(await screen.findByRole('heading', { name: /Sarah Chen/i })).toBeInTheDocument();
   });
 });

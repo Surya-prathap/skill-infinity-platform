@@ -183,6 +183,7 @@ export interface Mentor {
   status?: string;
   verified: boolean;
   verifiedAt?: string;
+  rejectionReason?: string;
   profile: MentorProfile;
   expertiseList?: MentorExpertise[];
   availabilities?: MentorAvailability[];

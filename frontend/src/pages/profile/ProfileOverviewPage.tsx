@@ -32,6 +32,7 @@ import { useAuth } from '@/hooks';
 import { ROUTES } from '@/constants';
 import { ROLE_LABELS } from '@/constants';
 import { computeProfileCompletion, proficiencyToPercent, useProfileQuery } from '@/features/profile';
+import { useMentorSearch } from '@/features/marketplace';
 import { formatDate } from '@/utils';
 import type { Education, Experience } from '@/types';
 
@@ -67,6 +68,18 @@ export const ProfileOverviewPage: React.FC = () => {
   const { profile, educations, experiences, skills, languages, isOffline, notFound } =
     useProfileQuery();
   const completion = computeProfileCompletion(profile);
+
+  // Real top-rated mentors from the mentor-service search (no hardcoded names).
+  const topMentorsQuery = useMentorSearch({ page: 0, size: 5, sortBy: 'rating', sortDirection: 'DESC' });
+  const followedMentors = topMentorsQuery.data.content.map((mentor) => {
+    const nameParts = (mentor.headline?.split('·')[0]?.trim() || 'Mentor').split(' ');
+    return {
+      firstName: nameParts[0],
+      lastName: nameParts.slice(1).join(' '),
+      name: nameParts.join(' '),
+      src: mentor.profilePictureUrl,
+    };
+  });
 
   const displayName = profile?.firstName
     ? `${profile.firstName} ${profile.lastName ?? ''}`.trim()
@@ -559,22 +572,28 @@ export const ProfileOverviewPage: React.FC = () => {
               </Card>
             </motion.div>
 
-            {/* Mentor community preview */}
-            <motion.div initial="hidden" animate="visible" variants={fadeUp}>
-              <Card sx={{ p: 3 }}>
-                <SectionTitle icon={<ShareOutlinedIcon />}>Mentors you follow</SectionTitle>
-                <AvatarStack
-                  items={[
-                    { firstName: 'Sarah', lastName: 'Chen' },
-                    { firstName: 'Marcus', lastName: 'Reid' },
-                    { firstName: 'Priya', lastName: 'Sharma' },
-                    { firstName: 'David', lastName: 'Kim' },
-                    { firstName: 'Emily', lastName: 'Watson' },
-                  ]}
-                  label="5 mentors"
-                />
-              </Card>
-            </motion.div>
+            {/* Top mentors — real data from the mentor-service search (hidden when empty). */}
+            {followedMentors.length > 0 && (
+              <motion.div initial="hidden" animate="visible" variants={fadeUp}>
+                <Card sx={{ p: 3 }}>
+                  <Stack direction="row" alignItems="center" justifyContent="space-between">
+                    <SectionTitle icon={<ShareOutlinedIcon />}>Top mentors</SectionTitle>
+                    <Button
+                      component={RouterLink}
+                      to={ROUTES.MENTORS}
+                      size="small"
+                      endIcon={<ArrowForwardIcon fontSize="small" />}
+                    >
+                      Browse all
+                    </Button>
+                  </Stack>
+                  <AvatarStack
+                    items={followedMentors}
+                    label={`${followedMentors.length} top-rated mentors`}
+                  />
+                </Card>
+              </motion.div>
+            )}
           </Stack>
         </Grid>
       </Grid>

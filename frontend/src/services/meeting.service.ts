@@ -5,7 +5,7 @@ import type { ApiResponse, Meeting, MeetingStatePayload, MeetingDeviceSelection 
 const resolve = (template: string, params: Record<string, string>): string =>
   Object.entries(params).reduce((url, [key, value]) => url.replace(`{${key}}`, value), template);
 
-/** meeting-service endpoints (architecture mirrors the communication-service). */
+/** Meeting REST endpoints (with simulated-driver fallback in the meeting UI). */
 export const meetingService = {
   getMeeting: (meetingId: string) =>
     apiClient.get<ApiResponse<Meeting>>(resolve(API_ENDPOINTS.MEETING.ITEM, { meetingId })),

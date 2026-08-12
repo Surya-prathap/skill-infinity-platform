@@ -337,5 +337,4 @@ cd backend && mvn spring-boot:run -pl payment-service
 
 ### Outgoing Communication (Events)
 - **Wallet Service**: `CreditsPurchasedEvent` for credit addition
-- **Communication Service**: `PaymentCompletedEvent` for notifications
 - **Session Service**: Payment status for session bookings

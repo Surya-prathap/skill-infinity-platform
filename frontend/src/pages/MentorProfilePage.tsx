@@ -23,7 +23,7 @@ import { MentorHero } from '@/components/marketplace';
 import { useDocumentTitle } from '@/hooks';
 import { ROUTES } from '@/constants';
 import { useMentorProfile, useMentorSearch } from '@/features/marketplace';
-import { useMentorReviewsQuery } from '@/features/community';
+import { useMentorReviewsQuery } from '@/features/reviews';
 import { formatDate, formatCompactNumber } from '@/utils';
 
 const fadeUp = {
@@ -431,7 +431,7 @@ export const MentorProfilePage: React.FC = () => {
                         </Typography>
                       </Box>
                       <Typography variant="subtitle1" fontWeight={800} sx={{ color: 'primary.main' }}>
-                        {plan.isFree ? 'Free' : `${plan.currency ?? 'USD'} ${plan.price}`}
+                        {plan.isFree ? 'Free' : `${plan.price} credits`}
                       </Typography>
                     </Box>
                   ))}

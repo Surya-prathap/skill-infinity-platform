@@ -50,6 +50,18 @@ spring:
           max-attempts: 3
           initial-interval: 2000
 
+app:
+  services:
+    # Resolved by Docker DNS on the shared compose network; override for local runs.
+    wallet-service-url: ${WALLET_SERVICE_URL:http://wallet-service:8085}
+
+community:
+  allowance:
+    per-month: 3
+  recognition:
+    thresholds: 5,15,30,50
+    labels: Community Mentor,Active Contributor,Community Champion,Community Leader
+
 eureka:
   instance:
     prefer-ip-address: true

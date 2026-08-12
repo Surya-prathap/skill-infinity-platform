@@ -57,6 +57,10 @@ public class Booking {
     @Column(name = "duration_minutes", nullable = false)
     private int durationMinutes;
 
+    /** Session cost in credits (0 for free/community). */
+    @Column(name = "price")
+    private double price;
+
     @Column(name = "timezone", length = 50)
     private String timezone;
 

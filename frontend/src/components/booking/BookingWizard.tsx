@@ -14,7 +14,6 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { Avatar } from '@/components/ui/Avatar';
 import { Typography } from '@/components/ui/Typography';
 import { Stack } from '@/components/ui/Stack';
-import { formatCurrency } from '@/utils';
 import type { BookingRequest, Mentor, MentorPricing } from '@/types';
 
 const STEPS = [
@@ -114,6 +113,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
                 .format('HH:mm')}:00`
             : '',
           durationMinutes: selectedPricing?.durationMinutes ?? 60,
+          credits: selectedPricing?.isFree ? 0 : price,
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         });
         setStep(5);
@@ -283,11 +283,11 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
                       </Box>
                       <Box sx={{ textAlign: 'right' }}>
                         <Typography variant="h6" fontWeight={800} sx={{ color: 'primary.main' }}>
-                          {plan.isFree ? 'Free' : formatCurrency(plan.price)}
+                          {plan.isFree ? 'Free' : `${plan.price} credits`}
                         </Typography>
                         {plan.originalPrice && !plan.isFree && (
                           <Typography variant="caption" color="text.secondary" sx={{ textDecoration: 'line-through' }}>
-                            {formatCurrency(plan.originalPrice)}
+                            {plan.originalPrice} credits
                           </Typography>
                         )}
                       </Box>
@@ -415,19 +415,20 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
                 <Box sx={{ p: 2.5 }}>
                   <Stack direction="row" justifyContent="space-between" sx={{ mb: 1 }}>
                     <Typography variant="body2" color="text.secondary">Session fee</Typography>
-                    <Typography variant="body2" fontWeight={700}>{formatCurrency(price)}</Typography>
+                    <Typography variant="body2" fontWeight={700}>{price} credits</Typography>
                   </Stack>
                   <Stack direction="row" justifyContent="space-between" sx={{ mb: 1 }}>
                     <Typography variant="body2" color="text.secondary">Paid via wallet credits</Typography>
-                    <Typography variant="body2" fontWeight={700} color="success.main">−{formatCurrency(price)}</Typography>
+                    <Typography variant="body2" fontWeight={700} color="success.main">−{price} credits</Typography>
                   </Stack>
                   <Box sx={{ borderTop: 1, borderColor: 'divider', pt: 1.5, mt: 1 }}>
                     <Stack direction="row" justifyContent="space-between">
                       <Typography variant="subtitle2" fontWeight={800}>Total due</Typography>
-                      <Typography variant="subtitle2" fontWeight={800} color="success.main">$0.00</Typography>
+                      <Typography variant="subtitle2" fontWeight={800} color="success.main">0 credits</Typography>
                     </Stack>
                     <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                      Credits are deducted when the mentor approves your booking.
+                      Credits are reserved on booking and transferred to the mentor only after the
+                      session is completed successfully.
                     </Typography>
                   </Box>
                 </Box>

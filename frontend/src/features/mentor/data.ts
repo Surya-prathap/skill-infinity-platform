@@ -36,20 +36,6 @@ export const MENTOR_UPCOMING_SESSIONS: {
   color: string;
 }[] = [];
 export const MENTOR_REVIEWS: { id: string; author: string; rating: number; text: string; time: string }[] = [];
-export const MENTOR_MESSAGES: {
-  id: string;
-  from: string;
-  preview: string;
-  time: string;
-  unread: boolean;
-}[] = [];
-export const MENTOR_NOTIFICATIONS: {
-  id: string;
-  title: string;
-  time: string;
-  unread: boolean;
-  tone: string;
-}[] = [];
 export const MENTOR_ACTIVITY: {
   title: string;
   description: string;

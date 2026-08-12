@@ -1,10 +1,7 @@
 import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
 import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
 import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
-import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
-import ChatBubbleOutlineOutlinedIcon from '@mui/icons-material/ChatBubbleOutlineOutlined';
 import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
-import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import WorkspacePremiumOutlinedIcon from '@mui/icons-material/WorkspacePremiumOutlined';
 import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
@@ -14,20 +11,10 @@ import PriceChangeOutlinedIcon from '@mui/icons-material/PriceChangeOutlined';
 import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
 import EmojiEventsOutlinedIcon from '@mui/icons-material/EmojiEventsOutlined';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
-import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
-import LeaderboardOutlinedIcon from '@mui/icons-material/LeaderboardOutlined';
-import TimelineOutlinedIcon from '@mui/icons-material/TimelineOutlined';
-import ExploreOutlinedIcon from '@mui/icons-material/ExploreOutlined';
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
 import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
 import StarBorderOutlinedIcon from '@mui/icons-material/StarBorderOutlined';
-import SupportAgentOutlinedIcon from '@mui/icons-material/SupportAgentOutlined';
-import CampaignOutlinedIcon from '@mui/icons-material/CampaignOutlined';
-import SummarizeOutlinedIcon from '@mui/icons-material/SummarizeOutlined';
-import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
-import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
-import MonitorHeartOutlinedIcon from '@mui/icons-material/MonitorHeartOutlined';
-import type { NavItem } from '@/types';
+import type { NavItem, Role } from '@/types';
 import { ROLES, ROUTES } from '@/constants';
 
 /** Core navigation — visible to every authenticated user. */
@@ -36,40 +23,34 @@ export const CORE_NAV: NavItem[] = [
   { label: 'Sessions', path: ROUTES.SESSIONS, icon: <EventAvailableOutlinedIcon /> },
   { label: 'Calendar', path: ROUTES.CALENDAR, icon: <CalendarTodayOutlinedIcon /> },
   { label: 'Meetings', path: ROUTES.MEETINGS, icon: <VideocamOutlinedIcon /> },
-  { label: 'Messages', path: ROUTES.MESSAGES, icon: <ChatBubbleOutlineOutlinedIcon /> },
   { label: 'Wallet', path: ROUTES.WALLET, icon: <AccountBalanceWalletOutlinedIcon /> },
-  {
-    label: 'Community',
-    path: ROUTES.COMMUNITY,
-    icon: <ForumOutlinedIcon />,
-    children: [
-      { label: 'Feed', path: ROUTES.COMMUNITY, icon: <ForumOutlinedIcon />, end: true },
-      {
-        label: 'Communities',
-        path: ROUTES.COMMUNITIES,
-        icon: <GroupsOutlinedIcon />,
-      },
-      { label: 'Search', path: ROUTES.COMMUNITY_SEARCH, icon: <ExploreOutlinedIcon /> },
-      {
-        label: 'Leaderboard',
-        path: ROUTES.COMMUNITY_LEADERBOARD,
-        icon: <LeaderboardOutlinedIcon />,
-      },
-      { label: 'Activity', path: ROUTES.COMMUNITY_ACTIVITY, icon: <TimelineOutlinedIcon /> },
-      {
-        label: 'Achievements',
-        path: ROUTES.COMMUNITY_ACHIEVEMENTS,
-        icon: <WorkspacePremiumOutlinedIcon />,
-      },
-    ],
-  },
 ];
 
 /** Account section navigation. */
 export const ACCOUNT_NAV: NavItem[] = [
   { label: 'Profile', path: ROUTES.PROFILE, icon: <PersonOutlineOutlinedIcon /> },
-  { label: 'Notifications', path: ROUTES.NOTIFICATIONS, icon: <NotificationsNoneIcon /> },
+  { label: 'Subscription', path: ROUTES.SUBSCRIPTION, icon: <WorkspacePremiumOutlinedIcon /> },
   { label: 'Settings', path: ROUTES.SETTINGS, icon: <SettingsOutlinedIcon /> },
+];
+
+/** Learner tools a mentor can still use — kept in its own section so the
+ *  mentor studio is the clear primary dashboard. */
+export const MENTOR_LEARNER_NAV: NavItem[] = [
+  {
+    label: 'Learner Space',
+    path: ROUTES.SESSIONS,
+    icon: <EventAvailableOutlinedIcon />,
+    roles: [ROLES.MENTOR],
+    children: [
+      { label: 'Sessions', path: ROUTES.SESSIONS, icon: <EventAvailableOutlinedIcon /> },
+      { label: 'Calendar', path: ROUTES.CALENDAR, icon: <CalendarTodayOutlinedIcon /> },
+      { label: 'Meetings', path: ROUTES.MEETINGS, icon: <VideocamOutlinedIcon /> },
+      { label: 'Wallet', path: ROUTES.WALLET, icon: <AccountBalanceWalletOutlinedIcon /> },
+      { label: 'Profile', path: ROUTES.PROFILE, icon: <PersonOutlineOutlinedIcon /> },
+      { label: 'Subscription', path: ROUTES.SUBSCRIPTION, icon: <WorkspacePremiumOutlinedIcon /> },
+      { label: 'Settings', path: ROUTES.SETTINGS, icon: <SettingsOutlinedIcon /> },
+    ],
+  },
 ];
 
 /** Mentor-only navigation with a nested section (demonstrates nested nav). */
@@ -99,6 +80,7 @@ export const MENTOR_NAV: NavItem[] = [
         icon: <CalendarMonthOutlinedIcon />,
       },
       { label: 'Pricing', path: ROUTES.MENTOR_PRICING, icon: <PriceChangeOutlinedIcon /> },
+      { label: 'Subscription', path: ROUTES.MENTOR_SUBSCRIPTION, icon: <WorkspacePremiumOutlinedIcon /> },
       { label: 'Settings', path: ROUTES.MENTOR_SETTINGS, icon: <SettingsOutlinedIcon /> },
       { label: 'My Profile', path: ROUTES.PROFILE, icon: <PersonOutlineOutlinedIcon /> },
     ],
@@ -138,26 +120,29 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
   },
   {
     label: 'Engagement',
-    items: [
-      { label: 'Community', path: ROUTES.ADMIN_COMMUNITY, icon: <ForumOutlinedIcon /> },
-      { label: 'Reviews', path: ROUTES.ADMIN_REVIEWS, icon: <StarBorderOutlinedIcon /> },
-      { label: 'Support', path: ROUTES.ADMIN_SUPPORT, icon: <SupportAgentOutlinedIcon /> },
-      { label: 'Announcements', path: ROUTES.ADMIN_ANNOUNCEMENTS, icon: <CampaignOutlinedIcon /> },
-    ],
+    items: [{ label: 'Reviews', path: ROUTES.ADMIN_REVIEWS, icon: <StarBorderOutlinedIcon /> }],
   },
   {
     label: 'Platform',
-    items: [
-      { label: 'Reports', path: ROUTES.ADMIN_REPORTS, icon: <SummarizeOutlinedIcon /> },
-      { label: 'Settings', path: ROUTES.ADMIN_SETTINGS, icon: <SettingsOutlinedIcon /> },
-      { label: 'Feature Flags', path: ROUTES.ADMIN_FEATURE_FLAGS, icon: <FlagOutlinedIcon /> },
-      { label: 'Audit Logs', path: ROUTES.ADMIN_AUDIT, icon: <HistoryOutlinedIcon /> },
-      { label: 'Monitoring', path: ROUTES.ADMIN_MONITORING, icon: <MonitorHeartOutlinedIcon /> },
-    ],
+    items: [{ label: 'Settings', path: ROUTES.ADMIN_SETTINGS, icon: <SettingsOutlinedIcon /> }],
   },
 ];
 
-/** Standard authenticated sidebar. */
+/**
+ * Role-aware dashboard navigation.
+ *
+ * Mentors get a COMPLETELY separate dashboard: the mentor studio is the
+ * primary section and all learner tools are grouped under a secondary
+ * "Learner Space" section. Learners keep the standard core navigation.
+ */
+export const getDashboardNav = (roles: readonly Role[] | undefined): NavItem[] => {
+  if (roles?.includes(ROLES.MENTOR)) {
+    return [...MENTOR_NAV, ...MENTOR_LEARNER_NAV];
+  }
+  return [...CORE_NAV, ...ACCOUNT_NAV];
+};
+
+/** Standard authenticated sidebar (kept for backward compatibility). */
 export const DASHBOARD_NAV: NavItem[] = [...CORE_NAV, ...MENTOR_NAV, ...ACCOUNT_NAV];
 
 /** Admin sidebar (flat, legacy export). */

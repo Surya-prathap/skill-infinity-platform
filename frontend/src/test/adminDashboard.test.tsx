@@ -18,15 +18,13 @@ describe('AdminDashboardPage', () => {
     expect(screen.getByText('Mentors')).toBeInTheDocument();
     expect(screen.getByText('Total Sessions')).toBeInTheDocument();
     expect(screen.getByText('Monthly Revenue')).toBeInTheDocument();
-    expect(screen.getByText('Wallet Credits')).toBeInTheDocument();
   });
 
-  it('renders growth snapshot tiles', async () => {
+  it('renders communities, reviews and average rating KPIs', async () => {
     renderWithProviders(<AdminDashboardPage />);
 
-    expect(await screen.findByText('Engagement Score')).toBeInTheDocument();
-    expect(screen.getByText('Conversion Rate')).toBeInTheDocument();
-    expect(screen.getByText('Live Visitors')).toBeInTheDocument();
+    expect(await screen.findByText('Communities')).toBeInTheDocument();
+    expect(screen.getByText('Reviews')).toBeInTheDocument();
     expect(screen.getByText('Avg. Rating')).toBeInTheDocument();
   });
 
@@ -41,7 +39,6 @@ describe('AdminDashboardPage', () => {
     renderWithProviders(<AdminDashboardPage />);
 
     expect(await screen.findByText('Platform Health')).toBeInTheDocument();
-    expect(screen.getByText('All systems operational')).toBeInTheDocument();
     expect(screen.getByText('Quick Actions')).toBeInTheDocument();
     expect(screen.getByText('New announcement')).toBeInTheDocument();
     expect(screen.getByText('Review mentors')).toBeInTheDocument();

@@ -18,13 +18,14 @@ describe('MentorPricingPage', () => {
     expect(await screen.findByText('Discount rules')).toBeInTheDocument();
   });
 
-  it('renders the seed pricing plans', async () => {
+  it('shows an honest empty state when no pricing plans exist', async () => {
     renderWithProviders(<MentorPricingPage />);
 
-    // The featured plan also appears in the learner preview, so duplicates are expected.
-    expect((await screen.findAllByText('1:1 Mentoring')).length).toBeGreaterThan(0);
-    expect(await screen.findByText('Interview Prep')).toBeInTheDocument();
-    expect(await screen.findByText('Code Review')).toBeInTheDocument();
+    // The mentor has no pricing plans in the backend yet, so the empty
+    // state is shown instead of fabricated plans.
+    expect(
+      await screen.findByText(/No pricing plans yet\./),
+    ).toBeInTheDocument();
   });
 
   it('opens the pricing editor to create a plan', async () => {

@@ -6,6 +6,7 @@ import com.skillinfinity.wallet.dto.request.CreditRequest;
 import com.skillinfinity.wallet.dto.request.DebitRequest;
 import com.skillinfinity.wallet.dto.request.FreezeRequest;
 import com.skillinfinity.wallet.dto.request.WalletRequest;
+import com.skillinfinity.wallet.dto.request.WithdrawalRequestDto;
 import com.skillinfinity.wallet.dto.response.LedgerEntryResponse;
 import com.skillinfinity.wallet.dto.response.RewardResponse;
 import com.skillinfinity.wallet.dto.response.TransactionResponse;
@@ -13,6 +14,7 @@ import com.skillinfinity.wallet.dto.response.WalletAuditResponse;
 import com.skillinfinity.wallet.dto.response.WalletBalanceResponse;
 import com.skillinfinity.wallet.dto.response.WalletResponse;
 import com.skillinfinity.wallet.dto.response.WalletStatisticsResponse;
+import com.skillinfinity.wallet.dto.response.WithdrawalResponse;
 import com.skillinfinity.wallet.service.WalletService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -23,7 +25,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -121,6 +125,82 @@ public class WalletController {
         log.info("Release credits request for user: {}, amount: {}", userId, request.getAmount());
         TransactionResponse response = walletService.releaseCredits(userId, userId, request);
         return ResponseEntity.ok(ApiResponse.success("Credits released successfully", response));
+    }
+
+    @PostMapping("/freeze-by-user")
+    @Operation(summary = "Freeze credits (by user)", description = "Resolves the caller's wallet by user ID and freezes credits — used by session-service booking holds")
+    public ResponseEntity<ApiResponse<TransactionResponse>> freezeByUser(
+            @RequestHeader("X-User-ID") UUID userId,
+            @Valid @RequestBody FreezeRequest request) {
+        log.info("Freeze-by-user request for user: {}, amount: {}", userId, request.getAmount());
+        TransactionResponse response = walletService.freezeByUser(userId, request);
+        return ResponseEntity.ok(ApiResponse.success("Credits frozen successfully", response));
+    }
+
+    @PostMapping("/release-by-user")
+    @Operation(summary = "Release credits (by user)", description = "Releases frozen credits for the caller's wallet — used by session-service cancellation refunds")
+    public ResponseEntity<ApiResponse<TransactionResponse>> releaseByUser(
+            @RequestHeader("X-User-ID") UUID userId,
+            @Valid @RequestBody FreezeRequest request) {
+        log.info("Release-by-user request for user: {}, amount: {}", userId, request.getAmount());
+        TransactionResponse response = walletService.releaseByUser(userId, request);
+        return ResponseEntity.ok(ApiResponse.success("Credits released successfully", response));
+    }
+
+    // ============================================================
+    // Withdrawals
+    // ============================================================
+
+    @PostMapping("/withdrawals")
+    @Operation(summary = "Request withdrawal", description = "Converts withdrawable credits into an INR payout request (10-credit minimum, 10% platform fee)")
+    public ResponseEntity<ApiResponse<WithdrawalResponse>> requestWithdrawal(
+            @RequestHeader("X-User-ID") UUID userId,
+            @Valid @RequestBody WithdrawalRequestDto request) {
+        log.info("Withdrawal request from user: {}, credits: {}", userId, request.getAmountCredits());
+        WithdrawalResponse response = walletService.requestWithdrawal(userId, request);
+        return ResponseEntity.ok(ApiResponse.success("Withdrawal requested — pending admin review", response));
+    }
+
+    @GetMapping("/withdrawals")
+    @Operation(summary = "Get my withdrawals", description = "Returns the authenticated user's withdrawal requests")
+    public ResponseEntity<ApiResponse<PageResponse<WithdrawalResponse>>> getMyWithdrawals(
+            @RequestHeader("X-User-ID") UUID userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        PageResponse<WithdrawalResponse> response = walletService.getMyWithdrawals(userId, page, size);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    // ============================================================
+    // Withdrawals — Admin review
+    // ============================================================
+
+    @GetMapping("/admin/withdrawals")
+    @Operation(summary = "List withdrawals (Admin)", description = "Returns all withdrawal requests for admin review")
+    public ResponseEntity<ApiResponse<PageResponse<WithdrawalResponse>>> getAllWithdrawals(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        PageResponse<WithdrawalResponse> response = walletService.getAllWithdrawals(page, size);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @PutMapping("/admin/withdrawals/{id}/approve")
+    @Operation(summary = "Approve withdrawal (Admin)", description = "Approves a pending withdrawal request")
+    public ResponseEntity<ApiResponse<WithdrawalResponse>> approveWithdrawal(
+            @PathVariable UUID id,
+            @RequestHeader("X-User-ID") UUID adminId) {
+        WithdrawalResponse response = walletService.approveWithdrawal(id, adminId);
+        return ResponseEntity.ok(ApiResponse.success("Withdrawal approved", response));
+    }
+
+    @PutMapping("/admin/withdrawals/{id}/reject")
+    @Operation(summary = "Reject withdrawal (Admin)", description = "Rejects a pending withdrawal request")
+    public ResponseEntity<ApiResponse<WithdrawalResponse>> rejectWithdrawal(
+            @PathVariable UUID id,
+            @RequestHeader("X-User-ID") UUID adminId,
+            @RequestParam String reason) {
+        WithdrawalResponse response = walletService.rejectWithdrawal(id, adminId, reason);
+        return ResponseEntity.ok(ApiResponse.success("Withdrawal rejected", response));
     }
 
     @GetMapping("/history")

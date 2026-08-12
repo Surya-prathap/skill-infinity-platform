@@ -51,6 +51,27 @@ public class WalletBalance {
     @Builder.Default
     private BigDecimal pendingBalance = BigDecimal.ZERO;
 
+    /**
+     * Credit-type buckets. {@code currentBalance} is the sum of the three
+     * learning buckets (welcome + purchased + learning). Withdrawable credits
+     * are a separate earning bucket that cannot be spent on learning sessions.
+     */
+    @Column(name = "welcome_balance", nullable = false, precision = 15, scale = 2)
+    @Builder.Default
+    private BigDecimal welcomeBalance = BigDecimal.ZERO;
+
+    @Column(name = "purchased_balance", nullable = false, precision = 15, scale = 2)
+    @Builder.Default
+    private BigDecimal purchasedBalance = BigDecimal.ZERO;
+
+    @Column(name = "learning_balance", nullable = false, precision = 15, scale = 2)
+    @Builder.Default
+    private BigDecimal learningBalance = BigDecimal.ZERO;
+
+    @Column(name = "withdrawable_balance", nullable = false, precision = 15, scale = 2)
+    @Builder.Default
+    private BigDecimal withdrawableBalance = BigDecimal.ZERO;
+
     @Column(name = "currency", nullable = false, length = 10)
     @Builder.Default
     private String currency = "CREDITS";

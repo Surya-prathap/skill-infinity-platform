@@ -27,7 +27,7 @@ export const CreditPurchasePage: React.FC = () => {
   const { initiate, confirm } = usePurchaseCredits();
   const validateCoupon = useValidateCouponMutation();
 
-  const [selectedPack, setSelectedPack] = useState<CreditPackOption>(CREDIT_PACKS[1]!);
+  const [selectedPack, setSelectedPack] = useState<CreditPackOption>(CREDIT_PACKS[0]!);
   const [couponCode, setCouponCode] = useState('');
   const [couponApplied, setCouponApplied] = useState<string | null>(null);
   const [couponError, setCouponError] = useState<string | null>(null);
@@ -67,7 +67,8 @@ export const CreditPurchasePage: React.FC = () => {
     try {
       const initiated = await initiate.mutateAsync({
         amount: total,
-        currency: 'USD',
+        credits: selectedPack.credits,
+        currency: 'INR',
         description: `${selectedPack.name} credit pack — ${selectedPack.credits} credits`,
         referenceType: 'CREDIT_PURCHASE',
         couponCode: couponApplied ?? undefined,
@@ -98,7 +99,7 @@ export const CreditPurchasePage: React.FC = () => {
           actions={
             <Chip
               icon={<WorkspacePremiumOutlinedIcon />}
-              label="Credits never expire"
+              label="Instant credit delivery"
               color="primary"
               variant="outlined"
               sx={{ fontWeight: 700 }}
@@ -161,10 +162,10 @@ export const CreditPurchasePage: React.FC = () => {
                     {CREDIT_PACKS.map((pack, index) => (
                       <Grid key={pack.id} size={{ xs: 12, sm: 6, md: 4 }}>
                         <CreditPackCard
-                          pack={{ ...pack, highlighted: pack.id === 'pro' }}
+                          pack={{ ...pack, highlighted: pack.id === 'popular' }}
                           selected={selectedPack.id === pack.id}
                           onSelect={() => {
-                            setSelectedPack({ ...pack, highlighted: pack.id === 'pro' });
+                            setSelectedPack({ ...pack, highlighted: pack.id === 'popular' });
                             setCouponApplied(null);
                           }}
                           index={index}

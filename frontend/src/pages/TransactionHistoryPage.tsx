@@ -67,7 +67,7 @@ export const TransactionHistoryPage: React.FC = () => {
         row.transactionType,
         row.status,
         row.amount,
-        row.currency ?? 'USD',
+        row.currency ?? 'CREDITS',
         (row.description ?? '').replace(/,/g, ' '),
         formatDateTime(row.createdAt),
       ].join(','),

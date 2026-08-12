@@ -24,7 +24,8 @@ describe('validators', () => {
 
 describe('formatters', () => {
   it('formats currency', () => {
-    expect(formatCurrency(1234.5)).toBe('$1,234.50');
+    expect(formatCurrency(1234.5)).toBe('₹1,234.50');
+    expect(formatCurrency(109)).toBe('₹109');
   });
 
   it('formats dates', () => {

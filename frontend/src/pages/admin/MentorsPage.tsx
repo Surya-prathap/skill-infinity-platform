@@ -10,7 +10,7 @@ import { PageHeader } from '@/components/common';
 import { Avatar, Card, Stack, Typography } from '@/components/ui';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { AdvancedDataTable, type AdminColumn, ApprovalDialog, AnimatedProgress, AdminTableSkeleton } from '@/components/admin';
-import { DonutChart, BarChart } from '@/components/charts';
+import { DonutChart } from '@/components/charts';
 import { formatCurrency, formatRelativeTime } from '@/utils';
 import { useAdminMentorsQuery, useMentorApprovalsQuery, useApproveMentorMutation, useRejectMentorMutation } from '@/features/admin';
 import type { AdminMentor, MentorApproval } from '@/types';
@@ -30,18 +30,34 @@ export const MentorsPage: React.FC = () => {
   const pending = approvals.filter((approval) => approval.status === 'PENDING');
   const topMentors = useMemo(() => [...mentors].sort((a, b) => b.rating - a.rating).slice(0, 5), [mentors]);
 
-  const ratingSegments = [
-    { label: '5★', value: 68, color: '#10B981' },
-    { label: '4★', value: 24, color: '#6D5DF6' },
-    { label: '3★', value: 5, color: '#F59E0B' },
-    { label: '≤2★', value: 3, color: '#EF4444' },
-  ];
+  // Real analytics derived from the actual mentor directory — no fabricated figures.
+  const ratingSegments = useMemo(() => {
+    const rated = mentors.filter((m) => m.rating > 0);
+    return [
+      { label: '5★', value: rated.filter((m) => m.rating >= 4.5).length, color: '#10B981' },
+      { label: '4★', value: rated.filter((m) => m.rating >= 3.5 && m.rating < 4.5).length, color: '#6D5DF6' },
+      { label: '3★', value: rated.filter((m) => m.rating >= 2.5 && m.rating < 3.5).length, color: '#F59E0B' },
+      { label: '≤2★', value: rated.filter((m) => m.rating < 2.5).length, color: '#EF4444' },
+    ];
+  }, [mentors]);
 
-  const revenuePoints = [
-    { label: 'Jan', value: 38 }, { label: 'Feb', value: 42 }, { label: 'Mar', value: 47 },
-    { label: 'Apr', value: 44 }, { label: 'May', value: 55 }, { label: 'Jun', value: 58 },
-    { label: 'Jul', value: 64 },
-  ];
+  const avgRating = useMemo(
+    () =>
+      mentors.length > 0
+        ? mentors.reduce((sum, m) => sum + m.rating, 0) / mentors.length
+        : 0,
+    [mentors],
+  );
+
+  const mentorOverview = useMemo(
+    () => [
+      { label: 'Total mentors', value: mentors.length, icon: <SchoolOutlinedIcon />, color: '#6D5DF6' },
+      { label: 'Verified', value: mentors.filter((m) => m.verified).length, icon: <VerifiedOutlinedIcon />, color: '#10B981' },
+      { label: 'Active', value: mentors.filter((m) => m.status === 'ACTIVE').length, icon: <EmojiEventsOutlinedIcon />, color: '#14B8A6' },
+      { label: 'Awaiting review', value: pending.length, icon: <SchoolOutlinedIcon />, color: '#F59E0B' },
+    ],
+    [mentors, pending.length],
+  );
 
   const columns: AdminColumn<AdminMentor>[] = [
     {
@@ -112,22 +128,39 @@ export const MentorsPage: React.FC = () => {
         }
       />
 
-      {/* Analytics strip */}
+      {/* Analytics strip — real numbers only */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid size={{ xs: 12, md: 4 }}>
           <Card sx={{ p: 2.5, height: '100%' }}>
             <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>
               Rating Distribution
             </Typography>
-            <DonutChart segments={ratingSegments} size={150} centerValue="4.7" centerLabel="avg" />
+            <DonutChart
+              segments={ratingSegments}
+              size={150}
+              centerValue={avgRating > 0 ? avgRating.toFixed(1) : '—'}
+              centerLabel="avg"
+            />
           </Card>
         </Grid>
         <Grid size={{ xs: 12, md: 8 }}>
           <Card sx={{ p: 2.5, height: '100%' }}>
             <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 2 }}>
-              Mentor Payout Volume (thousands)
+              Mentor Overview
             </Typography>
-            <BarChart data={revenuePoints} height={150} color="#14B8A6" suffix="k" />
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)' }, gap: 2 }}>
+              {mentorOverview.map((item) => (
+                <Box key={item.label} sx={{ textAlign: 'center', p: 1.5, borderRadius: 2, bgcolor: 'background.default' }}>
+                  <Box sx={{ color: item.color, display: 'flex', justifyContent: 'center', mb: 0.5 }}>{item.icon}</Box>
+                  <Typography variant="h6" fontWeight={800}>
+                    {item.value}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {item.label}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
           </Card>
         </Grid>
       </Grid>

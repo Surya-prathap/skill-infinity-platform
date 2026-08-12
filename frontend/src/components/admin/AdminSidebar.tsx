@@ -199,7 +199,7 @@ const SidebarContent: React.FC<{ collapsed: boolean; onNavigate?: () => void }> 
           {collapsed ? (
             <Tooltip title="Sign out" placement="right">
               <IconButton onClick={handleLogout} sx={{ mx: 'auto' }} aria-label="Sign out">
-                <LogoutIcon fontSize="small" color="action" />
+                <LogoutIcon fontSize="small" sx={{ color: 'text.secondary' }} />
               </IconButton>
             </Tooltip>
           ) : (
