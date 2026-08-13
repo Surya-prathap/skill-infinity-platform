@@ -6,6 +6,7 @@ import { setMeetingError } from '@/store/slices/meetingSlice';
 import { selectMeetingStatus, selectMeeting, selectUser } from '@/store/selectors';
 import { useJoinMeeting, useResolveMeeting } from '@/features/meeting';
 import { WaitingRoom, MeetingRoom } from '@/components/meeting';
+import { ROUTES } from '@/constants';
 import type { Meeting } from '@/types';
 
 /** Full-screen meeting route — waiting room + live room. */
@@ -65,7 +66,7 @@ export const MeetingPage = () => {
           This meeting link is invalid or the meeting has ended.
         </p>
         <button
-          onClick={() => void navigate('/meetings')}
+          onClick={() => void navigate(ROUTES.SESSIONS)}
           style={{
             marginTop: 8,
             padding: '10px 24px',

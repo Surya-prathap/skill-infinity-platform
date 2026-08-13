@@ -14,7 +14,7 @@ describe('WalletPage', () => {
 
     expect(await screen.findByText('Available balance')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /buy credits/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /transactions/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /top up credits/i })).toBeInTheDocument();
   });
 
   it('renders the statistics metric cards', async () => {

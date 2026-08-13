@@ -12,6 +12,7 @@ import com.skillinfinity.payment.dto.response.TransactionResponse;
 import com.skillinfinity.payment.entity.Payment;
 import com.skillinfinity.payment.entity.SubscriptionHistory;
 import com.skillinfinity.payment.entity.SubscriptionPlan;
+import com.skillinfinity.payment.enumeration.SubscriptionPlanType;
 import com.skillinfinity.payment.enumeration.SubscriptionStatus;
 import com.skillinfinity.payment.event.PaymentEventPublisher;
 import com.skillinfinity.payment.exception.SubscriptionExpiredException;
@@ -158,8 +159,11 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<SubscriptionPlanResponse> getActivePlans() {
-        return subscriptionPlanRepository.findByIsActiveTrueOrderByPriceAsc().stream()
+    public List<SubscriptionPlanResponse> getActivePlans(SubscriptionPlanType type) {
+        List<SubscriptionPlan> plans = type != null
+                ? subscriptionPlanRepository.findByTypeAndIsActiveTrueOrderByPriceAsc(type)
+                : subscriptionPlanRepository.findByIsActiveTrueOrderByPriceAsc();
+        return plans.stream()
                 .map(this::toPlanResponse)
                 .toList();
     }
@@ -184,6 +188,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         return SubscriptionPlanResponse.builder()
                 .id(plan.getId())
                 .name(plan.getName())
+                .type(plan.getType())
                 .description(plan.getDescription())
                 .price(plan.getPrice())
                 .currency(plan.getCurrency())

@@ -47,6 +47,10 @@ const formatPlanPrice = (price: number, currency?: string): string => {
   return formatCurrency(price, currency);
 };
 
+/** Billing period label — 30-day plans are advertised as monthly (₹99/month). */
+const formatPlanDuration = (durationDays?: number): string =>
+  durationDays && durationDays !== 30 ? `/ ${durationDays} days` : '/ month';
+
 /**
  * Subscription plans with visible benefits. Learner and mentor subscriptions
  * are paid platform features — clearly separate from earned Community Mentor
@@ -55,6 +59,8 @@ const formatPlanPrice = (price: number, currency?: string): string => {
 export const SubscriptionPlansPage: React.FC<SubscriptionPlansPageProps> = ({ role }) => {
   useDocumentTitle(role === 'mentor' ? 'Mentor Subscription' : 'Subscription');
   const queryClient = useQueryClient();
+  const isMentor = role === 'mentor';
+  const expectedPlanType = isMentor ? 'MENTOR' : 'LEARNER';
   const [purchasingPlan, setPurchasingPlan] = useState<string | null>(null);
   const [cancelOpen, setCancelOpen] = useState(false);
 
@@ -66,9 +72,9 @@ export const SubscriptionPlansPage: React.FC<SubscriptionPlansPageProps> = ({ ro
   const [paymentComplete, setPaymentComplete] = useState(false);
 
   const plansQuery = useQuery({
-    queryKey: SUBSCRIPTION_QUERY_KEY,
+    queryKey: [...SUBSCRIPTION_QUERY_KEY, expectedPlanType],
     queryFn: async (): Promise<SubscriptionPlan[]> => {
-      const response = await paymentService.getSubscriptionPlans();
+      const response = await paymentService.getSubscriptionPlans(expectedPlanType);
       return response.data.data ?? [];
     },
     retry: 1,
@@ -99,7 +105,14 @@ export const SubscriptionPlansPage: React.FC<SubscriptionPlansPageProps> = ({ ro
   const initiate = useInitiatePaymentMutation();
   const confirm = useConfirmPaymentMutation();
 
-  const plans = plansQuery.data ?? [];
+  /** Plans are filtered server-side by audience. The fallback guard keeps
+   *  legacy backend responses (which lack a type) from leaking cross-role
+   *  plans onto the page. */
+  const plans = (plansQuery.data ?? []).filter((plan) =>
+    plan.type
+      ? plan.type === expectedPlanType
+      : plan.name.toLowerCase().startsWith(isMentor ? 'mentor' : 'learner'),
+  );
   const current = mineQuery.data;
 
   /** Opens the payment checkout for the chosen plan (no payment happens yet). */
@@ -159,8 +172,6 @@ export const SubscriptionPlansPage: React.FC<SubscriptionPlansPageProps> = ({ ro
       },
     );
   };
-
-  const isMentor = role === 'mentor';
 
   return (
     <Box>
@@ -317,8 +328,8 @@ export const SubscriptionPlansPage: React.FC<SubscriptionPlansPageProps> = ({ ro
         <Box sx={{ color: isMentor ? '#6D5DF6' : '#10B981', display: 'flex' }}>{isMentor ? <WorkspacePremiumOutlinedIcon /> : <SchoolOutlinedIcon />}</Box>
         <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1, minWidth: 240 }}>
           {isMentor
-            ? 'A subscription is a paid product. It is separate from Community Mentor benefits, which are earned only through real community teaching — they cannot be purchased.'
-            : 'Community sessions stay limited (3/month) even with a subscription — the credit economy stays meaningful. Subscriptions add convenience, priority and discovery features.'}
+            ? 'A subscription is a paid platform product — it adds visibility, analytics and commission perks. It never replaces credits, and it does not bypass the mentor approval workflow.'
+            : 'A subscription adds convenience, discounts and discovery — it never replaces credits. Professional sessions always require credits; Community sessions stay free.'}
         </Typography>
       </Box>
 
@@ -389,7 +400,7 @@ export const SubscriptionPlansPage: React.FC<SubscriptionPlansPageProps> = ({ ro
                           {formatPlanPrice(plan.price, plan.currency)}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                          {plan.durationDays ? `/ ${plan.durationDays} days` : '/ month'}
+                          {formatPlanDuration(plan.durationDays)}
                         </Typography>
                       </Stack>
                       <Stack spacing={1.25} sx={{ mb: 3, flexGrow: 1 }}>
@@ -416,15 +427,25 @@ export const SubscriptionPlansPage: React.FC<SubscriptionPlansPageProps> = ({ ro
                           </Stack>
                         ))}
                       </Stack>
-                      <Button
-                        variant={isCurrent ? 'outlined' : 'contained'}
-                        disabled={isCurrent || purchasingPlan === plan.id}
-                        startIcon={purchasingPlan === plan.id ? <CircularProgress size={16} color="inherit" /> : undefined}
-                        onClick={() => purchase(plan)}
-                        sx={{ fontWeight: 800, py: 1.25 }}
-                      >
-                        {isCurrent ? 'Current plan' : purchasingPlan === plan.id ? 'Processing…' : `Subscribe · ${formatPlanPrice(plan.price, plan.currency)}`}
-                      </Button>
+                      {plan.price <= 0 ? (
+                        <Button variant="outlined" disabled sx={{ fontWeight: 800, py: 1.25 }}>
+                          Free forever
+                        </Button>
+                      ) : isCurrent ? (
+                        <Button variant="outlined" disabled sx={{ fontWeight: 800, py: 1.25 }}>
+                          Current plan
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="contained"
+                          disabled={purchasingPlan === plan.id}
+                          startIcon={purchasingPlan === plan.id ? <CircularProgress size={16} color="inherit" /> : undefined}
+                          onClick={() => purchase(plan)}
+                          sx={{ fontWeight: 800, py: 1.25 }}
+                        >
+                          {purchasingPlan === plan.id ? 'Processing…' : `Subscribe · ${formatPlanPrice(plan.price, plan.currency)}`}
+                        </Button>
+                      )}
                     </Card>
                   </motion.div>
                 </Grid>
@@ -487,7 +508,7 @@ export const SubscriptionPlansPage: React.FC<SubscriptionPlansPageProps> = ({ ro
                   {formatPlanPrice(checkoutPlan.price, checkoutPlan.currency)}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  {checkoutPlan.durationDays ? `/ ${checkoutPlan.durationDays} days` : '/ month'}
+                  {formatPlanDuration(checkoutPlan.durationDays)}
                 </Typography>
               </Stack>
 

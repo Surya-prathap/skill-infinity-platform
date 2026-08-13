@@ -1,7 +1,10 @@
 package com.skillinfinity.payment.entity;
 
+import com.skillinfinity.payment.enumeration.SubscriptionPlanType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -31,6 +34,11 @@ public class SubscriptionPlan {
 
     @Column(name = "name", nullable = false, unique = true, length = 50)
     private String name;
+
+    /** Audience this plan targets — LEARNER or MENTOR. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type", length = 10)
+    private SubscriptionPlanType type;
 
     @Column(name = "description", length = 500)
     private String description;

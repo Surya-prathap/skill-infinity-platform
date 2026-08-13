@@ -1,6 +1,15 @@
+import { beforeEach } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { configure } from '@testing-library/react';
-import axios, { type AxiosAdapter } from 'axios';
+import axios, { AxiosError, type AxiosAdapter } from 'axios';
+
+// Sessions now live in sessionStorage (per-tab isolation) while legacy
+// features still write to localStorage. Clear both so tests never inherit
+// persisted state from a previous test file.
+beforeEach(() => {
+  window.localStorage.clear();
+  window.sessionStorage.clear();
+});
 
 // Heavy MUI + framer-motion pages render slowly under parallel test load.
 // Give async queries enough headroom so rendering, not timing, decides results.
@@ -12,15 +21,10 @@ configure({ asyncUtilTimeout: 5000 });
  * error renders the fallback deterministically instead of timing out under
  * parallel test load.
  */
-const offlineAdapter: AxiosAdapter = () =>
-  Promise.reject({
-    isAxiosError: true,
-    code: 'ERR_NETWORK',
-    message: 'Network Error',
-    response: undefined,
-    config: { timeout: 0 },
-    toJSON: () => ({}),
-  });
+const offlineAdapter: AxiosAdapter = (config) =>
+  Promise.reject(
+    new AxiosError('Network Error', AxiosError.ERR_NETWORK, config),
+  );
 
 // apiClient is created via axios.create() and inherits the default adapter.
 axios.defaults.adapter = offlineAdapter;

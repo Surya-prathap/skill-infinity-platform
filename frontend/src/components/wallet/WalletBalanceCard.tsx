@@ -9,7 +9,6 @@ import type { WalletBalance } from '@/types';
 interface WalletBalanceCardProps {
   balance: WalletBalance;
   onTopUp?: () => void;
-  onHistory?: () => void;
 }
 
 const BUCKET_COLORS: Record<string, string> = {
@@ -30,7 +29,6 @@ const BUCKETS: { key: 'welcomeBalance' | 'purchasedBalance' | 'learningBalance' 
 export const WalletBalanceCard: React.FC<WalletBalanceCardProps> = ({
   balance,
   onTopUp,
-  onHistory,
 }) => {
   return (
     <Box
@@ -162,19 +160,6 @@ export const WalletBalanceCard: React.FC<WalletBalanceCardProps> = ({
               }}
             >
               Top up credits
-            </Button>
-          )}
-          {onHistory && (
-            <Button
-              variant="outlined"
-              onClick={onHistory}
-              sx={{
-                color: '#fff',
-                borderColor: 'rgba(255,255,255,0.5)',
-                '&:hover': { borderColor: '#fff', bgcolor: 'rgba(255,255,255,0.1)' },
-              }}
-            >
-              History
             </Button>
           )}
         </Stack>

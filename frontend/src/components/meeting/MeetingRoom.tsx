@@ -38,6 +38,7 @@ import { ReactionOverlay } from './ReactionOverlay';
 import { LeaveMeetingDialog } from './LeaveMeetingDialog';
 import { showInfo, showSuccess } from '@/utils';
 import { useCurrentUserIdentity } from '@/hooks';
+import { ROUTES } from '@/constants';
 
 interface MeetingRoomProps {
   onEnded: () => void;
@@ -179,7 +180,7 @@ export const MeetingRoom = ({ onEnded }: MeetingRoomProps) => {
     stopMedia();
     onEnded();
     showSuccess('Meeting ended — everyone has been disconnected');
-    void navigate('/meetings', { replace: true });
+    void navigate(ROUTES.SESSIONS, { replace: true });
   }, [dispatch, stopMedia, onEnded, navigate]);
 
   const handlePin = useCallback(

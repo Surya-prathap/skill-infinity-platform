@@ -42,8 +42,6 @@ management:
       probes:
         enabled: true
       show-details: always
-  tracing:
-    enabled: false
       group:
         readiness:
           # Skip the slow discoveryComposite/Eureka remote-status fetch — the
@@ -52,3 +50,5 @@ management:
           include:
             - readinessState
             - redis
+  tracing:
+    enabled: false

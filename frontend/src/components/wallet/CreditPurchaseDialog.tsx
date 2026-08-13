@@ -1,31 +1,45 @@
 import { useState } from 'react';
-import { Box, Button, Chip, CircularProgress, Grid, InputAdornment, TextField } from '@mui/material';
+import {
+  Box,
+  Button,
+  Chip,
+  CircularProgress,
+  Dialog,
+  DialogContent,
+  Grid,
+  InputAdornment,
+  TextField,
+} from '@mui/material';
+import { useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import LocalOfferOutlinedIcon from '@mui/icons-material/LocalOfferOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import CheckCircleOutlineRoundedIcon from '@mui/icons-material/CheckCircleOutlineRounded';
-import WorkspacePremiumOutlinedIcon from '@mui/icons-material/WorkspacePremiumOutlined';
-import { Card } from '@/components/ui/Card';
-import { Stack } from '@/components/ui/Stack';
 import { Typography } from '@/components/ui/Typography';
-import { PageHeader } from '@/components/common';
+import { Stack } from '@/components/ui/Stack';
 import { CreditPackCard, InvoicePreview, PaymentMethodCard, PAYMENT_METHOD_OPTIONS } from '@/components/wallet';
 import type { CreditPackOption } from '@/components/wallet';
-import { useDocumentTitle } from '@/hooks';
-import { ROUTES } from '@/constants';
 import { usePurchaseCredits, useValidateCouponMutation } from '@/features/payments';
 import { CREDIT_PACKS } from '@/features/wallet/constants';
+import { walletKeys } from '@/features/wallet/queryKeys';
 import { formatCurrency } from '@/utils';
 
 const TAX_RATE = 0.08;
 
-export const CreditPurchasePage: React.FC = () => {
-  useDocumentTitle('Buy Credits');
-  const navigate = useNavigate();
+interface CreditPurchaseDialogProps {
+  open: boolean;
+  onClose: () => void;
+}
+
+/**
+ * Inline credit top-up — replaces the old standalone /wallet/credits page so
+ * buying credits never leaves the wallet. Same checkout flow: pick a pack,
+ * apply a coupon, pay.
+ */
+export const CreditPurchaseDialog: React.FC<CreditPurchaseDialogProps> = ({ open, onClose }) => {
   const { initiate, confirm } = usePurchaseCredits();
   const validateCoupon = useValidateCouponMutation();
+  const queryClient = useQueryClient();
 
   const [selectedPack, setSelectedPack] = useState<CreditPackOption>(CREDIT_PACKS[0]!);
   const [couponCode, setCouponCode] = useState('');
@@ -78,6 +92,9 @@ export const CreditPurchasePage: React.FC = () => {
         paymentId: initiated.id,
         gatewayTransactionId: `gw_${Date.now()}`,
       });
+      // Refresh the wallet balance/history behind the dialog so the page
+      // shows the updated credits as soon as it closes.
+      void queryClient.invalidateQueries({ queryKey: walletKeys.all });
       setComplete(true);
     } catch {
       setPaymentError('Payment failed. Please check your payment details and try again.');
@@ -86,31 +103,29 @@ export const CreditPurchasePage: React.FC = () => {
     }
   };
 
+  const handleClose = () => {
+    // Reset the flow so the next open starts fresh.
+    setComplete(false);
+    setPaymentError(null);
+    setCouponApplied(null);
+    setCouponCode('');
+    onClose();
+  };
+
   return (
-    <Box>
-      <Button startIcon={<ArrowBackIcon />} onClick={() => navigate(ROUTES.WALLET)} sx={{ mb: 2.5 }}>
-        Back to wallet
-      </Button>
-
-      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}>
-        <PageHeader
-          title="Buy credits"
-          subtitle="Choose a pack, apply a coupon and top up instantly."
-          actions={
-            <Chip
-              icon={<WorkspacePremiumOutlinedIcon />}
-              label="Instant credit delivery"
-              color="primary"
-              variant="outlined"
-              sx={{ fontWeight: 700 }}
-            />
-          }
-        />
-
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      maxWidth="md"
+      fullWidth
+      scroll="body"
+      aria-labelledby="credit-purchase-title"
+    >
+      <DialogContent sx={{ p: { xs: 2.5, md: 4 } }}>
         <AnimatePresence mode="wait">
           {complete ? (
             <motion.div key="done" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}>
-              <Card sx={{ p: { xs: 4, md: 6 }, textAlign: 'center' }}>
+              <Box sx={{ textAlign: 'center', py: 3 }}>
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
@@ -134,24 +149,26 @@ export const CreditPurchasePage: React.FC = () => {
                     <CheckCircleOutlineRoundedIcon sx={{ fontSize: 44 }} />
                   </Box>
                 </motion.div>
-                <Typography variant="h5" fontWeight={800} sx={{ mb: 1 }}>
+                <Typography variant="h5" fontWeight={800} sx={{ mb: 1 }} id="credit-purchase-title">
                   Payment successful!
                 </Typography>
                 <Typography variant="body1" color="text.secondary" sx={{ mb: 3, maxWidth: 420, mx: 'auto' }}>
                   {selectedPack.credits.toLocaleString()} credits were added to your wallet. Happy learning!
                 </Typography>
-                <Stack direction="row" gap={1.5} justifyContent="center">
-                  <Button variant="contained" onClick={() => navigate(ROUTES.WALLET)}>
-                    Go to wallet
-                  </Button>
-                  <Button variant="outlined" onClick={() => navigate(ROUTES.MENTORS)}>
-                    Find a mentor
-                  </Button>
-                </Stack>
-              </Card>
+                <Button variant="contained" onClick={handleClose}>
+                  Done
+                </Button>
+              </Box>
             </motion.div>
           ) : (
             <motion.div key="checkout" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <Typography variant="h5" fontWeight={800} sx={{ mb: 0.5 }} id="credit-purchase-title">
+                Buy credits
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Choose a pack, apply a coupon and top up instantly.
+              </Typography>
+
               <Grid container spacing={3}>
                 {/* Packs */}
                 <Grid size={{ xs: 12, lg: 7 }}>
@@ -175,7 +192,7 @@ export const CreditPurchasePage: React.FC = () => {
                   </Grid>
 
                   {/* Coupon */}
-                  <Card sx={{ p: 3, mt: 3 }}>
+                  <Box sx={{ mt: 3 }}>
                     <Typography variant="subtitle1" fontWeight={800} sx={{ mb: 1.5 }}>
                       Have a coupon?
                     </Typography>
@@ -219,79 +236,74 @@ export const CreditPurchasePage: React.FC = () => {
                         {couponError}
                       </Typography>
                     )}
-                    <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mt: 1 }}>
-                      Coupons are validated by the payment service.
-                    </Typography>
-                  </Card>
+                  </Box>
                 </Grid>
 
                 {/* Checkout */}
                 <Grid size={{ xs: 12, lg: 5 }}>
-                  <Card sx={{ p: { xs: 2.5, md: 3.5 } }}>
-                    <Typography variant="subtitle1" fontWeight={800} sx={{ mb: 2 }}>
-                      Payment method
-                    </Typography>
-                    <Stack spacing={1.25} sx={{ mb: 3 }}>
-                      {PAYMENT_METHOD_OPTIONS.map((method) => (
-                        <PaymentMethodCard
-                          key={method.id}
-                          method={method}
-                          selected={paymentMethod === method.id}
-                          onSelect={() => setPaymentMethod(method.id)}
-                        />
-                      ))}
-                    </Stack>
+                  <Typography variant="subtitle1" fontWeight={800} sx={{ mb: 2 }}>
+                    Payment method
+                  </Typography>
+                  <Stack spacing={1.25} sx={{ mb: 3 }}>
+                    {PAYMENT_METHOD_OPTIONS.map((method) => (
+                      <PaymentMethodCard
+                        key={method.id}
+                        method={method}
+                        selected={paymentMethod === method.id}
+                        onSelect={() => setPaymentMethod(method.id)}
+                      />
+                    ))}
+                  </Stack>
 
-                    <InvoicePreview
-                      subtotal={subtotal}
-                      discount={discount}
-                      tax={tax}
-                      total={total}
-                      couponCode={couponApplied ?? undefined}
-                    />
+                  <InvoicePreview
+                    subtotal={subtotal}
+                    discount={discount}
+                    tax={tax}
+                    total={total}
+                    couponCode={couponApplied ?? undefined}
+                  />
 
-                    {paymentError && (
-                      <Box
-                        role="alert"
-                        sx={{
-                          mt: 2,
-                          p: 1.5,
-                          borderRadius: 2,
-                          border: 1,
-                          borderColor: 'error.main',
-                          bgcolor: 'error.light',
-                          color: 'error.contrastText',
-                        }}
-                      >
-                        <Typography variant="body2" fontWeight={600}>
-                          {paymentError}
-                        </Typography>
-                      </Box>
-                    )}
-
-                    <Button
-                      fullWidth
-                      variant="contained"
-                      size="large"
-                      disabled={processing}
-                      onClick={() => void handlePurchase()}
-                      startIcon={processing ? <CircularProgress size={18} color="inherit" /> : <LockOutlinedIcon />}
-                      sx={{ mt: 2.5, fontWeight: 800 }}
+                  {paymentError && (
+                    <Box
+                      role="alert"
+                      sx={{
+                        mt: 2,
+                        p: 1.5,
+                        borderRadius: 2,
+                        border: 1,
+                        borderColor: 'error.main',
+                        bgcolor: 'error.light',
+                        color: 'error.contrastText',
+                      }}
                     >
-                      {processing ? 'Processing…' : `Pay ${formatCurrency(total)}`}
-                    </Button>
-                    <Typography variant="caption" color="text.disabled" sx={{ display: 'block', textAlign: 'center', mt: 1.5 }}>
-                      Secured by Stripe · Razorpay · UPI — credits arrive instantly
-                    </Typography>
-                  </Card>
+                      <Typography variant="body2" fontWeight={600}>
+                        {paymentError}
+                      </Typography>
+                    </Box>
+                  )}
+
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    size="large"
+                    disabled={processing}
+                    onClick={() => void handlePurchase()}
+                    startIcon={processing ? <CircularProgress size={18} color="inherit" /> : <LockOutlinedIcon />}
+                    sx={{ mt: 2.5, fontWeight: 800 }}
+                  >
+                    {processing ? 'Processing…' : `Pay ${formatCurrency(total)}`}
+                  </Button>
+                  <Typography variant="caption" color="text.disabled" sx={{ display: 'block', textAlign: 'center', mt: 1.5 }}>
+                    Secured by Stripe · Razorpay · UPI — credits arrive instantly
+                  </Typography>
                 </Grid>
               </Grid>
             </motion.div>
           )}
         </AnimatePresence>
-      </motion.div>
-    </Box>
+      </DialogContent>
+    </Dialog>
   );
 };
 
-export default CreditPurchasePage;
+export default CreditPurchaseDialog;

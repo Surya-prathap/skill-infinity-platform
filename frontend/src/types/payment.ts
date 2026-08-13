@@ -134,6 +134,8 @@ export interface CouponValidationRequest {
 export interface SubscriptionPlan {
   id: string;
   name: string;
+  /** Audience this plan targets — 'LEARNER' or 'MENTOR'. */
+  type?: 'LEARNER' | 'MENTOR';
   description?: string;
   price: number;
   currency?: string;

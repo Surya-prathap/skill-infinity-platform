@@ -2,6 +2,7 @@ package com.skillinfinity.payment.service;
 
 import com.skillinfinity.common.dto.PageResponse;
 import com.skillinfinity.payment.dto.request.SubscriptionRequest;
+import com.skillinfinity.payment.enumeration.SubscriptionPlanType;
 import com.skillinfinity.payment.dto.response.MySubscriptionResponse;
 import com.skillinfinity.payment.dto.response.PaymentResponse;
 import com.skillinfinity.payment.dto.response.SubscriptionPlanResponse;
@@ -18,7 +19,7 @@ public interface SubscriptionService {
 
     PageResponse<TransactionResponse> getSubscriptionHistory(UUID userId, int page, int size);
 
-    List<SubscriptionPlanResponse> getActivePlans();
+    List<SubscriptionPlanResponse> getActivePlans(SubscriptionPlanType type);
 
     MySubscriptionResponse getMySubscription(UUID userId);
 }

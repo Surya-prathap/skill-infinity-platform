@@ -65,29 +65,9 @@ const EditProfilePage = lazyPage(async () => {
   const module = await import('@/pages/profile/EditProfilePage');
   return { default: module.EditProfilePage };
 });
-const EducationPage = lazyPage(async () => {
-  const module = await import('@/pages/profile/EducationPage');
-  return { default: module.EducationPage };
-});
-const ExperiencePage = lazyPage(async () => {
-  const module = await import('@/pages/profile/ExperiencePage');
-  return { default: module.ExperiencePage };
-});
 const SkillsPage = lazyPage(async () => {
   const module = await import('@/pages/profile/SkillsPage');
   return { default: module.SkillsPage };
-});
-const LanguagesPage = lazyPage(async () => {
-  const module = await import('@/pages/profile/LanguagesPage');
-  return { default: module.LanguagesPage };
-});
-const SocialLinksPage = lazyPage(async () => {
-  const module = await import('@/pages/profile/SocialLinksPage');
-  return { default: module.SocialLinksPage };
-});
-const ResumePage = lazyPage(async () => {
-  const module = await import('@/pages/profile/ResumePage');
-  return { default: module.ResumePage };
 });
 const MentorDashboardPage = lazyPage(async () => {
   const module = await import('@/pages/mentor/MentorDashboardPage');
@@ -129,18 +109,6 @@ const MentorReviewsPage = lazyPage(async () => {
   const module = await import('@/pages/reviews/MentorReviewsPage');
   return { default: module.MentorReviewsPage };
 });
-const CalendarPage = lazyPage(async () => {
-  const module = await import('@/pages/CalendarPage');
-  return { default: module.CalendarPage };
-});
-const CreditPurchasePage = lazyPage(async () => {
-  const module = await import('@/pages/CreditPurchasePage');
-  return { default: module.CreditPurchasePage };
-});
-const TransactionHistoryPage = lazyPage(async () => {
-  const module = await import('@/pages/TransactionHistoryPage');
-  return { default: module.TransactionHistoryPage };
-});
 const SessionDetailsPage = lazyPage(async () => {
   const module = await import('@/pages/SessionDetailsPage');
   return { default: module.SessionDetailsPage };
@@ -160,10 +128,6 @@ const MentorSubscriptionPage = lazyPage(async () => {
 const SessionsPage = lazyPage(async () => {
   const module = await import('@/pages/SessionsPage');
   return { default: module.SessionsPage };
-});
-const MeetingsPage = lazyPage(async () => {
-  const module = await import('@/pages/MeetingsPage');
-  return { default: module.MeetingsPage };
 });
 const MeetingPage = lazyPage(async () => {
   const module = await import('@/pages/MeetingPage');
@@ -374,22 +338,6 @@ export const AppRouter: React.FC = () => {
               }
             />
             <Route
-              path="education"
-              element={
-                <Suspense fallback={<RouteFallback />}>
-                  <EducationPage />
-                </Suspense>
-              }
-            />
-            <Route
-              path="experience"
-              element={
-                <Suspense fallback={<RouteFallback />}>
-                  <ExperiencePage />
-                </Suspense>
-              }
-            />
-            <Route
               path="skills"
               element={
                 <Suspense fallback={<RouteFallback />}>
@@ -397,29 +345,26 @@ export const AppRouter: React.FC = () => {
                 </Suspense>
               }
             />
+            {/* Removed profile sections redirect to the overview. */}
+            <Route
+              path="education"
+              element={<Navigate to={ROUTES.PROFILE} replace />}
+            />
+            <Route
+              path="experience"
+              element={<Navigate to={ROUTES.PROFILE} replace />}
+            />
             <Route
               path="languages"
-              element={
-                <Suspense fallback={<RouteFallback />}>
-                  <LanguagesPage />
-                </Suspense>
-              }
+              element={<Navigate to={ROUTES.PROFILE} replace />}
             />
             <Route
               path="social"
-              element={
-                <Suspense fallback={<RouteFallback />}>
-                  <SocialLinksPage />
-                </Suspense>
-              }
+              element={<Navigate to={ROUTES.PROFILE} replace />}
             />
             <Route
               path="resume"
-              element={
-                <Suspense fallback={<RouteFallback />}>
-                  <ResumePage />
-                </Suspense>
-              }
+              element={<Navigate to={ROUTES.PROFILE} replace />}
             />
           </Route>
           <Route
@@ -438,27 +383,16 @@ export const AppRouter: React.FC = () => {
               </Suspense>
             }
           />
-          <Route
-            path={ROUTES.CALENDAR}
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <CalendarPage />
-              </Suspense>
-            }
-          />
+          {/* Removed pages redirect to their closest remaining destination. */}
+          <Route path={ROUTES.CALENDAR} element={<Navigate to={ROUTES.SESSIONS} replace />} />
+          <Route path={ROUTES.CREDITS} element={<Navigate to={ROUTES.WALLET} replace />} />
+          <Route path={ROUTES.TRANSACTIONS} element={<Navigate to={ROUTES.WALLET} replace />} />
+          <Route path={ROUTES.MEETINGS} element={<Navigate to={ROUTES.SESSIONS} replace />} />
           <Route
             path={ROUTES.WALLET}
             element={
               <Suspense fallback={<RouteFallback />}>
                 <WalletPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path={ROUTES.CREDITS}
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <CreditPurchasePage />
               </Suspense>
             }
           />
@@ -471,26 +405,10 @@ export const AppRouter: React.FC = () => {
             }
           />
           <Route
-            path={ROUTES.TRANSACTIONS}
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <TransactionHistoryPage />
-              </Suspense>
-            }
-          />
-          <Route
             path={ROUTES.BOOK_SESSION}
             element={
               <Suspense fallback={<RouteFallback />}>
                 <BookingPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path={ROUTES.MEETINGS}
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <MeetingsPage />
               </Suspense>
             }
           />

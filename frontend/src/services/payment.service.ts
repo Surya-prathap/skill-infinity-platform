@@ -63,8 +63,12 @@ export const paymentService = {
 
   /* ---------------- Subscriptions ---------------- */
 
-  getSubscriptionPlans: () =>
-    apiClient.get<ApiResponse<SubscriptionPlan[]>>(API_ENDPOINTS.PAYMENTS.SUBSCRIPTION_PLANS),
+  getSubscriptionPlans: (type?: 'LEARNER' | 'MENTOR') =>
+    apiClient.get<ApiResponse<SubscriptionPlan[]>>(
+      type
+        ? `${API_ENDPOINTS.PAYMENTS.SUBSCRIPTION_PLANS}?type=${type}`
+        : API_ENDPOINTS.PAYMENTS.SUBSCRIPTION_PLANS,
+    ),
 
   getMySubscription: () =>
     apiClient.get<ApiResponse<MySubscription | null>>(API_ENDPOINTS.PAYMENTS.SUBSCRIPTION_MINE),

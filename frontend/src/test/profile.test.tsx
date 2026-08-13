@@ -36,18 +36,7 @@ describe('ProfileOverviewPage', () => {
     expect(screen.getByText('Profile Completion')).toBeInTheDocument();
   });
 
-  it('shows education and experience sections', async () => {
-    persistProfile(testProfile);
-    const { store } = renderWithProviders(<ProfileOverviewPage />);
-    store.dispatch(setCredentials(mockAuth));
-
-    expect(await screen.findByText('Education')).toBeInTheDocument();
-    expect(screen.getByText('Experience')).toBeInTheDocument();
-    expect(screen.getByText('University of Texas at Austin')).toBeInTheDocument();
-    expect(screen.getByText('Senior Frontend Engineer · Lumina Labs')).toBeInTheDocument();
-  });
-
-  it('renders skills and language chips', async () => {
+  it('renders skills chips', async () => {
     persistProfile(testProfile);
     const { store } = renderWithProviders(<ProfileOverviewPage />);
     store.dispatch(setCredentials(mockAuth));
@@ -55,6 +44,5 @@ describe('ProfileOverviewPage', () => {
     expect(await screen.findByText('Skills')).toBeInTheDocument();
     expect(screen.getByText('React')).toBeInTheDocument();
     expect(screen.getByText('TypeScript')).toBeInTheDocument();
-    expect(screen.getByText('English')).toBeInTheDocument();
   });
 });

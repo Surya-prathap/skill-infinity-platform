@@ -9,12 +9,10 @@ import {
   TextField,
 } from '@mui/material';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
 import AddIcon from '@mui/icons-material/Add';
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
 import TrendingUpOutlinedIcon from '@mui/icons-material/TrendingUpOutlined';
 import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import CurrencyExchangeOutlinedIcon from '@mui/icons-material/CurrencyExchangeOutlined';
 import { Card } from '@/components/ui/Card';
 import { Stack } from '@/components/ui/Stack';
@@ -23,11 +21,10 @@ import { MetricCard } from '@/components/ui/MetricCard';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { PageHeader } from '@/components/common';
 import { AreaChart, DonutChart } from '@/components/charts';
-import { WalletBalanceCard, TransactionCard } from '@/components/wallet';
+import { CreditPurchaseDialog, WalletBalanceCard, TransactionCard } from '@/components/wallet';
 import { EmptyState, PageSkeleton } from '@/components/feedback';
 import { Pagination } from '@/components/ui/Pagination';
 import { useDocumentTitle } from '@/hooks';
-import { ROUTES } from '@/constants';
 import {
   useRequestWithdrawalMutation,
   useWalletBalanceQuery,
@@ -217,8 +214,8 @@ const WithdrawalPanel: React.FC = () => {
 
 export const WalletPage: React.FC = () => {
   useDocumentTitle('Wallet');
-  const navigate = useNavigate();
   const [page, setPage] = useState(0);
+  const [purchaseOpen, setPurchaseOpen] = useState(false);
 
   const balance = useWalletBalanceQuery();
   const statistics = useWalletStatisticsQuery();
@@ -248,22 +245,9 @@ export const WalletPage: React.FC = () => {
         title="Wallet"
         subtitle="Manage your credits, track spending and top up anytime."
         actions={
-          <>
-            <Button
-              variant="outlined"
-              startIcon={<ReceiptLongOutlinedIcon />}
-              onClick={() => navigate(ROUTES.TRANSACTIONS)}
-            >
-              Transactions
-            </Button>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => navigate(ROUTES.CREDITS)}
-            >
-              Buy credits
-            </Button>
-          </>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={() => setPurchaseOpen(true)}>
+            Buy credits
+          </Button>
         }
       />
 
@@ -281,8 +265,7 @@ export const WalletPage: React.FC = () => {
                   currency: 'CREDITS',
                 }
               }
-              onTopUp={() => navigate(ROUTES.CREDITS)}
-              onHistory={() => navigate(ROUTES.TRANSACTIONS)}
+              onTopUp={() => setPurchaseOpen(true)}
             />
           </motion.div>
         </Grid>
@@ -414,15 +397,6 @@ export const WalletPage: React.FC = () => {
             iconColor="#F59E0B"
             title="Recent transactions"
             subtitle="Your latest wallet activity"
-            action={
-              <Button
-                size="small"
-                endIcon={<ArrowForwardIcon fontSize="small" />}
-                onClick={() => navigate(ROUTES.TRANSACTIONS)}
-              >
-                View all
-              </Button>
-            }
           />
 
           {history.isFetching && history.data.content.length === 0 ? (
@@ -433,7 +407,7 @@ export const WalletPage: React.FC = () => {
               title="No transactions yet"
               description="Buy credits to start your learning journey."
               actionLabel="Buy credits"
-              onAction={() => navigate(ROUTES.CREDITS)}
+              onAction={() => setPurchaseOpen(true)}
             />
           ) : (
             <>
@@ -460,6 +434,8 @@ export const WalletPage: React.FC = () => {
           )}
         </Card>
       </motion.div>
+
+      <CreditPurchaseDialog open={purchaseOpen} onClose={() => setPurchaseOpen(false)} />
     </Box>
   );
 };

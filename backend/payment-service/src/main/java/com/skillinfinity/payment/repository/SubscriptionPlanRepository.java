@@ -1,6 +1,7 @@
 package com.skillinfinity.payment.repository;
 
 import com.skillinfinity.payment.entity.SubscriptionPlan;
+import com.skillinfinity.payment.enumeration.SubscriptionPlanType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -16,4 +17,6 @@ public interface SubscriptionPlanRepository extends JpaRepository<SubscriptionPl
     List<SubscriptionPlan> findByIsActiveTrue();
 
     List<SubscriptionPlan> findByIsActiveTrueOrderByPriceAsc();
+
+    List<SubscriptionPlan> findByTypeAndIsActiveTrueOrderByPriceAsc(SubscriptionPlanType type);
 }

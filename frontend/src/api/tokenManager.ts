@@ -1,24 +1,28 @@
 import { STORAGE_KEYS } from '@/constants';
-import { getStoredString, setStoredString, removeStoredValue } from '@/utils';
+import { getSessionString, setSessionString, removeSessionValue } from '@/utils';
 
 /**
  * Lightweight token manager used by the axios client.
  * Kept dependency-free of the Redux store to avoid circular imports.
  * The store subscribes to auth changes and keeps this in sync.
+ *
+ * Tokens live in sessionStorage: every tab owns an independent session, so
+ * testing admin / mentor / learner roles in separate tabs works without one
+ * login overwriting another.
  */
 export const tokenManager = {
-  getAccessToken: (): string | null => getStoredString(STORAGE_KEYS.ACCESS_TOKEN),
-  getRefreshToken: (): string | null => getStoredString(STORAGE_KEYS.REFRESH_TOKEN),
-  setAccessToken: (token: string): void => setStoredString(STORAGE_KEYS.ACCESS_TOKEN, token),
-  setRefreshToken: (token: string): void => setStoredString(STORAGE_KEYS.REFRESH_TOKEN, token),
+  getAccessToken: (): string | null => getSessionString(STORAGE_KEYS.ACCESS_TOKEN),
+  getRefreshToken: (): string | null => getSessionString(STORAGE_KEYS.REFRESH_TOKEN),
+  setAccessToken: (token: string): void => setSessionString(STORAGE_KEYS.ACCESS_TOKEN, token),
+  setRefreshToken: (token: string): void => setSessionString(STORAGE_KEYS.REFRESH_TOKEN, token),
   setTokens: (accessToken: string, refreshToken: string): void => {
-    setStoredString(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
-    setStoredString(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
+    setSessionString(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
+    setSessionString(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
   },
-  clearAccessToken: (): void => removeStoredValue(STORAGE_KEYS.ACCESS_TOKEN),
-  clearRefreshToken: (): void => removeStoredValue(STORAGE_KEYS.REFRESH_TOKEN),
+  clearAccessToken: (): void => removeSessionValue(STORAGE_KEYS.ACCESS_TOKEN),
+  clearRefreshToken: (): void => removeSessionValue(STORAGE_KEYS.REFRESH_TOKEN),
   clearTokens: (): void => {
-    removeStoredValue(STORAGE_KEYS.ACCESS_TOKEN);
-    removeStoredValue(STORAGE_KEYS.REFRESH_TOKEN);
+    removeSessionValue(STORAGE_KEYS.ACCESS_TOKEN);
+    removeSessionValue(STORAGE_KEYS.REFRESH_TOKEN);
   },
 } as const;

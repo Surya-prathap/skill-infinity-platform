@@ -13,6 +13,7 @@ import com.skillinfinity.payment.dto.response.MySubscriptionResponse;
 import com.skillinfinity.payment.dto.response.PaymentResponse;
 import com.skillinfinity.payment.dto.response.ReceiptResponse;
 import com.skillinfinity.payment.dto.response.SubscriptionPlanResponse;
+import com.skillinfinity.payment.enumeration.SubscriptionPlanType;
 import com.skillinfinity.payment.dto.response.TransactionResponse;
 import com.skillinfinity.payment.service.CouponService;
 import com.skillinfinity.payment.service.PaymentService;
@@ -186,9 +187,10 @@ public class PaymentController {
     }
 
     @GetMapping("/subscription/plans")
-    @Operation(summary = "List subscription plans", description = "Returns all active learner/mentor subscription plans")
-    public ResponseEntity<ApiResponse<List<SubscriptionPlanResponse>>> getSubscriptionPlans() {
-        List<SubscriptionPlanResponse> plans = subscriptionService.getActivePlans();
+    @Operation(summary = "List subscription plans", description = "Returns active subscription plans, optionally filtered by audience (LEARNER or MENTOR)")
+    public ResponseEntity<ApiResponse<List<SubscriptionPlanResponse>>> getSubscriptionPlans(
+            @RequestParam(required = false) SubscriptionPlanType type) {
+        List<SubscriptionPlanResponse> plans = subscriptionService.getActivePlans(type);
         return ResponseEntity.ok(ApiResponse.success(plans));
     }
 

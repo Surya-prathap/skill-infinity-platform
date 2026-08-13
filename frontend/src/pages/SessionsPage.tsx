@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
 import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
-import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
 import AddIcon from '@mui/icons-material/Add';
 import { Card } from '@/components/ui/Card';
 import { Typography } from '@/components/ui/Typography';
@@ -36,22 +35,9 @@ export const SessionsPage: React.FC = () => {
         title="Sessions"
         subtitle="Book, manage and attend your learning sessions."
         actions={
-          <>
-            <Button
-              variant="outlined"
-              startIcon={<CalendarMonthOutlinedIcon />}
-              onClick={() => navigate(ROUTES.CALENDAR)}
-            >
-              Calendar
-            </Button>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => navigate(ROUTES.MENTORS)}
-            >
-              Book Session
-            </Button>
-          </>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate(ROUTES.MENTORS)}>
+            Book Session
+          </Button>
         }
       />
 

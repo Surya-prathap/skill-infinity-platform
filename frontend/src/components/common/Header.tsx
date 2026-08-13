@@ -7,7 +7,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Logo } from './Logo';
 import { SearchBar } from './SearchBar';
 import { ThemeToggle } from './ThemeToggle';
-import { LanguageSwitcher } from './LanguageSwitcher';
 import { ProfileMenu } from './ProfileMenu';
 import { useAuth } from '@/hooks';
 import { ROUTES, getHomeRoute } from '@/constants';
@@ -119,7 +118,6 @@ export const Header: React.FC = () => {
             )}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, ml: 'auto' }}>
               <ThemeToggle />
-              <LanguageSwitcher />
               {authActions}
             </Box>
           </Toolbar>

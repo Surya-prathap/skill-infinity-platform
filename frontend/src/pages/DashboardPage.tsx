@@ -4,7 +4,6 @@ import { Typography } from '@/components/ui/Typography';
 import {
   AnimatedNumber,
   Avatar,
-  AvatarStack,
   Card,
   GlassCard,
   MetricCard,
@@ -30,7 +29,12 @@ import { useAuth, useDocumentTitle } from '@/hooks';
 import { ROUTES } from '@/constants';
 import { computeProfileCompletion, useProfileQuery } from '@/features/profile';
 import { useDashboardData } from '@/features/dashboard';
-import { useCommunityAllowanceQuery } from '@/features/sessions';
+import {
+  useCommunityAllowanceQuery,
+  useJoinCommunitySessionMutation,
+  useUpcomingCommunitySessionsQuery,
+} from '@/features/sessions';
+import type { Session } from '@/types';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 22 },
@@ -58,6 +62,14 @@ export const DashboardPage: React.FC = () => {
   const { stats, learningProgress, upcomingSessions, mentorsQuery, reviewsQuery } = dashboard;
 
   const communityAllowance = useCommunityAllowanceQuery().allowance;
+  const communityQuery = useUpcomingCommunitySessionsQuery(0, 3);
+  const communitySessions = communityQuery.data.content;
+  const joinCommunity = useJoinCommunitySessionMutation();
+
+  const handleJoinCommunity = (session: Session) => {
+    if (joinCommunity.isPending) return;
+    joinCommunity.mutate(session.id);
+  };
 
   const recommendedMentors = mentorsQuery.data.content;
 
@@ -435,6 +447,124 @@ export const DashboardPage: React.FC = () => {
         </Grid>
       </Grid>
 
+      {/* ================= Community sessions ================= */}
+      <Grid container spacing={3} sx={{ mb: 3 }}>
+        <Grid size={{ xs: 12 }}>
+          <motion.div initial="hidden" animate="visible" variants={fadeUp} style={{ height: '100%' }}>
+            <Card sx={{ p: { xs: 2.5, md: 3.5 } }}>
+              <SectionHeader
+                icon={<ForumOutlinedIcon />}
+                iconColor="#EC4899"
+                title="Community Sessions"
+                subtitle="Free group sessions hosted by mentors — no credits needed"
+                action={
+                  <>
+                    {communityAllowance && (
+                      <Chip
+                        label={`${communityAllowance.remaining} free${communityAllowance.remaining === 1 ? '' : 's'} left this month`}
+                        size="small"
+                        color={communityAllowance.remaining > 0 ? 'success' : 'error'}
+                        variant="outlined"
+                        sx={{ fontWeight: 700, mr: 1 }}
+                      />
+                    )}
+                    <Button
+                      component={RouterLink}
+                      to={ROUTES.SESSIONS}
+                      size="small"
+                      endIcon={<ArrowForwardIcon fontSize="small" />}
+                    >
+                      View all
+                    </Button>
+                  </>
+                }
+              />
+              {communitySessions.length === 0 ? (
+                <Box sx={{ textAlign: 'center', py: 3 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    No community sessions are open right now — mentors schedule new ones regularly.
+                  </Typography>
+                </Box>
+              ) : (
+                <Grid container spacing={2}>
+                  {communitySessions.map((session) => (
+                    <Grid key={session.id} size={{ xs: 12, sm: 6, lg: 4 }}>
+                      <Box
+                        sx={{
+                          height: '100%',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 1.25,
+                          p: 2,
+                          borderRadius: 3,
+                          border: 1,
+                          borderColor: 'divider',
+                          transition: 'background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease',
+                          '&:hover': {
+                            bgcolor: 'action.hover',
+                            borderColor: 'primary.main',
+                            transform: 'translateY(-1px)',
+                          },
+                        }}
+                      >
+                        <Stack direction="row" alignItems="center" gap={1.5}>
+                          <Box
+                            sx={{
+                              width: 40,
+                              height: 40,
+                              borderRadius: 2,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: '#fff',
+                              background: 'linear-gradient(135deg, #EC4899, #F59E0B)',
+                              flexShrink: 0,
+                            }}
+                          >
+                            <ForumOutlinedIcon fontSize="small" />
+                          </Box>
+                          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                            <Typography variant="subtitle2" fontWeight={700} noWrap>
+                              {session.topic ?? session.title ?? 'Community session'}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" noWrap>
+                              {session.mentorName ?? 'A mentor'}
+                            </Typography>
+                          </Box>
+                          <Chip
+                            size="small"
+                            label="Free"
+                            color="secondary"
+                            sx={{ fontWeight: 700 }}
+                          />
+                        </Stack>
+                        <Typography variant="caption" color="text.secondary">
+                          {session.startTime
+                            ? dayjs(session.startTime).format('ddd, MMM D · h:mm A')
+                            : 'Time TBD'}
+                          {session.durationMinutes ? ` · ${session.durationMinutes} min` : ''}
+                          {session.participantCount !== undefined ? ` · ${session.participantCount} joined` : ''}
+                        </Typography>
+                        <Button
+                          size="small"
+                          variant="contained"
+                          fullWidth
+                          disabled={joinCommunity.isPending}
+                          onClick={() => handleJoinCommunity(session)}
+                          sx={{ mt: 'auto' }}
+                        >
+                          Join session
+                        </Button>
+                      </Box>
+                    </Grid>
+                  ))}
+                </Grid>
+              )}
+            </Card>
+          </motion.div>
+        </Grid>
+      </Grid>
+
       {/* ================= Activity + reviews + mentors ================= */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid size={{ xs: 12, md: 4 }}>
@@ -553,24 +683,6 @@ export const DashboardPage: React.FC = () => {
           </motion.div>
         </Grid>
       </Grid>
-
-      {/* Mentors preview strip */}
-      {recommendedMentors.length > 0 && (
-        <Card sx={{ mt: 3, p: { xs: 2.5, md: 3 }, display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-          <AvatarStack
-            items={recommendedMentors.map((mentor) => ({
-              firstName: mentor.headline?.split(' ')[0],
-              lastName: mentor.headline?.split(' ').slice(1).join(' '),
-            }))}
-            size={38}
-            label={`${recommendedMentors.length} top-rated mentors on the platform`}
-          />
-          <Box sx={{ flexGrow: 1 }} />
-          <Typography variant="caption" color="text.secondary">
-            Live data from the mentor marketplace
-          </Typography>
-        </Card>
-      )}
     </Box>
   );
 };

@@ -1,5 +1,6 @@
 package com.skillinfinity.payment.dto.response;
 
+import com.skillinfinity.payment.enumeration.SubscriptionPlanType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -17,6 +18,7 @@ public class SubscriptionPlanResponse {
 
     private UUID id;
     private String name;
+    private SubscriptionPlanType type;
     private String description;
     private BigDecimal price;
     private String currency;
