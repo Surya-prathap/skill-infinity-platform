@@ -1,5 +1,5 @@
 import { describe, expect, it, afterEach } from 'vitest';
-import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, screen } from '@testing-library/react';
 import { MentorsPage } from '@/pages/MentorsPage';
 import { renderWithProviders } from './testUtils';
 
@@ -9,46 +9,27 @@ describe('MentorsPage (marketplace)', () => {
     window.localStorage.clear();
   });
 
-  it('renders the hero, search and trending skills', async () => {
+  it('renders the hero and search', async () => {
     renderWithProviders(<MentorsPage />);
 
     expect(await screen.findByText('Find your perfect mentor')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Search by skill, topic or mentor…')).toBeInTheDocument();
-    expect(screen.getByText('Trending:')).toBeInTheDocument();
   });
 
-  it('renders mentor cards from the seed catalog', async () => {
+  it('shows an honest empty state when no mentors exist yet', async () => {
     renderWithProviders(<MentorsPage />);
 
-    // "Staff Engineer" is unique to the m-001 mentor card (not in trending chips).
-    const staffEngineers = await screen.findAllByText('Staff Engineer');
-    expect(staffEngineers.length).toBeGreaterThan(0);
-    expect(await screen.findByText('Trending mentors')).toBeInTheDocument();
+    // No fabricated mentor catalog — a real empty state instead.
+    expect(await screen.findByText('No mentors match your filters')).toBeInTheDocument();
+    expect(screen.getByText('Trending mentors')).toBeInTheDocument();
   });
 
-  it('lets the user save a mentor and view saved mentors', async () => {
+  it('clears filters from the empty state', async () => {
     renderWithProviders(<MentorsPage />);
 
-    // Cards render under parallel test load — wait generously.
-    await waitFor(
-      () => {
-        expect(screen.getAllByRole('button', { name: /save mentor/i }).length).toBeGreaterThan(0);
-      },
-      { timeout: 15000 },
-    );
+    const clear = await screen.findByRole('button', { name: 'Clear filters' });
+    fireEvent.click(clear);
 
-    fireEvent.click(screen.getAllByRole('button', { name: /save mentor/i })[0]);
-
-    // The toolbar toggle exposes its tooltip text as the accessible name.
-    const savedToggle = await screen.findByRole('button', { name: /show saved mentors/i });
-    fireEvent.click(savedToggle);
-
-    // The saved card is now the only result, with a "remove" affordance.
-    await waitFor(
-      () => {
-        expect(screen.getAllByRole('button', { name: /remove from saved mentors/i }).length).toBe(1);
-      },
-      { timeout: 15000 },
-    );
+    expect(screen.getByText('No mentors match your filters')).toBeInTheDocument();
   });
 });

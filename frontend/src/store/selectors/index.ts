@@ -13,6 +13,20 @@ export const selectRememberMe = (state: RootState) => state.auth.rememberMe;
 export const selectIsAuthenticated = (state: RootState) =>
   state.auth.status === 'authenticated' && Boolean(state.auth.accessToken);
 
+/**
+ * True once redux-persist finished rehydrating the persisted session. Route
+ * guards must wait for this before deciding to redirect: on a browser refresh
+ * the auth slice starts empty (status 'idle') and only becomes authoritative
+ * after the persisted tokens are restored. Redirecting earlier is what sent
+ * users to /login on every refresh.
+ */
+export const selectAuthInitialized = (state: RootState) =>
+  // `?? true`: setups without a redux-persist layer (e.g. unit tests) are
+  // treated as already initialized. In the real app `_persist` is always
+  // present — redux-persist sets `rehydrated: false` on boot and flips it to
+  // true once the persisted session is restored.
+  (state as RootState & { _persist?: { rehydrated?: boolean } })._persist?.rehydrated ?? true;
+
 export const selectUserRoles = createSelector(
   [(state: RootState) => state.auth.user],
   (user) => user?.roles ?? ([] as Role[]),
@@ -43,11 +57,6 @@ export const selectResolvedThemeMode = (state: RootState): 'light' | 'dark' => {
   return mode;
 };
 
-/* ---------------- Notifications ---------------- */
-export const selectNotifications = (state: RootState) => state.notifications.items;
-export const selectUnreadCount = (state: RootState) => state.notifications.unreadCount;
-export const selectNotificationsLoading = (state: RootState) => state.notifications.loading;
-
 /* ---------------- Settings ---------------- */
 export const selectSettings = (state: RootState) => state.settings;
 export const selectLanguage = (state: RootState) => state.settings.language;
@@ -64,86 +73,3 @@ export const selectPageLoading = (state: RootState) => state.loading.pageLoading
 
 /* ---------------- Admin ---------------- */
 export const selectAdminSidebarCollapsed = (state: RootState) => state.admin.sidebarCollapsed;
-export const selectAdminEnvironment = (state: RootState) => state.admin.environment;
-
-/* ---------------- Community ---------------- */
-export const selectCommunityDrafts = (state: RootState) => state.community.drafts;
-export const selectCommunityDraft = (key: string) => (state: RootState) =>
-  state.community.drafts[key] ?? null;
-export const selectCommunityLiveEvents = (state: RootState) => state.community.liveEvents;
-
-/* ---------------- Chat / Communication ---------------- */
-export const selectChatConversations = (state: RootState) => state.chat.conversations;
-export const selectChatActiveConversationId = (state: RootState) => state.chat.activeConversationId;
-export const selectChatMessages = (state: RootState) => state.chat.messages;
-export const selectChatTyping = (state: RootState) => state.chat.typing;
-export const selectChatPresence = (state: RootState) => state.chat.presence;
-export const selectChatUnreadCounts = (state: RootState) => state.chat.unreadCounts;
-export const selectSocketStatus = (state: RootState) => state.chat.socketStatus;
-export const selectOwnPresence = (state: RootState) => state.chat.ownPresence;
-
-export const selectChatActiveConversation = createSelector(
-  [selectChatConversations, selectChatActiveConversationId],
-  (conversations, activeId) =>
-    activeId ? conversations.find((conversation) => conversation.id === activeId) ?? null : null,
-);
-
-export const selectMessagesForConversation = createSelector(
-  [selectChatMessages, (_: RootState, conversationId: string) => conversationId],
-  (messages, conversationId) => messages[conversationId] ?? [],
-);
-
-export const selectTypingForConversation = createSelector(
-  [selectChatTyping, (_: RootState, conversationId: string) => conversationId],
-  (typing, conversationId) => typing[conversationId] ?? [],
-);
-
-export const selectPresenceForUser = createSelector(
-  [selectChatPresence, (_: RootState, userId: string) => userId],
-  (presence, userId) => presence[userId] ?? null,
-);
-
-export const selectTotalUnread = createSelector([selectChatUnreadCounts], (unreadCounts) =>
-  Object.values(unreadCounts).reduce((sum, count) => sum + count, 0),
-);
-
-export const selectUnreadForConversation = createSelector(
-  [selectChatUnreadCounts, (_: RootState, conversationId: string) => conversationId],
-  (unreadCounts, conversationId) => unreadCounts[conversationId] ?? 0,
-);
-
-/* ---------------- Meeting ---------------- */
-export const selectMeeting = (state: RootState) => state.meeting.meeting;
-export const selectMeetingId = (state: RootState) => state.meeting.meetingId;
-export const selectMeetingStatus = (state: RootState) => state.meeting.status;
-export const selectMeetingParticipants = (state: RootState) => state.meeting.participants;
-export const selectMeetingLayout = (state: RootState) => state.meeting.layout;
-export const selectMeetingFullscreen = (state: RootState) => state.meeting.fullscreen;
-export const selectMeetingControls = (state: RootState) => state.meeting.controls;
-export const selectMeetingDevices = (state: RootState) => state.meeting.devices;
-export const selectMeetingDevicesList = (state: RootState) => state.meeting.devicesList;
-export const selectMeetingConnection = (state: RootState) => state.meeting.connection;
-export const selectMeetingStats = (state: RootState) => state.meeting.stats;
-export const selectMeetingMessages = (state: RootState) => state.meeting.messages;
-export const selectMeetingReactions = (state: RootState) => state.meeting.reactions;
-export const selectMeetingPinnedId = (state: RootState) => state.meeting.pinnedId;
-export const selectMeetingSpotlightId = (state: RootState) => state.meeting.spotlightId;
-export const selectMeetingStartedAt = (state: RootState) => state.meeting.startedAt;
-export const selectMeetingUnreadChat = (state: RootState) => state.meeting.unreadChat;
-export const selectMeetingError = (state: RootState) => state.meeting.error;
-
-export const selectLocalParticipant = createSelector(
-  [selectMeetingParticipants],
-  (participants) => participants.find((participant) => participant.isLocal) ?? null,
-);
-
-export const selectSpeakingParticipants = createSelector(
-  [selectMeetingParticipants],
-  (participants) => participants.filter((participant) => participant.isSpeaking),
-);
-
-export const selectScreenSharingParticipant = createSelector(
-  [selectMeetingParticipants],
-  (participants) =>
-    participants.find((participant) => participant.screenSharing) ?? null,
-);

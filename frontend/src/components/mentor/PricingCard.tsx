@@ -6,7 +6,6 @@ import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import { Card } from '@/components/ui/Card';
 import { Typography } from '@/components/ui/Typography';
-import { formatCurrency } from '@/utils';
 import { SESSION_TYPES } from '@/features/mentor/constants';
 import type { MentorPricing } from '@/types';
 
@@ -27,7 +26,6 @@ export const PricingCard: React.FC<PricingCardProps> = ({
   onEdit,
   onDelete,
 }) => {
-  const currency = plan.currency ?? 'USD';
   const hasDiscount = Boolean(plan.discountPercentage && plan.originalPrice);
 
   return (
@@ -102,11 +100,11 @@ export const PricingCard: React.FC<PricingCardProps> = ({
           ) : (
             <>
               <Typography variant="h4" fontWeight={800} sx={{ letterSpacing: '-0.02em' }}>
-                {formatCurrency(plan.price, currency)}
+                {plan.price} credits
               </Typography>
               {hasDiscount && plan.originalPrice && (
                 <Typography variant="body2" color="text.disabled" sx={{ textDecoration: 'line-through' }}>
-                  {formatCurrency(plan.originalPrice, currency)}
+                  {plan.originalPrice} credits
                 </Typography>
               )}
             </>
@@ -135,7 +133,7 @@ export const PricingCard: React.FC<PricingCardProps> = ({
         <Stack direction="row" alignItems="center" gap={0.75} sx={{ mt: 1.5, color: 'text.secondary' }}>
           <AccessTimeOutlinedIcon sx={{ fontSize: 16 }} />
           <Typography variant="caption" fontWeight={600}>
-            {plan.durationMinutes ?? 60} minutes · {currency}
+            {plan.durationMinutes ?? 60} minutes · {plan.price} credits
           </Typography>
         </Stack>
       </Card>

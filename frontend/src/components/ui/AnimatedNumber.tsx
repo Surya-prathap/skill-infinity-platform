@@ -22,7 +22,7 @@ const easeOutExpo = (progress: number): number =>
  */
 export const AnimatedNumber: React.FC<AnimatedNumberProps> = ({
   value,
-  duration = 900,
+  duration = 550,
   decimals = 0,
   prefix = '',
   suffix = '',
@@ -50,7 +50,9 @@ export const AnimatedNumber: React.FC<AnimatedNumberProps> = ({
     );
     observer.observe(element);
     // Fallback so the value always appears (e.g. stubbed observers in tests).
-    const fallback = window.setTimeout(() => setInView(true), 1200);
+    // Kept short so numbers are visible almost immediately — a 1.2s fallback
+    // made the whole dashboard feel like it was still loading.
+    const fallback = window.setTimeout(() => setInView(true), 200);
     return () => {
       observer.disconnect();
       window.clearTimeout(fallback);

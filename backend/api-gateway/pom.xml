@@ -18,10 +18,12 @@
     <description>API Gateway for routing, security, and cross-cutting concerns</description>
 
     <dependencies>
-        <dependency>
-            <groupId>com.skillinfinity</groupId>
-            <artifactId>common</artifactId>
-        </dependency>
+        <!--
+          NOTE: the `common` module is deliberately NOT a dependency of the gateway.
+          common brings spring-boot-starter-web (servlet/Tomcat) and spring-boot-starter-amqp
+          which conflict with the reactive Spring Cloud Gateway stack (starts a stray Tomcat,
+          opens RabbitMQ connections) and slow startup significantly.
+        -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-config</artifactId>
@@ -46,17 +48,23 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
+        <!-- JWT parsing for gateway-side token validation (mirrors identity-service jjwt 0.12.x) -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-redis-reactive</artifactId>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>0.12.5</version>
         </dependency>
         <dependency>
-            <groupId>io.micrometer</groupId>
-            <artifactId>micrometer-registry-prometheus</artifactId>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>0.12.5</version>
+            <scope>runtime</scope>
         </dependency>
         <dependency>
-            <groupId>net.logstash.logback</groupId>
-            <artifactId>logstash-logback-encoder</artifactId>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>0.12.5</version>
+            <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

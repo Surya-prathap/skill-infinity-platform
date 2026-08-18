@@ -13,7 +13,6 @@ The Session Service follows a microservice architecture pattern and integrates w
 - **User Service** - Learner profile retrieval
 - **Mentor Service** - Mentor profile and availability validation
 - **RabbitMQ** - Event-driven communication
-- **Redis** - Caching for upcoming sessions, session details, and mentor schedules
 - **MySQL** - Persistent data storage
 
 ## Responsibilities
@@ -127,7 +126,6 @@ SCHEDULED
 
 ## Caching
 
-Redis caching is configured for:
 
 | Cache Name | TTL | Description |
 |------------|-----|-------------|
@@ -172,7 +170,6 @@ Environment variables:
 | `SESSION_DB_NAME` | skill_infinity_session | Database name |
 | `SESSION_DB_USERNAME` | root | Database username |
 | `SESSION_DB_PASSWORD` | root | Database password |
-| `REDIS_HOST` | localhost | Redis host |
 | `RABBITMQ_HOST` | localhost | RabbitMQ host |
 
 ## Swagger
@@ -206,7 +203,6 @@ mvn test -pl session-service -Pcoverage
 - Spring Boot Actuator
 - OpenAPI / Swagger
 - RabbitMQ
-- Redis
 - MySQL
 - MapStruct
 - Lombok

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Box, Button, Chip, Grid, LinearProgress, Link } from '@mui/material';
+import { Box, Button, Chip, Grid, Link } from '@mui/material';
 import { Stack } from '@/components/ui/Stack';
 import { Typography } from '@/components/ui/Typography';
 import {
@@ -9,31 +9,23 @@ import {
   GlassCard,
   InfoCard,
   ProfileCompletionRing,
-  Timeline,
 } from '@/components';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import SchoolOutlinedIcon from '@mui/icons-material/SchoolOutlined';
-import WorkOutlineOutlinedIcon from '@mui/icons-material/WorkOutlineOutlined';
 import BoltOutlinedIcon from '@mui/icons-material/BoltOutlined';
-import TranslateIcon from '@mui/icons-material/Translate';
 import ShareOutlinedIcon from '@mui/icons-material/ShareOutlined';
-import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import WorkspacePremiumOutlinedIcon from '@mui/icons-material/WorkspacePremiumOutlined';
 import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
 import ScheduleOutlinedIcon from '@mui/icons-material/ScheduleOutlined';
 import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined';
-import LanguageOutlinedIcon from '@mui/icons-material/LanguageOutlined';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import { FaGithub, FaLinkedin, FaXTwitter } from 'react-icons/fa6';
 import { motion } from 'framer-motion';
 import { Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '@/hooks';
 import { ROUTES } from '@/constants';
 import { ROLE_LABELS } from '@/constants';
-import { computeProfileCompletion, proficiencyToPercent, useProfileQuery } from '@/features/profile';
-import { formatDate } from '@/utils';
-import type { Education, Experience } from '@/types';
+import { computeProfileCompletion, useProfileQuery } from '@/features/profile';
+import { useMentorSearch } from '@/features/marketplace';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -64,9 +56,20 @@ const SectionTitle: React.FC<{ icon: ReactNode; children: ReactNode }> = ({ icon
 
 export const ProfileOverviewPage: React.FC = () => {
   const { user } = useAuth();
-  const { profile, educations, experiences, skills, languages, isOffline, notFound } =
-    useProfileQuery();
+  const { profile, skills, isOffline, notFound } = useProfileQuery();
   const completion = computeProfileCompletion(profile);
+
+  // Real top-rated mentors from the mentor-service search (no hardcoded names).
+  const topMentorsQuery = useMentorSearch({ page: 0, size: 5, sortBy: 'rating', sortDirection: 'DESC' });
+  const followedMentors = topMentorsQuery.data.content.map((mentor) => {
+    const nameParts = (mentor.headline?.split('·')[0]?.trim() || 'Mentor').split(' ');
+    return {
+      firstName: nameParts[0],
+      lastName: nameParts.slice(1).join(' '),
+      name: nameParts.join(' '),
+      src: mentor.profilePictureUrl,
+    };
+  });
 
   const displayName = profile?.firstName
     ? `${profile.firstName} ${profile.lastName ?? ''}`.trim()
@@ -75,29 +78,6 @@ export const ProfileOverviewPage: React.FC = () => {
   const initialsName = profile?.firstName ? `${profile.firstName} ${profile.lastName ?? ''}`.trim() : user?.username;
 
   const location = [profile?.city, profile?.country].filter(Boolean).join(', ');
-  const socialLinks = [
-    { icon: <FaLinkedin fontSize="15" />, label: 'LinkedIn', url: profile?.linkedinUrl },
-    { icon: <FaGithub fontSize="15" />, label: 'GitHub', url: profile?.githubUrl },
-    { icon: <FaXTwitter fontSize="15" />, label: 'X / Twitter', url: profile?.twitterUrl },
-    { icon: <LanguageOutlinedIcon fontSize="small" />, label: 'Website', url: profile?.website },
-  ].filter((link) => Boolean(link.url));
-
-  const educationTimeline = educations.map((education: Education) => ({
-    title: education.institution,
-    description: [education.degree, education.fieldOfStudy].filter(Boolean).join(' · ') || 'Student',
-    time: `${formatDate(education.startDate)} — ${education.currentlyStudying ? 'Present' : formatDate(education.endDate)}`,
-    icon: <SchoolOutlinedIcon sx={{ fontSize: 16 }} />,
-    color: '#6D5DF6',
-  }));
-
-  const experienceTimeline = experiences.map((experience: Experience) => ({
-    title: `${experience.title} · ${experience.company}`,
-    description:
-      [experience.location, experience.employmentType].filter(Boolean).join(' · ') || undefined,
-    time: `${formatDate(experience.startDate)} — ${experience.currentlyWorking ? 'Present' : formatDate(experience.endDate)}`,
-    icon: <WorkOutlineOutlinedIcon sx={{ fontSize: 16 }} />,
-    color: '#14B8A6',
-  }));
 
   return (
     <Box>
@@ -278,60 +258,6 @@ export const ProfileOverviewPage: React.FC = () => {
               </Card>
             </motion.div>
 
-            {/* Experience */}
-            <motion.div initial="hidden" animate="visible" variants={fadeUp}>
-              <Card sx={{ p: 3 }}>
-                <Stack direction="row" alignItems="center" justifyContent="space-between">
-                  <SectionTitle icon={<WorkOutlineOutlinedIcon />}>Experience</SectionTitle>
-                  <Button
-                    component={RouterLink}
-                    to={ROUTES.PROFILE_EXPERIENCE}
-                    size="small"
-                    endIcon={<ArrowForwardIcon fontSize="small" />}
-                  >
-                    Manage
-                  </Button>
-                </Stack>
-                {experiences.length > 0 ? (
-                  <Timeline items={experienceTimeline} />
-                ) : (
-                  <Typography variant="body2" color="text.secondary">
-                    No experience added yet.{' '}
-                    <Link component={RouterLink} to={ROUTES.PROFILE_EXPERIENCE} underline="hover" sx={{ fontWeight: 700 }}>
-                      Add your work history
-                    </Link>
-                  </Typography>
-                )}
-              </Card>
-            </motion.div>
-
-            {/* Education */}
-            <motion.div initial="hidden" animate="visible" variants={fadeUp}>
-              <Card sx={{ p: 3 }}>
-                <Stack direction="row" alignItems="center" justifyContent="space-between">
-                  <SectionTitle icon={<SchoolOutlinedIcon />}>Education</SectionTitle>
-                  <Button
-                    component={RouterLink}
-                    to={ROUTES.PROFILE_EDUCATION}
-                    size="small"
-                    endIcon={<ArrowForwardIcon fontSize="small" />}
-                  >
-                    Manage
-                  </Button>
-                </Stack>
-                {educations.length > 0 ? (
-                  <Timeline items={educationTimeline} />
-                ) : (
-                  <Typography variant="body2" color="text.secondary">
-                    No education added yet.{' '}
-                    <Link component={RouterLink} to={ROUTES.PROFILE_EDUCATION} underline="hover" sx={{ fontWeight: 700 }}>
-                      Add your education
-                    </Link>
-                  </Typography>
-                )}
-              </Card>
-            </motion.div>
-
             {/* Certifications */}
             {profile?.certifications && profile.certifications.length > 0 && (
               <motion.div initial="hidden" animate="visible" variants={fadeUp}>
@@ -470,111 +396,28 @@ export const ProfileOverviewPage: React.FC = () => {
               </Card>
             </motion.div>
 
-            {/* Languages */}
-            <motion.div initial="hidden" animate="visible" variants={fadeUp}>
-              <Card sx={{ p: 3 }}>
-                <SectionTitle icon={<TranslateIcon />}>Languages</SectionTitle>
-                {languages.length > 0 ? (
-                  <Stack spacing={1.25}>
-                    {languages.map((language) => (
-                      <Stack key={language.id ?? language.name} direction="row" alignItems="center" gap={1.5}>
-                        <Typography variant="body2" fontWeight={600} sx={{ minWidth: 90 }}>
-                          {language.name}
-                        </Typography>
-                        <Box sx={{ flexGrow: 1 }}>
-                          <LinearProgress
-                            variant="determinate"
-                            value={proficiencyToPercent(language.proficiencyLevel)}
-                            sx={{ height: 6 }}
-                          />
-                        </Box>
-                        <Typography variant="caption" color="text.secondary" sx={{ minWidth: 64, textAlign: 'right' }}>
-                          {language.proficiencyLevel}
-                        </Typography>
-                      </Stack>
-                    ))}
-                  </Stack>
-                ) : (
-                  <Typography variant="body2" color="text.secondary">
-                    No languages added yet.
-                  </Typography>
-                )}
-              </Card>
-            </motion.div>
-
-            {/* Social */}
-            {socialLinks.length > 0 && (
+            {/* Top mentors — real data from the mentor-service search (hidden when empty). */}
+            {followedMentors.length > 0 && (
               <motion.div initial="hidden" animate="visible" variants={fadeUp}>
                 <Card sx={{ p: 3 }}>
                   <Stack direction="row" alignItems="center" justifyContent="space-between">
-                    <SectionTitle icon={<ShareOutlinedIcon />}>Social</SectionTitle>
+                    <SectionTitle icon={<ShareOutlinedIcon />}>Top mentors</SectionTitle>
                     <Button
                       component={RouterLink}
-                      to={ROUTES.PROFILE_SOCIAL}
+                      to={ROUTES.MENTORS}
                       size="small"
                       endIcon={<ArrowForwardIcon fontSize="small" />}
                     >
-                      Manage
+                      Browse all
                     </Button>
                   </Stack>
-                  <Stack spacing={1.5}>
-                    {socialLinks.map((link) => (
-                      <InfoCard
-                        key={link.label}
-                        icon={link.icon}
-                        label={link.label}
-                        value={link.url!}
-                        href={link.url}
-                        color="#0A66C2"
-                      />
-                    ))}
-                  </Stack>
+                  <AvatarStack
+                    items={followedMentors}
+                    label={`${followedMentors.length} top-rated mentors`}
+                  />
                 </Card>
               </motion.div>
             )}
-
-            {/* Resume */}
-            <motion.div initial="hidden" animate="visible" variants={fadeUp}>
-              <Card sx={{ p: 3 }}>
-                <SectionTitle icon={<DescriptionOutlinedIcon />}>Resume</SectionTitle>
-                {profile?.resumeUrl ? (
-                  <Button
-                    href={profile.resumeUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    variant="outlined"
-                    startIcon={<DescriptionOutlinedIcon />}
-                    fullWidth
-                  >
-                    View Resume
-                  </Button>
-                ) : (
-                  <Typography variant="body2" color="text.secondary">
-                    No resume uploaded yet.{' '}
-                    <Link component={RouterLink} to={ROUTES.PROFILE_RESUME} underline="hover" sx={{ fontWeight: 700 }}>
-                      Upload one
-                    </Link>
-                  </Typography>
-                )}
-              </Card>
-            </motion.div>
-
-            {/* Mentor community preview */}
-            <motion.div initial="hidden" animate="visible" variants={fadeUp}>
-              <Card sx={{ p: 3 }}>
-                <SectionTitle icon={<ShareOutlinedIcon />}>Mentors you follow</SectionTitle>
-                <AvatarStack
-                  items={[
-                    { firstName: 'Sarah', lastName: 'Chen' },
-                    { firstName: 'Marcus', lastName: 'Reid' },
-                    { firstName: 'Priya', lastName: 'Sharma' },
-                    { firstName: 'David', lastName: 'Kim' },
-                    { firstName: 'Emily', lastName: 'Watson' },
-                  ]}
-                  label="5 mentors"
-                />
-              </Card>
-            </motion.div>
           </Stack>
         </Grid>
       </Grid>

@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import toast from 'react-hot-toast';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Box, Chip, Divider, Link } from '@mui/material';
@@ -8,12 +9,40 @@ import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { Button, FormInput, PasswordInput } from '@/components';
 import { useAuth } from '@/hooks';
 import { ROUTES } from '@/constants';
-import { passwordRequirements, showError, showSuccess } from '@/utils';
+import { getErrorMessage, passwordRequirements, showError, showSuccess } from '@/utils';
 import { registerSchema, type RegisterFormValues } from './schemas';
+
+/** Backend messages that mean the email/username is already in use. */
+const EMAIL_EXISTS_RE = /already (?:registered|exists)|already in use|(?:email|username).*taken/i;
 
 export const RegisterForm: React.FC = () => {
   const { register } = useAuth();
   const navigate = useNavigate();
+
+  const showEmailExistsToast = (): void => {
+    toast.error(
+      (t) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+            <Typography variant="body2" fontWeight={600}>
+              This email is already registered — you can log in instead.
+            </Typography>
+          </Box>
+          <Button
+            size="small"
+            variant="contained"
+            onClick={() => {
+              toast.dismiss(t.id);
+              navigate(ROUTES.LOGIN);
+            }}
+          >
+            Log in
+          </Button>
+        </Box>
+      ),
+      { duration: 7000 },
+    );
+  };
 
   const {
     control,
@@ -48,12 +77,17 @@ export const RegisterForm: React.FC = () => {
         firstName: values.firstName || undefined,
         lastName: values.lastName || undefined,
       });
-      showSuccess('Account created — welcome to Skill Infinity!');
-      navigate(ROUTES.DASHBOARD);
+      // Account created — the user is NOT signed in yet. Send them to the
+      // login page so they sign in explicitly with their new credentials.
+      showSuccess('Account created — please sign in to continue.');
+      navigate(ROUTES.LOGIN, { replace: true, state: { registered: true } });
     } catch (error) {
-      showError(
-        error instanceof Error ? error.message : 'Unable to create your account. Please try again.',
-      );
+      const message = getErrorMessage(error);
+      if (EMAIL_EXISTS_RE.test(message)) {
+        showEmailExistsToast();
+      } else {
+        showError(message || 'Unable to create your account. Please try again.');
+      }
     }
   };
 

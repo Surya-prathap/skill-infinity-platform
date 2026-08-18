@@ -1,3 +1,4 @@
+import type { AxiosRequestConfig } from 'axios';
 import { apiClient } from '@/api';
 import { API_ENDPOINTS } from '@/constants';
 import type {
@@ -19,7 +20,8 @@ export const authService = {
   logout: (refreshToken: string) =>
     apiClient.post<ApiResponse<null>>(API_ENDPOINTS.AUTH.LOGOUT, { refreshToken }),
 
-  getCurrentUser: () => apiClient.get<ApiResponse<AuthUser>>(API_ENDPOINTS.AUTH.ME),
+  getCurrentUser: (config?: AxiosRequestConfig) =>
+    apiClient.get<ApiResponse<AuthUser>>(API_ENDPOINTS.AUTH.ME, config),
 
   changePassword: (payload: ChangePasswordRequest) =>
     apiClient.post<ApiResponse<null>>(API_ENDPOINTS.AUTH.CHANGE_PASSWORD, payload),

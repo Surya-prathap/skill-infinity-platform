@@ -14,7 +14,7 @@ describe('WalletPage', () => {
 
     expect(await screen.findByText('Available balance')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /buy credits/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /transactions/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /top up credits/i })).toBeInTheDocument();
   });
 
   it('renders the statistics metric cards', async () => {
@@ -27,12 +27,14 @@ describe('WalletPage', () => {
     expect(screen.getAllByText('Transactions').length).toBeGreaterThan(0);
   });
 
-  it('renders charts and recent transactions from seed data', async () => {
+  it('renders charts and honest empty states when the API is offline', async () => {
     renderWithProviders(<WalletPage />);
 
     expect(await screen.findByText('Monthly spending')).toBeInTheDocument();
     expect(screen.getByText('Spending split')).toBeInTheDocument();
     expect(screen.getByText('Recent transactions')).toBeInTheDocument();
-    expect(screen.getByText('Credit top-up — Pro Pack')).toBeInTheDocument();
+    // No fabricated transactions or spending breakdowns — real empty states only.
+    expect(screen.getByText('No spending data yet.')).toBeInTheDocument();
+    expect(await screen.findByText('No transactions yet')).toBeInTheDocument();
   });
 });

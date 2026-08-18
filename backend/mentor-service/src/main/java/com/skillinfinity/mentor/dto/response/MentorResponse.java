@@ -27,8 +27,6 @@ public class MentorResponse {
     private List<AvailabilityResponse> availabilities;
     private List<PricingResponse> pricingList;
     private List<LanguageResponse> languages;
-    private List<CertificationResponse> certifications;
-    private List<AchievementResponse> achievements;
     private List<ExperienceResponse> experiences;
     private List<EducationResponse> educationList;
     private List<SocialProfileResponse> socialProfiles;

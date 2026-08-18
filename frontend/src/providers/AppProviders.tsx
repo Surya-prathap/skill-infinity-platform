@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
+import { MotionConfig } from 'framer-motion';
 import { StoreProvider } from './StoreProvider';
 import { QueryProvider } from './QueryProvider';
-import { ChatSocketProvider } from './ChatSocketProvider';
 import { ThemeContextProvider } from '@/contexts';
 
 interface AppProvidersProps {
@@ -13,7 +13,10 @@ export const AppProviders: React.FC<AppProvidersProps> = ({ children }) => {
     <StoreProvider>
       <ThemeContextProvider>
         <QueryProvider>
-          <ChatSocketProvider>{children}</ChatSocketProvider>
+          {/* Respect the OS "reduce motion" setting: infinite hero/blob
+              animations are disabled for those users, keeping the UI fast
+              and accessible. */}
+          <MotionConfig reducedMotion="user">{children}</MotionConfig>
         </QueryProvider>
       </ThemeContextProvider>
     </StoreProvider>

@@ -3,14 +3,22 @@ import { API_ENDPOINTS } from '@/constants';
 import type {
   ApiResponse,
   CouponValidationRequest,
+  CreditPackage,
+  CreditPurchaseRequest,
   Invoice,
+  MySubscription,
   PageResponse,
   Payment,
   PaymentConfirmationRequest,
   PaymentFailureRequest,
   PaymentInitRequest,
+  RazorpayOrder,
+  RazorpaySubscriptionCheckout,
+  RazorpaySubscriptionVerifyRequest,
+  RazorpayVerifyRequest,
   Receipt,
   RefundRequest,
+  SubscriptionPlan,
 } from '@/types';
 
 const resolve = (template: string, params: Record<string, string>): string =>
@@ -57,6 +65,46 @@ export const paymentService = {
   getReceipt: (receiptId: string) =>
     apiClient.get<ApiResponse<Receipt>>(
       resolve(API_ENDPOINTS.PAYMENTS.RECEIPT, { receiptId }),
+    ),
+
+  /* ---------------- Subscriptions ---------------- */
+
+  getSubscriptionPlans: (type?: 'LEARNER' | 'MENTOR') =>
+    apiClient.get<ApiResponse<SubscriptionPlan[]>>(
+      type
+        ? `${API_ENDPOINTS.PAYMENTS.SUBSCRIPTION_PLANS}?type=${type}`
+        : API_ENDPOINTS.PAYMENTS.SUBSCRIPTION_PLANS,
+    ),
+
+  getMySubscription: () =>
+    apiClient.get<ApiResponse<MySubscription | null>>(API_ENDPOINTS.PAYMENTS.SUBSCRIPTION_MINE),
+
+  cancelSubscription: (subscriptionId: string) =>
+    apiClient.post<ApiResponse<null>>(
+      resolve(API_ENDPOINTS.PAYMENTS.SUBSCRIPTION_CANCEL, { subscriptionId }),
+    ),
+
+  /* ---------------- Razorpay (INR, test mode) ---------------- */
+
+  getCreditPackages: () =>
+    apiClient.get<ApiResponse<CreditPackage[]>>(API_ENDPOINTS.PAYMENTS.CREDIT_PACKAGES),
+
+  createRazorpayOrder: (payload: CreditPurchaseRequest) =>
+    apiClient.post<ApiResponse<RazorpayOrder>>(API_ENDPOINTS.PAYMENTS.ORDERS, payload),
+
+  verifyRazorpayPayment: (payload: RazorpayVerifyRequest) =>
+    apiClient.post<ApiResponse<Payment>>(API_ENDPOINTS.PAYMENTS.VERIFY, payload),
+
+  createSubscriptionCheckout: (planId: string) =>
+    apiClient.post<ApiResponse<RazorpaySubscriptionCheckout>>(
+      API_ENDPOINTS.PAYMENTS.SUBSCRIPTION_CHECKOUT,
+      { planId },
+    ),
+
+  verifySubscriptionPayment: (payload: RazorpaySubscriptionVerifyRequest) =>
+    apiClient.post<ApiResponse<MySubscription>>(
+      API_ENDPOINTS.PAYMENTS.SUBSCRIPTION_VERIFY,
+      payload,
     ),
 };
 

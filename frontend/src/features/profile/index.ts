@@ -5,5 +5,4 @@ export * from './proficiency';
 export * from './profileCompletion';
 export * from './queryKeys';
 export * from './schemas';
-export * from './seed';
 export * from './storage';

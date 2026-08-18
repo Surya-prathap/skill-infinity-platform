@@ -64,7 +64,7 @@ public class SessionRequest {
     @Schema(description = "Price", example = "99.99")
     private double price;
 
-    @Schema(description = "Currency", example = "USD")
+    @Schema(description = "Currency", example = "INR")
     private String currency;
 
     @Schema(description = "Whether the session is free", example = "false")

@@ -67,10 +67,6 @@ public class WalletStatistics {
     @Builder.Default
     private BigDecimal largestDebit = BigDecimal.ZERO;
 
-    @Column(name = "total_rewards_claimed")
-    @Builder.Default
-    private long totalRewardsClaimed = 0;
-
     @Column(name = "active_days", nullable = false)
     @Builder.Default
     private long activeDays = 0;

@@ -7,11 +7,12 @@ import com.skillinfinity.payment.dto.request.PaymentConfirmationRequest;
 import com.skillinfinity.payment.dto.request.PaymentFailureRequest;
 import com.skillinfinity.payment.dto.request.PaymentRequest;
 import com.skillinfinity.payment.dto.request.RefundRequest;
-import com.skillinfinity.payment.dto.request.SubscriptionRequest;
 import com.skillinfinity.payment.dto.response.InvoiceResponse;
+import com.skillinfinity.payment.dto.response.MySubscriptionResponse;
 import com.skillinfinity.payment.dto.response.PaymentResponse;
 import com.skillinfinity.payment.dto.response.ReceiptResponse;
-import com.skillinfinity.payment.dto.response.TransactionResponse;
+import com.skillinfinity.payment.dto.response.SubscriptionPlanResponse;
+import com.skillinfinity.payment.enumeration.SubscriptionPlanType;
 import com.skillinfinity.payment.service.CouponService;
 import com.skillinfinity.payment.service.PaymentService;
 import com.skillinfinity.payment.service.RefundService;
@@ -33,6 +34,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -166,20 +168,20 @@ public class PaymentController {
         return ResponseEntity.ok(ApiResponse.success("Coupon is valid", null));
     }
 
-    @PostMapping("/subscription")
-    @Operation(summary = "Purchase subscription", description = "Purchases a subscription plan for the authenticated user")
-    @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Subscription purchased successfully"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid plan or request"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized")
-    })
-    public ResponseEntity<ApiResponse<PaymentResponse>> purchaseSubscription(
-            @RequestHeader("X-User-ID") UUID userId,
-            @Valid @RequestBody SubscriptionRequest request) {
-        log.info("Purchase subscription for user: {}, planId: {}", userId, request.getPlanId());
-        PaymentResponse response = subscriptionService.purchaseSubscription(userId, request);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Subscription purchased successfully", response));
+    @GetMapping("/subscription/plans")
+    @Operation(summary = "List subscription plans", description = "Returns active subscription plans, optionally filtered by audience (LEARNER or MENTOR)")
+    public ResponseEntity<ApiResponse<List<SubscriptionPlanResponse>>> getSubscriptionPlans(
+            @RequestParam(required = false) SubscriptionPlanType type) {
+        List<SubscriptionPlanResponse> plans = subscriptionService.getActivePlans(type);
+        return ResponseEntity.ok(ApiResponse.success(plans));
+    }
+
+    @GetMapping("/subscription/mine")
+    @Operation(summary = "My subscription", description = "Returns the authenticated user's current active subscription, if any")
+    public ResponseEntity<ApiResponse<MySubscriptionResponse>> getMySubscription(
+            @RequestHeader("X-User-ID") UUID userId) {
+        MySubscriptionResponse subscription = subscriptionService.getMySubscription(userId);
+        return ResponseEntity.ok(ApiResponse.success(subscription));
     }
 
     @PostMapping("/subscription/{id}/cancel")

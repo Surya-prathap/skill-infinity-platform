@@ -91,6 +91,8 @@ export interface PaymentTransaction {
 
 export interface PaymentInitRequest {
   amount: number;
+  /** Number of credits purchased with this payment (pack credits, not INR). */
+  credits?: number;
   currency?: string;
   description?: string;
   referenceId?: string;
@@ -125,4 +127,93 @@ export interface CouponValidationRequest {
   couponCode: string;
   amount: number;
   userId?: string;
+}
+
+/* ---------------- Subscriptions ---------------- */
+
+export interface SubscriptionPlan {
+  id: string;
+  name: string;
+  /** Audience this plan targets — 'LEARNER' or 'MENTOR'. */
+  type?: 'LEARNER' | 'MENTOR';
+  description?: string;
+  price: number;
+  currency?: string;
+  durationDays?: number;
+  maxSessionsPerMonth?: number;
+  features?: string[];
+  active?: boolean;
+}
+
+export interface MySubscription {
+  subscriptionId: string;
+  plan: SubscriptionPlan;
+  status: string;
+  startedAt?: string;
+  expiresAt?: string;
+  autoRenew?: boolean;
+}
+
+export interface SubscriptionPurchaseRequest {
+  planId: string;
+  couponCode?: string;
+}
+
+/* ---------------- Razorpay (INR, test mode) ---------------- */
+
+/** Backend-controlled credit package — the backend decides credits + price. */
+export interface CreditPackage {
+  code: string;
+  name: string;
+  credits: number;
+  price: number;
+  currency?: string;
+  highlighted?: boolean;
+  features?: string[];
+  active?: boolean;
+}
+
+/** Razorpay order details for opening the checkout. */
+export interface RazorpayOrder {
+  paymentId: string;
+  orderId: string;
+  /** Amount in paise (₹109 → 10900). */
+  amount: number;
+  currency: string;
+  /** Razorpay Key ID — safe for the browser. */
+  keyId: string;
+  credits?: number;
+  discountAmount?: number;
+  totalAmount?: number;
+}
+
+export interface RazorpayVerifyRequest {
+  paymentId: string;
+  razorpayPaymentId?: string;
+  razorpayOrderId?: string;
+  razorpaySignature: string;
+}
+
+/** Razorpay subscription checkout details (order-based, same as credit purchase). */
+export interface RazorpaySubscriptionCheckout {
+  paymentId: string;
+  orderId: string;
+  keyId: string;
+  planId?: string;
+  planName?: string;
+  amount: number;
+  currency: string;
+  totalCount?: number;
+}
+
+export interface RazorpaySubscriptionVerifyRequest {
+  paymentId: string;
+  razorpayPaymentId?: string;
+  razorpayOrderId?: string;
+  razorpaySignature: string;
+}
+
+export interface CreditPurchaseRequest {
+  packageCode: string;
+  couponCode?: string;
 }

@@ -35,12 +35,9 @@ These include settings for all platform services:
 - `identity-service.yml`
 - `user-service.yml`
 - `mentor-service.yml`
-- `session-service.yml`
+- `session-service.yml` (hosts sessions and reviews)
 - `wallet-service.yml`
 - `payment-service.yml`
-- `community-service.yml`
-- `communication-service.yml`
-- `review-service.yml`
 - `admin-service.yml`
 
 ### Git Profile (production)

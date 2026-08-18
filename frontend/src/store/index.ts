@@ -11,24 +11,23 @@ import {
   REGISTER,
 } from 'redux-persist';
 
+import type { PersistedState } from 'redux-persist';
+
 import storage from './storage';
 
 import { PERSIST_KEYS } from '@/constants';
 import { tokenManager } from '@/api';
 import { registerLoadingDispatch } from '@/api/loadingBridge';
-import { registerSessionExpiryHandler } from '@/api/sessionExpiryBridge';
-import { clearCredentials } from './slices/authSlice';
+import { registerSessionExpiryHandler, registerTokensRefreshedHandler } from '@/api/sessionExpiryBridge';
+import { clearCredentials, tokensRefreshed } from './slices/authSlice';
+import { resetUserState } from './slices/userSlice';
 import {
   authReducer,
   userReducer,
   themeReducer,
-  notificationsReducer,
   settingsReducer,
   loadingReducer,
   mentorReducer,
-  chatReducer,
-  meetingReducer,
-  communityReducer,
   adminReducer,
   type AuthState,
 } from './slices';
@@ -37,13 +36,9 @@ const rootReducer = combineReducers({
   auth: authReducer,
   user: userReducer,
   theme: themeReducer,
-  notifications: notificationsReducer,
   settings: settingsReducer,
   loading: loadingReducer,
   mentor: mentorReducer,
-  chat: chatReducer,
-  meeting: meetingReducer,
-  community: communityReducer,
   admin: adminReducer,
 });
 
@@ -53,18 +48,20 @@ const resetAuthState: AuthState = {
   user: null,
   status: 'unauthenticated',
   error: null,
-  rememberMe: true,
+  rememberMe: false,
 };
 
 /**
- * Persist the session only when the user opted into "Remember Me".
- * Transient fields (status, error) are never persisted.
+ * Persist the active session (tokens + user) so a browser refresh restores
+ * the auth state without a login. Only transient fields (status, error) are
+ * stripped before persisting and re-derived after rehydration.
  */
 const authPersistTransform = createTransform<AuthState, AuthState>(
-  (inboundState) => {
-    if (!inboundState.rememberMe) return { ...resetAuthState, rememberMe: false };
-    return { ...inboundState, status: 'authenticated', error: null };
-  },
+  (inboundState) => ({
+    ...inboundState,
+    status: inboundState.accessToken ? 'authenticated' : 'unauthenticated',
+    error: null,
+  }),
   (outboundState) => ({
     ...resetAuthState,
     ...outboundState,
@@ -77,6 +74,15 @@ const authPersistTransform = createTransform<AuthState, AuthState>(
 const persistConfig = {
   key: PERSIST_KEYS.ROOT,
   storage,
+  version: 2,
+  // Only discard persisted state written by OLDER versions. The previous
+  // implementation (`async () => undefined`) discarded the persisted session
+  // on EVERY boot, which is what made a plain browser refresh log the user
+  // out and trigger "session expired" moments later. v2 state is kept.
+  migrate: async (state: PersistedState): Promise<PersistedState | undefined> => {
+    if (!state) return undefined;
+    return state._persist?.version === 2 ? state : undefined;
+  },
   whitelist: ['auth', 'theme', 'settings'],
   transforms: [authPersistTransform],
 };
@@ -93,19 +99,47 @@ export const store = configureStore({
     }),
 });
 
-/* Keep the axios tokenManager in sync with the Redux auth state. */
+/* Keep the axios tokenManager in sync with the Redux auth state.
+
+   NOTE: while the store is still rehydrating (auth.status === 'idle') the
+   persisted session has not been restored yet. Clearing the sessionStorage
+   tokens during that window would wipe the very credentials the rehydrate is
+   about to read — the root cause of refresh logging users out. Only clear
+   once we know the auth state is final (authenticated or unauthenticated). */
+let lastAuthStatus = 'idle';
 store.subscribe(() => {
   const { auth } = store.getState();
-  if (auth.accessToken) tokenManager.setAccessToken(auth.accessToken);
-  else tokenManager.clearAccessToken();
-  if (auth.refreshToken) tokenManager.setRefreshToken(auth.refreshToken);
-  else tokenManager.clearRefreshToken();
+  if (auth.accessToken) {
+    tokenManager.setAccessToken(auth.accessToken);
+  } else if (auth.status !== 'idle') {
+    tokenManager.clearAccessToken();
+  }
+  if (auth.refreshToken) {
+    tokenManager.setRefreshToken(auth.refreshToken);
+  } else if (auth.status !== 'idle') {
+    tokenManager.clearRefreshToken();
+  }
+
+  // When the session ends (logout / expiry) the in-memory profile must not
+  // survive into the next login — otherwise the new user briefly sees the
+  // previous user's profile until a refetch lands.
+  if (lastAuthStatus === 'authenticated' && auth.status === 'unauthenticated') {
+    store.dispatch(resetUserState());
+  }
+  lastAuthStatus = auth.status;
 });
 
 /* Wire the axios client to the store without circular imports. */
 registerLoadingDispatch((action) => store.dispatch(action));
 registerSessionExpiryHandler(() => {
   store.dispatch(clearCredentials());
+});
+
+/* After a silent refresh-token rotation the axios layer holds the NEW tokens;
+   push them back into the store so the Redux session (and what gets persisted
+   on the next write) always matches what the request layer is using. */
+registerTokensRefreshedHandler((accessToken, refreshToken) => {
+  store.dispatch(tokensRefreshed({ accessToken, refreshToken }));
 });
 
 export const persistor = persistStore(store);

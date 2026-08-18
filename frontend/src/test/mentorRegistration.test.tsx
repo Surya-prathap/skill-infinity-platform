@@ -13,7 +13,7 @@ describe('MentorRegistrationPage', () => {
     renderWithProviders(<MentorRegistrationPage />);
 
     expect(await screen.findByText('Become a Mentor')).toBeInTheDocument();
-    expect(await screen.findByText(/Step 1 of 10/)).toBeInTheDocument();
+    expect(await screen.findByText(/Step 1 of 7/)).toBeInTheDocument();
     expect(await screen.findByText('Application progress')).toBeInTheDocument();
     // "Personal" appears in both the stepper and the requirements strip.
     expect((await screen.findAllByText('Personal')).length).toBeGreaterThan(0);
@@ -27,7 +27,7 @@ describe('MentorRegistrationPage', () => {
     expect(await screen.findByLabelText(/Short bio/)).toBeInTheDocument();
   });
 
-  it('advances to the experience step after a valid personal form', async () => {
+  it('advances to the skills step after a valid personal form', async () => {
     renderWithProviders(<MentorRegistrationPage />);
 
     const headline = await screen.findByLabelText(/Professional headline/);
@@ -35,7 +35,7 @@ describe('MentorRegistrationPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Save & Continue' }));
 
-    expect(await screen.findByText(/Step 2 of 10/)).toBeInTheDocument();
-    expect(await screen.findByText('No experience yet')).toBeInTheDocument();
+    expect(await screen.findByText(/Step 2 of 7/)).toBeInTheDocument();
+    expect(await screen.findByText('No skills added')).toBeInTheDocument();
   });
 });

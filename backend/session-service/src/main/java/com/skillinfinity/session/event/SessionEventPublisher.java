@@ -58,11 +58,14 @@ public class SessionEventPublisher {
 
     public void publishSessionCompleted(UUID sessionId, UUID mentorId, UUID learnerId,
                                          UUID bookingId, String mentorName, String learnerName,
-                                         String topic) {
+                                         String topic, double credits, boolean community) {
         SessionEvent event = buildEvent("SESSION_COMPLETED", sessionId, mentorId, learnerId,
                 bookingId, mentorName, learnerName, topic, null, null, null, 0, null);
+        event.setCredits(credits);
+        event.setCommunity(community);
         publish(RabbitMQConfig.SESSION_COMPLETED_ROUTING_KEY, event);
-        log.info("Published session completed event: sessionId={}", sessionId);
+        log.info("Published session completed event: sessionId={}, credits={}, community={}",
+                sessionId, credits, community);
     }
 
     public void publishSessionReminder(UUID sessionId, UUID mentorId, UUID learnerId,

@@ -31,11 +31,7 @@ public class CategoryController {
     @GetMapping
     @Operation(summary = "Get all categories", description = "Returns all active categories with their subcategories")
     public ResponseEntity<ApiResponse<List<CategoryResponse>>> getAllCategories() {
-        List<Category> categories = categoryService.getAllCategories();
-        List<CategoryResponse> response = categories.stream()
-                .map(this::toCategoryResponse)
-                .toList();
-        return ResponseEntity.ok(ApiResponse.success(response));
+        return ResponseEntity.ok(ApiResponse.success(categoryService.getAllCategories()));
     }
 
     @GetMapping("/{id}")

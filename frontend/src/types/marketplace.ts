@@ -19,7 +19,9 @@ export interface MentorSummary {
   totalSessions: number;
   totalStudents: number;
   profileCompletionPercentage: number;
+  status?: 'PENDING_VERIFICATION' | 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'REJECTED';
   verified?: boolean;
+  createdAt?: string;
 }
 
 /** Client-side discovery filter state (serialized to the search API). */

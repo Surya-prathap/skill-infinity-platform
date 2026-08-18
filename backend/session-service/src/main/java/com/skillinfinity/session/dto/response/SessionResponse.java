@@ -73,6 +73,21 @@ public class SessionResponse {
     @Schema(description = "Whether the session is free")
     private boolean free;
 
+    /** True for community mentoring sessions. */
+    private boolean community;
+
+    /** Number of participants (community sessions). */
+    private Integer participantCount;
+
+    /** Learner capacity of a community session (1–20, null for professional sessions). */
+    private Integer maxParticipants;
+
+    /** Learners currently joined to a community session (excludes the host). */
+    private Integer learnerCount;
+
+    /** Seats left before the session is full (maxParticipants - learnerCount). */
+    private Integer remainingSeats;
+
     @Schema(description = "Recording URL")
     private String recordingUrl;
 
@@ -108,6 +123,16 @@ public class SessionResponse {
 
     @Schema(description = "Meeting link")
     private MeetingResponse meetingLink;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    @Schema(description = "Join window opens at (start time minus the configured join window)")
+    private LocalDateTime joinAvailableAt;
+
+    @Schema(description = "Whether the session may be joined right now, per the backend (server time + status)")
+    private Boolean joinAllowed;
+
+    @Schema(description = "Whether a meeting link is stored for this session")
+    private Boolean sessionLinkAvailable;
 
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     @Schema(description = "Created at")

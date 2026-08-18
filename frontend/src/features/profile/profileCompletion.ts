@@ -60,46 +60,11 @@ export const buildCompletionSections = (profile: UserProfile | null | undefined)
       complete: hasText(p.timezone),
     },
     {
-      key: 'social',
-      label: 'Social links',
-      hint: 'Connect LinkedIn, GitHub or X.',
-      weight: 1,
-      complete: hasText(p.linkedinUrl) || hasText(p.githubUrl) || hasText(p.twitterUrl),
-    },
-    {
-      key: 'education',
-      label: 'Education',
-      hint: 'Add at least one education entry.',
-      weight: 1,
-      complete: list(p.educations),
-    },
-    {
-      key: 'experience',
-      label: 'Experience',
-      hint: 'Add at least one work experience.',
-      weight: 1,
-      complete: list(p.experiences),
-    },
-    {
       key: 'skills',
       label: 'Skills',
       hint: 'List at least one skill.',
       weight: 1,
       complete: list(p.skills),
-    },
-    {
-      key: 'languages',
-      label: 'Languages',
-      hint: 'Add the languages you speak.',
-      weight: 1,
-      complete: list(p.languages),
-    },
-    {
-      key: 'resume',
-      label: 'Resume',
-      hint: 'Upload your resume or CV.',
-      weight: 1,
-      complete: hasText(p.resumeUrl),
     },
   ];
 };

@@ -7,7 +7,7 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { selectSettings } from '@/store/selectors';
 import { resetSettings, updateSettings } from '@/store/slices/settingsSlice';
 import { useDocumentTitle } from '@/hooks';
-import { showInfo, showSuccess } from '@/utils';
+import { showSuccess } from '@/utils';
 
 const LANGUAGES = [
   { code: 'en', label: 'English' },
@@ -22,7 +22,6 @@ export const SettingsPage: React.FC = () => {
   const dispatch = useAppDispatch();
   const settings = useAppSelector(selectSettings);
   const [confirmResetOpen, setConfirmResetOpen] = useState(false);
-  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
   const togglePreference = (key: keyof typeof settings) => {
     dispatch(updateSettings({ [key]: !settings[key] }));
@@ -86,21 +85,6 @@ export const SettingsPage: React.FC = () => {
 
         <Grid size={{ xs: 12, md: 6 }}>
           <Stack spacing={3}>
-            <Card sx={{ p: 3 }}>
-              <Typography variant="h6" fontWeight={700} gutterBottom>
-                Security
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Manage your password and account security.
-              </Typography>
-              <Button
-                variant="outlined"
-                onClick={() => setChangePasswordOpen(true)}
-              >
-                Change Password
-              </Button>
-            </Card>
-
             <Card sx={{ p: 3, borderColor: 'error.main' }}>
               <Typography variant="h6" fontWeight={700} gutterBottom color="error">
                 Danger Zone
@@ -127,18 +111,6 @@ export const SettingsPage: React.FC = () => {
           dispatch(resetSettings());
           setConfirmResetOpen(false);
           showSuccess('Preferences reset to defaults');
-        }}
-      />
-
-      <ConfirmDialog
-        open={changePasswordOpen}
-        title="Change password"
-        message="Password change arrives with the User Portal on Day 12 — no architectural changes required."
-        confirmText="OK"
-        onCancel={() => setChangePasswordOpen(false)}
-        onConfirm={() => {
-          setChangePasswordOpen(false);
-          showInfo('Password change ships with the User Portal on Day 12 — no architectural changes required.');
         }}
       />
     </Box>

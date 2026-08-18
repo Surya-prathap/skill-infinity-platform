@@ -3,7 +3,4 @@ export { MentorRegistrationPage } from './MentorRegistrationPage';
 export { MentorDashboardPage } from './MentorDashboardPage';
 export { MentorAvailabilityPage } from './MentorAvailabilityPage';
 export { MentorPricingPage } from './MentorPricingPage';
-export { MentorAnalyticsPage } from './MentorAnalyticsPage';
-export { MentorCertificatesPage } from './MentorCertificatesPage';
-export { MentorAchievementsPage } from './MentorAchievementsPage';
 export { MentorSettingsPage } from './MentorSettingsPage';

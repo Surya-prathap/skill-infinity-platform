@@ -26,7 +26,6 @@ public class WalletStatisticsResponse {
     private BigDecimal averageTransactionAmount;
     private BigDecimal largestCredit;
     private BigDecimal largestDebit;
-    private long totalRewardsClaimed;
     private long activeDays;
     private LocalDateTime lastActivityDate;
 }

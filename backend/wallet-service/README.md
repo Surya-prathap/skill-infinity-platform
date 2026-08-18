@@ -12,7 +12,7 @@ The Wallet Service follows a domain-driven microservice architecture with the fo
 - **Entities**: JPA entities with UUID primary keys and audit fields
 - **Mappers**: MapStruct-based entity-to-DTO mapping
 - **Events**: RabbitMQ-based event publishing for inter-service communication
-- **Cache**: Redis-based caching for wallet balance, details, and statistics
+- **Cache**: none (direct DB reads)
 - **Security**: JWT authentication via API Gateway with RBAC support
 
 ## Responsibilities
@@ -91,7 +91,6 @@ CREATE DATABASE IF NOT EXISTS skill_infinity_wallet
 
 ## Caching
 
-Redis is used for caching with the following cache names and TTLs:
 
 | Cache Name | TTL | Purpose |
 |---|---|---|
@@ -153,7 +152,6 @@ Key environment variables:
 | `WALLET_DB_HOST` | localhost | MySQL host |
 | `WALLET_DB_PORT` | 3306 | MySQL port |
 | `WALLET_DB_NAME` | skill_infinity_wallet | Database name |
-| `REDIS_HOST` | localhost | Redis host |
 | `RABBITMQ_HOST` | localhost | RabbitMQ host |
 | `CONFIG_SERVER_URL` | http://localhost:8888 | Config server URL |
 | `EUREKA_DEFAULT_ZONE` | http://localhost:8761/eureka/ | Eureka URL |

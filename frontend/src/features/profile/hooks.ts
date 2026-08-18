@@ -33,39 +33,41 @@ const tempId = (prefix: string): string => `${prefix}-${Date.now()}`;
  * Fields that only exist client-side (the backend ignores them in update
  * payloads) must survive refetches of the server profile.
  */
-const mergeClientOnlyFields = (local: UserProfile, server: UserProfile): UserProfile => ({
+const mergeClientOnlyFields = (local: UserProfile | null, server: UserProfile): UserProfile => ({
   ...server,
-  profilePictureUrl: server.profilePictureUrl || local.profilePictureUrl,
-  resumeUrl: server.resumeUrl || local.resumeUrl,
+  profilePictureUrl: server.profilePictureUrl || local?.profilePictureUrl,
+  resumeUrl: server.resumeUrl || local?.resumeUrl,
   certifications:
     server.certifications && server.certifications.length > 0
       ? server.certifications
-      : local.certifications,
+      : local?.certifications,
 });
 
 /**
  * Fetches the authenticated user's profile. While loading (and when the API is
- * unreachable) the locally persisted profile — or the demo seed — is served so
- * the UI remains fully functional offline. A backend 404 means the user has no
- * profile yet and is surfaced via `notFound` so the UI can offer a create flow.
+ * unreachable) the locally persisted profile — if any — is served so the UI
+ * remains usable. A backend 404 means the user has no profile yet and is
+ * surfaced via `notFound` so the UI can offer a create flow. No seed data.
  */
 export const useProfileQuery = () => {
   const query = useQuery({
     queryKey: profileKeys.detail(),
     queryFn: async () => {
       const local = loadStoredProfile();
-      const response = await userService.getProfile();
+      // silent: the UI already renders the locally persisted profile via
+      // placeholderData — a slow backend must not pin the global loading bar.
+      const response = await userService.getProfile({ silent: true });
       const merged = mergeClientOnlyFields(local, response.data.data);
       persistProfile(merged);
       return merged;
     },
-    placeholderData: loadStoredProfile,
+    placeholderData: () => loadStoredProfile() ?? undefined,
     retry: 1,
   });
 
   const errorStatus = (query.error as AxiosError | undefined)?.response?.status;
   const notFound = errorStatus === 404;
-  const profile = notFound ? null : (query.data ?? loadStoredProfile());
+  const profile = notFound ? null : (query.data ?? loadStoredProfile() ?? null);
 
   return {
     ...query,
@@ -111,7 +113,7 @@ const useOptimisticMutation = <TVars, TResult>({
     onMutate: async (vars) => {
       await queryClient.cancelQueries({ queryKey: profileKeys.detail() });
       const previous = queryClient.getQueryData<UserProfile>(profileKeys.detail());
-      const current = previous ?? loadStoredProfile();
+      const current = previous ?? loadStoredProfile() ?? ({} as UserProfile);
       const next = apply(current, vars);
       queryClient.setQueryData(profileKeys.detail(), next);
       persistProfile(next);

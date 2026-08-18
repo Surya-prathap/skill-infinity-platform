@@ -3,6 +3,8 @@
  * (ReviewResponse, RatingResponse, ReviewRequest).
  */
 
+export type ReviewDimensionKey = 'skill' | 'communication' | 'knowledge' | 'professionalism';
+
 export interface ReviewReply {
   id: string;
   mentorId?: string;
@@ -88,4 +90,32 @@ export interface ReviewRequestOptions {
   /** Hides the learner identity on public review pages. */
   anonymous?: boolean;
   dimensionRatings?: ReviewDimensionRatings;
+}
+
+/* ---------------- Search & moderation payloads (mirror backend) ---------------- */
+
+export interface ReportRequest {
+  targetType: 'POST' | 'COMMENT' | 'REVIEW';
+  targetId: string;
+  reason: string;
+}
+
+export interface ReviewSearchHit {
+  id: string;
+  mentorId: string;
+  mentorName: string;
+  learnerName?: string;
+  rating: number;
+  content?: string;
+  createdAt?: string;
+}
+
+export interface ReviewVoteRequest {
+  reviewId: string;
+  voteType: 'HELPFUL' | 'NOT_HELPFUL';
+}
+
+export interface ReviewReplyRequest {
+  reviewId: string;
+  content: string;
 }

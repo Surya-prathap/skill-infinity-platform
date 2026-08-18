@@ -1,16 +1,5 @@
 export { AdminDashboardPage } from './AdminDashboardPage';
-export { AnalyticsPage } from './AnalyticsPage';
 export { UsersPage } from './UsersPage';
 export { MentorsPage } from './MentorsPage';
-export { SessionsPage } from './SessionsPage';
-export { PaymentsPage } from './PaymentsPage';
-export { WalletPage } from './WalletPage';
-export { CommunityModerationPage } from './CommunityModerationPage';
-export { ReviewsModerationPage } from './ReviewsModerationPage';
-export { SupportCenterPage } from './SupportCenterPage';
-export { AnnouncementsPage } from './AnnouncementsPage';
-export { ReportsPage } from './ReportsPage';
+export { WithdrawalsPage } from './WithdrawalsPage';
 export { SettingsPage } from './SettingsPage';
-export { FeatureFlagsPage } from './FeatureFlagsPage';
-export { AuditLogsPage } from './AuditLogsPage';
-export { MonitoringPage } from './MonitoringPage';

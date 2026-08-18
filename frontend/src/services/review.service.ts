@@ -4,20 +4,16 @@ import type {
   ApiResponse,
   PageResponse,
   RatingBreakdown,
-  ReportRequest,
   Review,
-  ReviewReplyRequest,
   ReviewRequest,
   ReviewStatistics,
-  ReviewVoteRequest,
 } from '@/types';
 
 const resolve = (template: string, params: Record<string, string>): string =>
   Object.entries(params).reduce((url, [key, value]) => url.replace(`{${key}}`, value), template);
 
 /**
- * review-service endpoints for mentor ratings, breakdowns and reviews,
- * including replies, helpful votes, reporting, search and moderation.
+ * review endpoints for mentor ratings and reviews (hosted by session-service).
  */
 export const reviewService = {
   getReviewsByMentor: (
@@ -57,25 +53,6 @@ export const reviewService = {
 
   deleteReview: (reviewId: string) =>
     apiClient.delete<ApiResponse<void>>(resolve(API_ENDPOINTS.REVIEWS.ITEM, { reviewId })),
-
-  replyToReview: (payload: ReviewReplyRequest) =>
-    apiClient.post<ApiResponse<Review>>(API_ENDPOINTS.REVIEWS.REPLY, payload),
-
-  voteReview: (payload: ReviewVoteRequest) =>
-    apiClient.post<ApiResponse<Review>>(API_ENDPOINTS.REVIEWS.VOTE, payload),
-
-  reportReview: (payload: ReportRequest) =>
-    apiClient.post<ApiResponse<void>>(API_ENDPOINTS.REVIEWS.REPORT, payload),
-
-  searchReviews: (query: string, page = 0, size = 20) =>
-    apiClient.get<ApiResponse<PageResponse<Review>>>(API_ENDPOINTS.REVIEWS.SEARCH, {
-      params: { query, page, size },
-    }),
-
-  getTopRated: (limit = 10) =>
-    apiClient.get<ApiResponse<Review[]>>(API_ENDPOINTS.REVIEWS.TOP_RATED, {
-      params: { limit },
-    }),
 
   getSessionReviews: (sessionId: string) =>
     apiClient.get<ApiResponse<Review[]>>(

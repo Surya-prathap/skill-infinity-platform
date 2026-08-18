@@ -14,6 +14,15 @@ spring:
         locator:
           enabled: true
           lower-case-service-id: true
+
+      # Evict idle pooled connections before upstream keep-alive close (~60s)
+      # so the first request after idle never waits on a stale socket (10-20s).
+      httpclient:
+        pool:
+          max-idle-time: 30s
+          max-life-time: 10m
+          evict-in-background: 60s
+        response-timeout: ${GATEWAY_RESPONSE_TIMEOUT:60s}
       routes:
         - id: identity-service
           uri: lb://identity-service
@@ -57,22 +66,9 @@ spring:
           filters:
             - StripPrefix=0
 
-        - id: community-service
-          uri: lb://community-service
-          predicates:
-            - Path=/api/v1/community/**
-          filters:
-            - StripPrefix=0
-
-        - id: communication-service
-          uri: lb://communication-service
-          predicates:
-            - Path=/api/v1/communication/**
-          filters:
-            - StripPrefix=0
-
-        - id: review-service
-          uri: lb://review-service
+        # Reviews are hosted by the session-service (merged from review-service).
+        - id: session-reviews
+          uri: lb://session-service
           predicates:
             - Path=/api/v1/reviews/**
           filters:

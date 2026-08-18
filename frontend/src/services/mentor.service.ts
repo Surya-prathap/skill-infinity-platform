@@ -1,3 +1,4 @@
+import type { AxiosRequestConfig } from 'axios';
 import { apiClient } from '@/api';
 import { API_ENDPOINTS } from '@/constants';
 import type {
@@ -45,9 +46,10 @@ export const mentorService = {
 
   /* ---------------- Marketplace (discovery) ---------------- */
 
-  searchMentors: (query: DiscoveryQuery) =>
+  searchMentors: (query: DiscoveryQuery, config?: AxiosRequestConfig) =>
     apiClient.get<ApiResponse<PageResponse<MentorSummary>>>(API_ENDPOINTS.MENTORS.SEARCH, {
       params: query,
+      ...config,
     }),
 
   getMentorById: (mentorId: string) =>
@@ -56,6 +58,22 @@ export const mentorService = {
   getPublicProfile: (mentorId: string) =>
     apiClient.get<ApiResponse<Mentor>>(
       resolve(API_ENDPOINTS.MENTORS.PUBLIC_PROFILE, { mentorId }),
+    ),
+
+  /* ---------------- Admin: verification ---------------- */
+
+  /** Pending mentor applications (admin only). */
+  getPendingMentors: (page = 0, size = 200) =>
+    apiClient.get<ApiResponse<PageResponse<MentorSummary>>>(API_ENDPOINTS.MENTORS.PENDING, {
+      params: { page, size },
+    }),
+
+  /** Verify (approve) or reject a mentor application (admin only). */
+  verifyMentor: (mentorId: string, verified: boolean, rejectionReason?: string) =>
+    apiClient.put<ApiResponse<Mentor>>(
+      resolve(API_ENDPOINTS.MENTORS.VERIFY, { mentorId }),
+      undefined,
+      { params: { verified, ...(rejectionReason ? { rejectionReason } : {}) } },
     ),
 
   getMentorAvailability: (mentorId: string) =>

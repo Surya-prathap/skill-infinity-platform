@@ -11,7 +11,7 @@ import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
 import { Avatar } from '@/components/ui/Avatar';
 import { Typography } from '@/components/ui/Typography';
 import { Stack } from '@/components/ui/Stack';
-import { formatCompactNumber, formatCurrency } from '@/utils';
+import { formatCompactNumber } from '@/utils';
 import { ROUTES } from '@/constants';
 import type { Mentor } from '@/types';
 
@@ -72,7 +72,7 @@ export const MentorHero: React.FC<MentorHeroProps> = ({ mentor, name }) => {
       <motion.div
         animate={{ x: [0, 40, 0], y: [0, -24, 0] }}
         transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut' }}
-        style={{ position: 'absolute', width: 340, height: 340, borderRadius: '50%', top: -160, right: '8%', background: 'radial-gradient(circle, rgba(255,255,255,0.22), transparent 70%)', filter: 'blur(32px)', pointerEvents: 'none' }}
+        style={{ position: 'absolute', width: 340, height: 340, borderRadius: '50%', top: -160, right: '8%', background: 'radial-gradient(circle, rgba(255,255,255,0.22), transparent 70%)', pointerEvents: 'none', willChange: 'transform' }}
       />
 
       <Box sx={{ position: 'relative', p: { xs: 3, md: 4.5 } }}>
@@ -153,7 +153,7 @@ export const MentorHero: React.FC<MentorHeroProps> = ({ mentor, name }) => {
                 Sessions from
               </Typography>
               <Typography variant="h4" fontWeight={800}>
-                {formatCurrency(pricing.price)}
+                {pricing.price} credits
               </Typography>
               <Button
                 variant="contained"

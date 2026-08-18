@@ -1,50 +1,43 @@
 package com.skillinfinity.admin.service.impl;
 
-import com.skillinfinity.admin.dto.request.AnnouncementRequest;
-import com.skillinfinity.admin.dto.request.FeatureFlagRequest;
 import com.skillinfinity.admin.dto.request.PlatformSettingRequest;
 import com.skillinfinity.admin.dto.response.AdminUserResponse;
-import com.skillinfinity.admin.dto.response.AnalyticsResponse;
-import com.skillinfinity.admin.dto.response.AuditLogResponse;
 import com.skillinfinity.admin.dto.response.DashboardResponse;
+import com.skillinfinity.admin.dto.response.IdentityUserSync;
 import com.skillinfinity.admin.entity.AdminUser;
-import com.skillinfinity.admin.entity.AuditLog;
-import com.skillinfinity.admin.entity.FeatureFlag;
 import com.skillinfinity.admin.entity.PlatformSetting;
-import com.skillinfinity.admin.entity.ReportedContent;
-import com.skillinfinity.admin.entity.SupportTicket;
-import com.skillinfinity.admin.entity.SupportReply;
-import com.skillinfinity.admin.entity.SystemAnnouncement;
-import com.skillinfinity.admin.event.AdminEventPublisher;
 import com.skillinfinity.admin.exception.AdminNotFoundException;
-import com.skillinfinity.admin.exception.AnnouncementNotFoundException;
-import com.skillinfinity.admin.exception.FeatureFlagNotFoundException;
 import com.skillinfinity.admin.exception.PlatformSettingNotFoundException;
-import com.skillinfinity.admin.exception.SupportTicketNotFoundException;
 import com.skillinfinity.admin.mapper.AdminMapper;
 import com.skillinfinity.admin.repository.AdminUserRepository;
 import com.skillinfinity.admin.repository.AuditLogRepository;
-import com.skillinfinity.admin.repository.FeatureFlagRepository;
 import com.skillinfinity.admin.repository.PlatformSettingRepository;
-import com.skillinfinity.admin.repository.ReportedContentRepository;
-import com.skillinfinity.admin.repository.SupportTicketRepository;
-import com.skillinfinity.admin.repository.SupportReplyRepository;
-import com.skillinfinity.admin.repository.SystemAnnouncementRepository;
 import com.skillinfinity.admin.service.AdminService;
-import com.skillinfinity.common.exception.BadRequestException;
+import com.skillinfinity.common.dto.ApiResponse;
+import com.skillinfinity.common.exception.ServiceException;
+import com.skillinfinity.common.filter.GatewayHeaderAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
-import java.time.LocalDateTime;
+import java.net.URI;
+import java.lang.management.ManagementFactory;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -55,44 +48,61 @@ public class AdminServiceImpl implements AdminService {
     private final AdminUserRepository adminUserRepository;
     private final AuditLogRepository auditLogRepository;
     private final PlatformSettingRepository platformSettingRepository;
-    private final SystemAnnouncementRepository announcementRepository;
-    private final ReportedContentRepository reportedContentRepository;
-    private final SupportTicketRepository supportTicketRepository;
-    private final SupportReplyRepository supportReplyRepository;
-    private final FeatureFlagRepository featureFlagRepository;
     private final AdminMapper mapper;
-    private final AdminEventPublisher eventPublisher;
+    private final RestTemplate restTemplate;
 
+    /**
+     * mentor-service base URL. Resolved by Docker DNS on the shared network;
+     * override via MENTOR_SERVICE_URL when running services outside compose.
+     */
+    @Value("${app.services.mentor-service-url:http://mentor-service:8083}")
+    private String mentorServiceUrl;
+
+    /**
+     * identity-service base URL — used to backfill the admin user index with
+     * the accounts that existed before the event pipeline was introduced.
+     */
+    @Value("${app.services.identity-service-url:http://identity-service:8081}")
+    private String identityServiceUrl;
+
+    /**
+     * Builds the admin dashboard from data the admin-service actually owns:
+     * the synced user index and the audit trail. Mentor/session/revenue
+     * metrics are managed by their own services, so they are not fabricated
+     * here.
+     */
     @Override
-    @Transactional(readOnly = true)
-    @Cacheable(value = "dashboardStats", key = "'overview'")
     public DashboardResponse getDashboard() {
-        return DashboardResponse.builder()
-                .userStats(DashboardResponse.UserStats.builder()
-                        .totalUsers(1000).totalMentors(100).totalLearners(900)
-                        .activeUsersToday(50).dailyRegistrations(10)
-                        .build())
-                .mentorStats(DashboardResponse.MentorStats.builder()
-                        .totalMentors(100).approvedMentors(80)
-                        .pendingApprovals(10).suspendedMentors(10)
-                        .build())
-                .sessionStats(DashboardResponse.SessionStats.builder()
-                        .totalSessions(5000).completedSessions(3000)
-                        .activeSessions(100).cancelledSessions(500)
-                        .build())
-                .build();
-    }
+        // Seed the user index once so the Total Users KPI is accurate even when
+        // the admin opens the dashboard before the Users page ever loaded.
+        if (adminUserRepository.count() == 0) {
+            syncUsersFromIdentity();
+        }
 
-    @Override
-    @Transactional(readOnly = true)
-    @Cacheable(value = "analytics", key = "'platform'")
-    public AnalyticsResponse getAnalytics() {
-        return AnalyticsResponse.builder()
-                .revenue(AnalyticsResponse.RevenueAnalytics.builder()
-                        .totalRevenue(50000.0).monthlyRevenue(5000.0)
+        long totalUsers = adminUserRepository.count();
+        long totalMentors = adminUserRepository.countByRole("ROLE_MENTOR");
+        long totalLearners = adminUserRepository.countByRole("ROLE_LEARNER");
+        long uptimeHours = Math.max(0, ManagementFactory.getRuntimeMXBean().getUptime() / 3_600_000L);
+
+        List<DashboardResponse.ActivityItem> recentActivities = auditLogRepository
+                .findAllByOrderByCreatedAtDesc(PageRequest.of(0, 6))
+                .getContent()
+                .stream()
+                .map(activity -> DashboardResponse.ActivityItem.builder()
+                        .action(activity.getAction())
+                        .description(activity.getDescription() != null ? activity.getDescription() : activity.getAction())
+                        .timestamp(activity.getCreatedAt() != null ? activity.getCreatedAt().toString() : null)
                         .build())
-                .growth(AnalyticsResponse.GrowthAnalytics.builder()
-                        .userGrowthRate(15.0).mentorGrowthRate(10.0)
+                .toList();
+
+        return DashboardResponse.builder()
+                .totalUsers(totalUsers)
+                .totalMentors(totalMentors)
+                .totalLearners(totalLearners)
+                .recentActivities(recentActivities)
+                .systemHealth(DashboardResponse.SystemHealth.builder()
+                        .status("UP")
+                        .uptime(uptimeHours)
                         .build())
                 .build();
     }
@@ -100,12 +110,86 @@ public class AdminServiceImpl implements AdminService {
     @Override
     @Transactional(readOnly = true)
     public Page<AdminUserResponse> getUsers(int page, int size) {
-        return adminUserRepository.findAll(PageRequest.of(page, size))
+        // Lazy backfill: if the index is empty (e.g. accounts created before the
+        // identity event pipeline shipped), seed it from identity-service once.
+        if (adminUserRepository.count() == 0) {
+            syncUsersFromIdentity();
+        }
+        // The Users page shows learners and mentors only — platform ADMIN
+        // accounts are filtered out at the database level.
+        return adminUserRepository.findByRoleNot("ROLE_ADMIN", PageRequest.of(page, size))
                 .map(mapper::toAdminUserResponse);
     }
 
+    /**
+     * Pulls every account from the identity-service and upserts it into the
+     * admin user index. Uses the trusted admin identity headers exactly like
+     * the mentor verification forward, so the identity-service authorizes the
+     * call as ROLE_ADMIN.
+     */
+    private void syncUsersFromIdentity() {
+        try {
+            String baseUrl = identityServiceUrl.endsWith("/")
+                    ? identityServiceUrl.substring(0, identityServiceUrl.length() - 1)
+                    : identityServiceUrl;
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.set(GatewayHeaderAuthenticationFilter.USER_ID_HEADER, UUID.randomUUID().toString());
+            headers.set(GatewayHeaderAuthenticationFilter.USER_ROLES_HEADER, "ROLE_ADMIN");
+
+            ResponseEntity<ApiResponse<List<IdentityUserSync>>> response = restTemplate.exchange(
+                    baseUrl + "/api/v1/auth/admin/users",
+                    HttpMethod.GET,
+                    new HttpEntity<>(headers),
+                    new org.springframework.core.ParameterizedTypeReference<ApiResponse<List<IdentityUserSync>>>() {});
+
+            ApiResponse<List<IdentityUserSync>> body = response.getBody();
+            if (body == null || body.data() == null) {
+                log.warn("Identity backfill returned no data — leaving the admin user index empty");
+                return;
+            }
+
+            int created = 0;
+            for (IdentityUserSync user : body.data()) {
+                if (user.getId() == null) {
+                    continue;
+                }
+                AdminUser adminUser = adminUserRepository.findByUserId(user.getId()).orElse(null);
+                String role = resolveRole(user.getRoles());
+                if (adminUser == null) {
+                    adminUser = AdminUser.builder()
+                            .userId(user.getId())
+                            .name(user.getUsername())
+                            .email(user.getEmail())
+                            .role(role)
+                            .createdBy("identity-backfill")
+                            .updatedBy("identity-backfill")
+                            .build();
+                    adminUserRepository.save(adminUser);
+                    created++;
+                } else {
+                    adminUser.setName(user.getUsername());
+                    adminUser.setEmail(user.getEmail());
+                    adminUser.setRole(role);
+                    adminUser.setUpdatedBy("identity-backfill");
+                    adminUserRepository.save(adminUser);
+                }
+            }
+            log.info("Admin user index backfilled from identity-service: {} new users", created);
+        } catch (RestClientException e) {
+            log.warn("Could not backfill admin users from identity-service: {}", e.getMessage());
+        }
+    }
+
+    private String resolveRole(Set<String> roles) {
+        if (roles == null || roles.isEmpty()) return "ROLE_USER";
+        if (roles.contains("ROLE_ADMIN")) return "ROLE_ADMIN";
+        if (roles.contains("ROLE_MENTOR")) return "ROLE_MENTOR";
+        if (roles.contains("ROLE_LEARNER")) return "ROLE_LEARNER";
+        return "ROLE_USER";
+    }
+
     @Override
-    @CacheEvict(value = "dashboardStats", allEntries = true)
     public void suspendUser(UUID userId) {
         AdminUser adminUser = adminUserRepository.findByUserId(userId)
                 .orElseThrow(() -> new AdminNotFoundException(userId.toString()));
@@ -115,7 +199,6 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    @CacheEvict(value = "dashboardStats", allEntries = true)
     public void activateUser(UUID userId) {
         AdminUser adminUser = adminUserRepository.findByUserId(userId)
                 .orElseThrow(() -> new AdminNotFoundException(userId.toString()));
@@ -125,191 +208,60 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    @CacheEvict(value = "dashboardStats", allEntries = true)
-    public void assignRole(UUID userId, String role) {
-        AdminUser adminUser = adminUserRepository.findByUserId(userId)
-                .orElseThrow(() -> new AdminNotFoundException(userId.toString()));
-        adminUser.setRole(role);
-        adminUserRepository.save(adminUser);
-        log.info("Role {} assigned to user {}", role, userId);
+    public void approveMentor(UUID mentorId, UUID adminId) {
+        forwardVerification(mentorId, adminId, true, null);
+        log.info("Mentor {} approved by admin {}", mentorId, adminId);
     }
 
     @Override
-    @CacheEvict(value = "dashboardStats", allEntries = true)
-    public void approveMentor(UUID mentorId) {
-        log.info("Mentor {} approved", mentorId);
+    public void rejectMentor(UUID mentorId, String reason, UUID adminId) {
+        forwardVerification(mentorId, adminId, false, reason);
+        log.info("Mentor {} rejected by admin {}: {}", mentorId, adminId, reason);
     }
 
-    @Override
-    @CacheEvict(value = "dashboardStats", allEntries = true)
-    public void rejectMentor(UUID mentorId, String reason) {
-        log.info("Mentor {} rejected: {}", mentorId, reason);
-    }
+    /**
+     * Forwards the approval decision to the mentor-service verify endpoint,
+     * which is the authoritative owner of mentor status and emits the
+     * {@code mentor.verified} event that grants ROLE_MENTOR in identity-service.
+     * The trusted identity headers are set to the acting admin so mentor-service
+     * records who reviewed the application.
+     */
+    private void forwardVerification(UUID mentorId, UUID adminId, boolean verified, String reason) {
+        try {
+            String baseUrl = mentorServiceUrl.endsWith("/")
+                    ? mentorServiceUrl.substring(0, mentorServiceUrl.length() - 1)
+                    : mentorServiceUrl;
 
-    @Override
-    @CacheEvict(value = "dashboardStats", allEntries = true)
-    public void suspendMentor(UUID mentorId) {
-        log.info("Mentor {} suspended", mentorId);
-    }
+            UriComponentsBuilder builder = UriComponentsBuilder
+                    .fromUriString(baseUrl + "/api/v1/mentors/{mentorId}/verify")
+                    .queryParam("verified", verified);
+            if (StringUtils.hasText(reason)) {
+                builder.queryParam("rejectionReason", reason);
+            }
+            URI uri = builder.buildAndExpand(mentorId).toUri();
 
-    @Override
-    @CacheEvict(value = "dashboardStats", allEntries = true)
-    public void forceCancelSession(UUID sessionId, String reason) {
-        log.info("Session {} force cancelled: {}", sessionId, reason);
-    }
+            HttpHeaders headers = new HttpHeaders();
+            headers.set(GatewayHeaderAuthenticationFilter.USER_ID_HEADER, adminId.toString());
+            headers.set(GatewayHeaderAuthenticationFilter.USER_ROLES_HEADER, "ROLE_ADMIN");
 
-    @Override
-    @CacheEvict(value = "dashboardStats", allEntries = true)
-    public SystemAnnouncement createAnnouncement(AnnouncementRequest request, UUID adminId) {
-        SystemAnnouncement announcement = SystemAnnouncement.builder()
-                .id(UUID.randomUUID())
-                .title(request.getTitle())
-                .content(request.getContent())
-                .announcementType(request.getAnnouncementType())
-                .targetRole(request.getTargetRole())
-                .priority(request.getPriority())
-                .scheduledAt(request.getScheduledAt())
-                .expiresAt(request.getExpiresAt())
-                .status("DRAFT")
-                .createdBy(adminId.toString())
-                .updatedBy(adminId.toString())
-                .build();
-
-        announcement = announcementRepository.save(announcement);
-        eventPublisher.publishAnnouncement(announcement);
-        log.info("Announcement created: {}", announcement.getId());
-        return announcement;
-    }
-
-    @Override
-    @CacheEvict(value = "dashboardStats", allEntries = true)
-    public void deleteAnnouncement(UUID announcementId) {
-        SystemAnnouncement announcement = announcementRepository.findById(announcementId)
-                .orElseThrow(() -> new AnnouncementNotFoundException(announcementId.toString()));
-        announcement.setActive(false);
-        announcementRepository.save(announcement);
-        log.info("Announcement deleted: {}", announcementId);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<SystemAnnouncement> getActiveAnnouncements() {
-        return announcementRepository.findByStatusAndActiveTrue("PUBLISHED",
-                PageRequest.of(0, 50)).getContent();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Page<SupportTicket> getSupportTickets(int page, int size, String status) {
-        if (status != null && !status.isEmpty()) {
-            return supportTicketRepository.findByStatusOrderByCreatedAtDesc(status, PageRequest.of(page, size));
+            restTemplate.exchange(uri, HttpMethod.PUT, new HttpEntity<>(headers), String.class);
+            log.info("Forwarded mentor {} verification (verified={}) to mentor-service", mentorId, verified);
+        } catch (RestClientException e) {
+            log.error("Failed to forward mentor {} verification decision to mentor-service", mentorId, e);
+            throw new ServiceException("Could not update mentor status: upstream service error", HttpStatus.BAD_GATEWAY);
         }
-        return supportTicketRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(page, size));
-    }
-
-    @Override
-    @CacheEvict(value = "dashboardStats", allEntries = true)
-    public SupportTicket assignTicket(UUID ticketId, UUID adminId) {
-        SupportTicket ticket = supportTicketRepository.findById(ticketId)
-                .orElseThrow(() -> new SupportTicketNotFoundException(ticketId.toString()));
-        ticket.setAssignedTo(adminId);
-        ticket.setAssignedAt(LocalDateTime.now());
-        ticket.setStatus("IN_PROGRESS");
-        ticket.setUpdatedBy(adminId.toString());
-        return supportTicketRepository.save(ticket);
-    }
-
-    @Override
-    @CacheEvict(value = "dashboardStats", allEntries = true)
-    public SupportTicket replyToTicket(UUID ticketId, String message, UUID adminId) {
-        SupportTicket ticket = supportTicketRepository.findById(ticketId)
-                .orElseThrow(() -> new SupportTicketNotFoundException(ticketId.toString()));
-
-        SupportReply reply = SupportReply.builder()
-                .id(UUID.randomUUID())
-                .ticket(ticket)
-                .senderId(adminId)
-                .senderType("ADMIN")
-                .message(message)
-                .build();
-        supportReplyRepository.save(reply);
-
-        ticket.setStatus("IN_PROGRESS");
-        ticket.setUpdatedBy(adminId.toString());
-        return supportTicketRepository.save(ticket);
-    }
-
-    @Override
-    @CacheEvict(value = "dashboardStats", allEntries = true)
-    public SupportTicket resolveTicket(UUID ticketId, String resolution) {
-        SupportTicket ticket = supportTicketRepository.findById(ticketId)
-                .orElseThrow(() -> new SupportTicketNotFoundException(ticketId.toString()));
-        ticket.setStatus("RESOLVED");
-        ticket.setResolvedAt(LocalDateTime.now());
-        ticket.setResolutionNotes(resolution);
-        return supportTicketRepository.save(ticket);
     }
 
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(value = "featureFlags", key = "'all'")
-    public List<FeatureFlag> getFeatureFlags() {
-        return featureFlagRepository.findByActiveTrue();
-    }
-
-    @Override
-    @CacheEvict(value = "featureFlags", allEntries = true)
-    public FeatureFlag toggleFeatureFlag(String featureKey, boolean enabled) {
-        FeatureFlag flag = featureFlagRepository.findByFeatureKey(featureKey)
-                .orElseThrow(() -> new FeatureFlagNotFoundException(featureKey));
-        flag.setEnabled(enabled);
-        return featureFlagRepository.save(flag);
-    }
-
-    @Override
-    @CacheEvict(value = "featureFlags", allEntries = true)
-    public FeatureFlag updateFeatureFlag(FeatureFlagRequest request) {
-        FeatureFlag flag = featureFlagRepository.findByFeatureKey(request.getFeatureKey())
-                .orElse(null);
-
-        if (flag == null) {
-            flag = FeatureFlag.builder()
-                    .id(UUID.randomUUID())
-                    .featureKey(request.getFeatureKey())
-                    .featureName(request.getFeatureName())
-                    .description(request.getDescription())
-                    .enabled(request.isEnabled())
-                    .rolloutPercentage(request.getRolloutPercentage())
-                    .environment(request.getEnvironment())
-                    .createdBy("admin")
-                    .updatedBy("admin")
-                    .build();
-        } else {
-            flag.setFeatureName(request.getFeatureName());
-            flag.setDescription(request.getDescription());
-            flag.setEnabled(request.isEnabled());
-            flag.setRolloutPercentage(request.getRolloutPercentage());
-            flag.setEnvironment(request.getEnvironment());
-            flag.setUpdatedBy("admin");
-        }
-
-        return featureFlagRepository.save(flag);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    @Cacheable(value = "platformSettings", key = "'all'")
     public List<PlatformSetting> getSettings() {
         return platformSettingRepository.findByActiveTrue();
     }
 
     @Override
-    @CacheEvict(value = "platformSettings", allEntries = true)
     public PlatformSetting updateSetting(PlatformSettingRequest request, UUID adminId) {
         PlatformSetting setting = platformSettingRepository.findBySettingKey(request.getSettingKey())
                 .orElse(null);
-
-        String oldValue = setting != null ? setting.getSettingValue() : null;
 
         if (setting == null) {
             setting = PlatformSetting.builder()
@@ -323,7 +275,6 @@ public class AdminServiceImpl implements AdminService {
                     .updatedBy(adminId.toString())
                     .build();
         } else {
-            oldValue = setting.getSettingValue();
             setting.setSettingValue(request.getSettingValue());
             setting.setDataType(request.getDataType());
             setting.setDescription(request.getDescription());
@@ -331,37 +282,6 @@ public class AdminServiceImpl implements AdminService {
             setting.setUpdatedBy(adminId.toString());
         }
 
-        setting = platformSettingRepository.save(setting);
-        eventPublisher.publishSettingChanged(setting, oldValue);
-        return setting;
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Page<AuditLogResponse> getAuditLogs(int page, int size) {
-        return auditLogRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(page, size))
-                .map(mapper::toAuditLogResponse);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Page<ReportedContent> getReportedContent(int page, int size, String status) {
-        if (status != null && !status.isEmpty()) {
-            return reportedContentRepository.findByStatusOrderByCreatedAtDesc(status, PageRequest.of(page, size));
-        }
-        return reportedContentRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(page, size));
-    }
-
-    @Override
-    @CacheEvict(value = "dashboardStats", allEntries = true)
-    public void moderateReportedContent(UUID reportId, String action, String notes, UUID adminId) {
-        ReportedContent report = reportedContentRepository.findById(reportId)
-                .orElseThrow(() -> new com.skillinfinity.common.exception.ResourceNotFoundException("Report", reportId.toString()));
-        report.setStatus("RESOLVED");
-        report.setReviewedBy(adminId);
-        report.setReviewedAt(LocalDateTime.now());
-        report.setResolutionNotes(notes);
-        reportedContentRepository.save(report);
-        log.info("Report {} moderated by {}: {}", reportId, adminId, action);
+        return platformSettingRepository.save(setting);
     }
 }

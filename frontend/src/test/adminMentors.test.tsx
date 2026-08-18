@@ -1,59 +1,44 @@
 import { describe, expect, it, afterEach } from 'vitest';
-import { cleanup, screen, waitFor } from '@testing-library/react';
+import { cleanup, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MentorsPage } from '@/pages/admin/MentorsPage';
 import { renderWithProviders } from './testUtils';
 
+/**
+ * API calls fail instantly in tests (offline adapter), so the page renders its
+ * honest empty states — no fabricated mentor names or counts.
+ */
 describe('MentorsPage', () => {
   afterEach(() => {
     cleanup();
     window.localStorage.clear();
   });
 
-  it('renders the header, analytics strip and approval queue', async () => {
+  it('renders the header, analytics strip and empty approval queue', async () => {
     renderWithProviders(<MentorsPage />);
 
     expect(await screen.findByText('Mentor Management')).toBeInTheDocument();
     expect(screen.getByText('Rating Distribution')).toBeInTheDocument();
-    expect(screen.getByText('Mentor Payout Volume (thousands)')).toBeInTheDocument();
-    expect(screen.getByText('5 awaiting approval')).toBeInTheDocument();
-    // First approval candidate from the seed queue.
-    expect(screen.getByText('Oliver Berg')).toBeInTheDocument();
-    expect(screen.getByText('Ava Thompson')).toBeInTheDocument();
+    expect(screen.getByText('Mentor Overview')).toBeInTheDocument();
+    expect(screen.getByText('0 awaiting approval')).toBeInTheDocument();
+    expect(screen.getByText('All caught up 🎉')).toBeInTheDocument();
   });
 
-  it('shows the approval tabs with correct counts', async () => {
+  it('shows the approval tabs with zero counts', async () => {
     renderWithProviders(<MentorsPage />);
 
-    expect(await screen.findByRole('tab', { name: 'Approval Queue (5)' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'All Mentors (10)' })).toBeInTheDocument();
+    expect(await screen.findByRole('tab', { name: 'Approval Queue (0)' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'All Mentors (0)' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Top Mentors' })).toBeInTheDocument();
   });
 
-  it('switches to the all-mentors table and searches', async () => {
+  it('switches to the all-mentors table and shows the empty state', async () => {
     const user = userEvent.setup();
     renderWithProviders(<MentorsPage />);
 
-    await user.click(await screen.findByRole('tab', { name: 'All Mentors (10)' }));
+    await user.click(await screen.findByRole('tab', { name: 'All Mentors (0)' }));
 
-    expect(await screen.findByText('All mentors (10)')).toBeInTheDocument();
-    expect(screen.getByText('Emma Wilson')).toBeInTheDocument();
-
-    const search = screen.getByPlaceholderText('Search mentors…');
-    await user.type(search, 'Ravi');
-    await waitFor(() => {
-      expect(screen.getByText('Ravi Patel')).toBeInTheDocument();
-    });
-    expect(screen.queryByText('Emma Wilson')).not.toBeInTheDocument();
-  });
-
-  it('opens the approval dialog for a candidate', async () => {
-    const user = userEvent.setup();
-    renderWithProviders(<MentorsPage />);
-
-    const approveButtons = await screen.findAllByRole('button', { name: /Approve/i });
-    await user.click(approveButtons[0]!);
-
-    expect(await screen.findByRole('heading', { name: /Approve mentor/i })).toBeInTheDocument();
+    expect(await screen.findByText('All mentors (0)')).toBeInTheDocument();
+    expect(screen.getByText('No mentors found')).toBeInTheDocument();
   });
 });

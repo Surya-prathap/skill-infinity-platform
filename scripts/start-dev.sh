@@ -10,8 +10,8 @@ echo "╚═══════════════════════�
 
 # 1. Start infrastructure services
 echo ""
-echo "▶ Starting infrastructure services (MySQL, Redis, RabbitMQ, MinIO)..."
-docker compose -f docker/docker-compose.yml up -d mysql redis rabbitmq minio
+echo "▶ Starting infrastructure services (MySQL, RabbitMQ)..."
+docker compose -f docker/docker-compose.yml up -d mysql rabbitmq
 echo "   Waiting for databases to be ready..."
 sleep 10
 
@@ -67,7 +67,6 @@ echo "║   API Gateway:    http://localhost:8080                 ║"
 echo "║   Eureka:         http://localhost:8761                 ║"
 echo "║   Config Server:  http://localhost:8888                 ║"
 echo "║   RabbitMQ:       http://localhost:15672                ║"
-echo "║   MinIO Console:  http://localhost:9001                 ║"
 echo "╚══════════════════════════════════════════════════════════╝"
 echo ""
 echo "Press Ctrl+C to stop all services."

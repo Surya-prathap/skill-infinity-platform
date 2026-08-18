@@ -13,7 +13,7 @@ import { Card } from '@/components/ui/Card';
 import { Typography } from '@/components/ui/Typography';
 import { Stack } from '@/components/ui/Stack';
 import { Avatar } from '@/components/ui/Avatar';
-import { formatCompactNumber, formatCurrency } from '@/utils';
+import { formatCompactNumber } from '@/utils';
 import { ROUTES } from '@/constants';
 import type { Mentor, MentorSummary } from '@/types';
 
@@ -222,7 +222,7 @@ export const MarketplaceMentorCard: React.FC<MarketplaceMentorCardProps> = ({
             <Box>
               {price !== undefined && (
                 <Typography variant="h6" fontWeight={800} sx={{ color: 'primary.main' }}>
-                  {formatCurrency(price)}
+                  {price} credits
                   <Typography component="span" variant="caption" color="text.secondary" fontWeight={500}>
                     {' '}/ {sessionTypeLabel(priceType)}
                   </Typography>

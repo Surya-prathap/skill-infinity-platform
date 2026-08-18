@@ -12,7 +12,6 @@ export {
 export { RoleBadge } from './RoleBadge';
 export { UserDrawer } from './UserDrawer';
 export { ApprovalDialog } from './ApprovalDialog';
-export { AuditTimeline } from './AuditTimeline';
 export { ActivityFeed } from './ActivityFeed';
 export { DashboardWidget } from './DashboardWidget';
 export { AnimatedProgress, getToneColor } from './AnimatedProgress';

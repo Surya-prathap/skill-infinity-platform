@@ -8,8 +8,6 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
-import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest(properties = {
@@ -39,14 +37,6 @@ class MentorApplicationTests {
         @Primary
         public RabbitTemplate rabbitTemplate(CachingConnectionFactory ccf) {
             return new RabbitTemplate(ccf);
-        }
-
-        @Bean
-        @Primary
-        public RedisConnectionFactory redisConnectionFactory() {
-            LettuceConnectionFactory factory = new LettuceConnectionFactory("localhost", 6379);
-            factory.setTimeout(100L);
-            return factory;
         }
     }
 }

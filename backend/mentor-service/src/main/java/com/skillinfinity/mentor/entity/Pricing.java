@@ -89,7 +89,7 @@ public class Pricing {
         updatedAt = LocalDateTime.now();
         active = true;
         if (currency == null) {
-            currency = "USD";
+            currency = "INR";
         }
     }
 

@@ -7,6 +7,7 @@ import com.skillinfinity.identity.dto.request.RefreshTokenRequest;
 import com.skillinfinity.identity.dto.request.RegisterRequest;
 import com.skillinfinity.identity.dto.response.AuthResponse;
 import com.skillinfinity.identity.dto.response.TokenValidationResponse;
+import com.skillinfinity.identity.dto.response.UserAdminResponse;
 import com.skillinfinity.identity.dto.response.UserInfoResponse;
 import com.skillinfinity.identity.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -87,6 +88,13 @@ public class AuthController {
     public ResponseEntity<ApiResponse<UserInfoResponse>> getCurrentUser(Principal principal) {
         UserInfoResponse response = authService.getCurrentUser(principal.getName());
         return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @GetMapping("/admin/users")
+    @Operation(summary = "List all users (admin)", description = "Returns every account so the admin-service can backfill its user index")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<java.util.List<UserAdminResponse>>> getAdminUsers() {
+        return ResponseEntity.ok(ApiResponse.success(authService.getAdminUsers()));
     }
 
     @PostMapping("/change-password")

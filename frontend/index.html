@@ -21,10 +21,21 @@
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Fonts load asynchronously (media=print swaps to all on load) so a slow
+         CDN round-trip never blocks first paint; text falls back to system
+         fonts until Inter is ready (display=swap already avoids invisible text). -->
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
       rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
     />
+    <noscript>
+      <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet"
+      />
+    </noscript>
     <title>Skill Infinity — Where Knowledge Creates Value</title>
   </head>
   <body>

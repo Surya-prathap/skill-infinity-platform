@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Box, Divider, Link } from '@mui/material';
@@ -8,8 +9,8 @@ import { Button, FormCheckbox, FormInput, PasswordInput } from '@/components';
 import { useAuth } from '@/hooks';
 import { setRememberMe } from '@/store/slices/authSlice';
 import { useAppDispatch } from '@/store/hooks';
-import { ROUTES } from '@/constants';
-import { showError, showSuccess } from '@/utils';
+import { ROUTES, getHomeRoute } from '@/constants';
+import { getErrorMessage, showError, showSuccess } from '@/utils';
 import { loginSchema, type LoginFormValues } from './schemas';
 
 export const LoginForm: React.FC = () => {
@@ -18,24 +19,42 @@ export const LoginForm: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Hard re-entry guard: even though the button is disabled while submitting,
+  // a second click (or Enter+click) can land before React re-renders. Two
+  // concurrent login POSTs for the same account used to deadlock on the MySQL
+  // row lock and stall login for 20s+ — never fire a second request.
+  const submittingRef = useRef(false);
+
   const {
     control,
     handleSubmit,
     formState: { isSubmitting },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: '', password: '', rememberMe: true },
+    defaultValues: { email: '', password: '', rememberMe: false },
   });
 
   const onSubmit = async (values: LoginFormValues) => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     dispatch(setRememberMe(values.rememberMe));
     try {
-      await login({ email: values.email, password: values.password });
+      const auth = await login({ email: values.email, password: values.password });
       showSuccess('Welcome back!');
       const from = (location.state as { from?: string } | null)?.from;
-      navigate(from ?? ROUTES.DASHBOARD, { replace: true });
+      const home = getHomeRoute(auth.roles);
+      // An explicit `from` destination wins — EXCEPT the generic learner
+      // `/dashboard`, so admins and mentors are never dropped back onto the
+      // learner dashboard (e.g. when their session expired there).
+      const destination = from && from !== ROUTES.DASHBOARD ? from : home;
+      navigate(destination, { replace: true });
     } catch (error) {
-      showError(error instanceof Error ? error.message : 'Unable to sign in. Please try again.');
+      // `error` here is the string payload thrown by the thunk's `.unwrap()`
+      // (not an Error instance), so use getErrorMessage to surface the real
+      // backend/network message instead of a generic fallback.
+      showError(getErrorMessage(error));
+    } finally {
+      submittingRef.current = false;
     }
   };
 

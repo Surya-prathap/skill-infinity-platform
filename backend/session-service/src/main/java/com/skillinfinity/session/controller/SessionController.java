@@ -5,12 +5,14 @@ import com.skillinfinity.common.dto.PageResponse;
 import com.skillinfinity.session.dto.request.AttendanceRequest;
 import com.skillinfinity.session.dto.request.BookingRequest;
 import com.skillinfinity.session.dto.request.CancellationRequest;
+import com.skillinfinity.session.dto.request.CommunitySessionRequest;
 import com.skillinfinity.session.dto.request.RescheduleRequestDto;
 import com.skillinfinity.session.dto.request.SearchRequest;
 import com.skillinfinity.session.dto.request.SessionRequest;
 import com.skillinfinity.session.dto.response.AttendanceResponse;
 import com.skillinfinity.session.dto.response.BookingResponse;
-import com.skillinfinity.session.dto.response.CalendarResponse;
+import com.skillinfinity.session.dto.response.CommunityAllowanceResponse;
+import com.skillinfinity.session.dto.response.CommunityImpactResponse;
 import com.skillinfinity.session.dto.response.MeetingResponse;
 import com.skillinfinity.session.dto.response.SessionResponse;
 import com.skillinfinity.session.service.SessionService;
@@ -76,9 +78,61 @@ public class SessionController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get session by ID", description = "Returns session details for the specified session ID")
-    public ResponseEntity<ApiResponse<SessionResponse>> getSessionById(@PathVariable UUID id) {
-        SessionResponse response = sessionService.getSessionById(id);
+    @Operation(summary = "Get session by ID", description = "Returns session details for the specified session ID (participants only)")
+    public ResponseEntity<ApiResponse<SessionResponse>> getSessionById(
+            @PathVariable UUID id,
+            @RequestHeader("X-User-ID") UUID userId) {
+        SessionResponse response = sessionService.getSessionById(id, userId);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    // ============================================================
+    // Community Sessions
+    // ============================================================
+
+    @PostMapping("/community")
+    @Operation(summary = "Create community session", description = "Mentor schedules a free community mentoring session")
+    public ResponseEntity<ApiResponse<SessionResponse>> createCommunitySession(
+            @RequestHeader("X-User-ID") UUID mentorId,
+            @Valid @RequestBody CommunitySessionRequest request) {
+        log.info("Create community session request from mentor: {}", mentorId);
+        SessionResponse response = sessionService.createCommunitySession(request, mentorId);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Community session scheduled successfully", response));
+    }
+
+    @GetMapping("/community/upcoming")
+    @Operation(summary = "Upcoming community sessions", description = "Lists free community sessions open for joining")
+    public ResponseEntity<ApiResponse<PageResponse<SessionResponse>>> getUpcomingCommunitySessions(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        PageResponse<SessionResponse> response = sessionService.getUpcomingCommunitySessions(page, size);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @PostMapping("/{id}/join")
+    @Operation(summary = "Join community session", description = "Learner joins a free community session (3 per calendar month)")
+    public ResponseEntity<ApiResponse<SessionResponse>> joinCommunitySession(
+            @PathVariable UUID id,
+            @RequestHeader("X-User-ID") UUID userId) {
+        log.info("Join community session request from learner: {}", userId);
+        SessionResponse response = sessionService.joinCommunitySession(id, userId);
+        return ResponseEntity.ok(ApiResponse.success("Joined community session successfully", response));
+    }
+
+    @GetMapping("/community/allowance")
+    @Operation(summary = "Community session allowance", description = "Learner's free community sessions used/remaining this month")
+    public ResponseEntity<ApiResponse<CommunityAllowanceResponse>> getCommunityAllowance(
+            @RequestHeader("X-User-ID") UUID userId) {
+        CommunityAllowanceResponse response = sessionService.getCommunityAllowance(userId);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @GetMapping("/community/impact/{mentorId}")
+    @Operation(summary = "Mentor community impact", description = "Mentor's real community contribution statistics and recognition level")
+    public ResponseEntity<ApiResponse<CommunityImpactResponse>> getMentorCommunityImpact(
+            @PathVariable UUID mentorId) {
+        CommunityImpactResponse response = sessionService.getMentorCommunityImpact(mentorId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -120,6 +174,28 @@ public class SessionController {
         BookingResponse response = sessionService.bookSession(request, userId);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Booking created successfully. Awaiting mentor approval.", response));
+    }
+
+    @GetMapping("/bookings/mentor")
+    @Operation(summary = "Get mentor bookings", description = "Returns bookings where the authenticated user is the mentor (dashboard session requests)")
+    public ResponseEntity<ApiResponse<PageResponse<BookingResponse>>> getMentorBookings(
+            @RequestHeader("X-User-ID") UUID mentorId,
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        PageResponse<BookingResponse> response = sessionService.getMentorBookings(mentorId, status, page, size);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @GetMapping("/bookings/learner")
+    @Operation(summary = "Get learner bookings", description = "Returns bookings where the authenticated user is the learner")
+    public ResponseEntity<ApiResponse<PageResponse<BookingResponse>>> getLearnerBookings(
+            @RequestHeader("X-User-ID") UUID learnerId,
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        PageResponse<BookingResponse> response = sessionService.getLearnerBookings(learnerId, status, page, size);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PostMapping("/approve")
@@ -270,34 +346,12 @@ public class SessionController {
     // ============================================================
 
     @GetMapping("/{id}/meeting")
-    @Operation(summary = "Get meeting link", description = "Returns the meeting link for a session")
-    public ResponseEntity<ApiResponse<MeetingResponse>> getMeetingLink(@PathVariable UUID id) {
-        MeetingResponse response = sessionService.getMeetingLink(id);
-        return ResponseEntity.ok(ApiResponse.success(response));
-    }
-
-    // ============================================================
-    // Calendar
-    // ============================================================
-
-    @GetMapping("/calendar")
-    @Operation(summary = "Get calendar events", description = "Returns calendar events for the authenticated user within a date range")
-    public ResponseEntity<ApiResponse<CalendarResponse>> getCalendar(
-            @RequestHeader("X-User-ID") UUID userId,
-            @RequestParam(required = false) String startDate,
-            @RequestParam(required = false) String endDate) {
-        CalendarResponse response = sessionService.getCalendar(userId, startDate, endDate);
-        return ResponseEntity.ok(ApiResponse.success(response));
-    }
-
-    @GetMapping("/calendar/export")
-    @Operation(summary = "Export calendar as ICS", description = "Exports sessions as ICS calendar file")
-    public ResponseEntity<String> exportCalendar(
+    @Operation(summary = "Get meeting link", description = "Returns the meeting link for a session after verifying the caller belongs to the session and the join window is open")
+    public ResponseEntity<ApiResponse<MeetingResponse>> getMeetingLink(
+            @PathVariable UUID id,
             @RequestHeader("X-User-ID") UUID userId) {
-        String icsContent = sessionService.exportCalendarIcs(userId);
-        return ResponseEntity.ok()
-                .header("Content-Type", "text/calendar; charset=utf-8")
-                .header("Content-Disposition", "attachment; filename=sessions.ics")
-                .body(icsContent);
+        MeetingResponse response = sessionService.getMeetingLink(id, userId);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
+
 }

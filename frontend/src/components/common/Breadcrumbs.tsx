@@ -8,12 +8,8 @@ import { ROUTES } from '@/constants';
 const LABEL_MAP: Record<string, string> = {
   dashboard: 'Dashboard',
   profile: 'Profile',
-  community: 'Community',
   sessions: 'Sessions',
   wallet: 'Wallet',
-  notifications: 'Notifications',
-  messages: 'Messages',
-  announcements: 'Announcements',
   settings: 'Settings',
   mentor: 'Mentor',
   admin: 'Admin',

@@ -39,6 +39,10 @@ public class Booking {
     @Column(name = "learner_name", length = 255)
     private String learnerName;
 
+    /** Learner's email, captured at booking time for reference. */
+    @Column(name = "learner_email", length = 255)
+    private String learnerEmail;
+
     @Column(name = "topic", length = 255)
     private String topic;
 
@@ -56,6 +60,10 @@ public class Booking {
 
     @Column(name = "duration_minutes", nullable = false)
     private int durationMinutes;
+
+    /** Session cost in credits (0 for free/community). */
+    @Column(name = "price")
+    private double price;
 
     @Column(name = "timezone", length = 50)
     private String timezone;

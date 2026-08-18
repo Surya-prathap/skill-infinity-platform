@@ -1,3 +1,4 @@
+import type { AxiosRequestConfig } from 'axios';
 import { apiClient } from '@/api';
 import { API_ENDPOINTS } from '@/constants';
 import type {
@@ -23,7 +24,8 @@ const collection = (template: string, userId: string, itemId?: string): string =
  * authenticated user's UUID (X-User-ID is injected by the API gateway).
  */
 export const userService = {
-  getProfile: () => apiClient.get<ApiResponse<UserProfile>>(API_ENDPOINTS.USERS.PROFILE),
+  getProfile: (config?: AxiosRequestConfig) =>
+    apiClient.get<ApiResponse<UserProfile>>(API_ENDPOINTS.USERS.PROFILE, config),
 
   createProfile: (payload: CreateProfileRequest) =>
     apiClient.post<ApiResponse<UserProfile>>(API_ENDPOINTS.USERS.BASE, payload),

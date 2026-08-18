@@ -9,7 +9,6 @@ export const ROUTES = {
   MENTORS: '/mentors',
   SESSIONS: '/sessions',
   WALLET: '/wallet',
-  COMMUNITY: '/community',
   PROFILE: '/profile',
   ADMIN: '/admin',
 } as const;
@@ -34,10 +33,6 @@ export const API_ENDPOINTS = {
   WALLET: {
     BASE: '/wallet',
     TRANSACTIONS: '/wallet/transactions',
-  },
-  COMMUNITY: {
-    POSTS: '/community/posts',
-    COMMENTS: '/community/comments',
   },
 } as const;
 

@@ -5,7 +5,4 @@ export * from './session.service';
 export * from './wallet.service';
 export * from './payment.service';
 export * from './review.service';
-export * from './community.service';
 export * from './admin.service';
-export * from './communication.service';
-export * from './meeting.service';

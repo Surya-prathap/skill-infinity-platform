@@ -20,8 +20,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Rate limiting filter using in-memory token bucket algorithm.
  * Provides basic protection against request floods.
- * For production, replace with Redis-backed rate limiter using
- * Spring Cloud Gateway's RequestRateLimiterGatewayFilterFactory.
  */
 @Slf4j
 @Component

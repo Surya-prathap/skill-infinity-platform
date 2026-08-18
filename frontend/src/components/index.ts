@@ -8,8 +8,6 @@ export * from './marketplace';
 export * from './session';
 export * from './wallet';
 export * from './booking';
-export * from './communication';
+export * from './reviews';
 /* Admin components are imported from '@/components/admin' directly to avoid
-   name collisions (e.g. FilterDrawer is also exported by the marketplace).
-   Community components are imported from '@/components/community' to avoid
-   name collisions with the mentor portal (e.g. AchievementCard). */
+   name collisions (e.g. FilterDrawer is also exported by the marketplace). */

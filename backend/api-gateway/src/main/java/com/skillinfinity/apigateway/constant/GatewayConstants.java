@@ -20,6 +20,10 @@ public final class GatewayConstants {
     public static final String[] PUBLIC_PATHS = {
             "/api/v1/auth/**",
             "/api/v1/public/**",
+            // Public mentor discovery — mirrors mentor-service SecurityConfig PUBLIC_PATHS
+            "/api/v1/mentors/search",
+            "/api/v1/mentors/categories/**",
+            "/api/v1/mentors/{id}/public",
             "/actuator/health/**",
             "/actuator/info",
             "/swagger-ui/**",

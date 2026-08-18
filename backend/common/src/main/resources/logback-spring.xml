@@ -5,35 +5,11 @@
 
     <!-- Spring property for application name -->
     <springProperty scope="context" name="springAppName" source="spring.application.name"/>
-    <springProperty scope="context" name="springProfile" source="spring.profiles.active" defaultValue="default"/>
 
     <!-- Appender name for log file -->
     <property name="LOG_FILE" value="${LOG_FILE:-logs/${springAppName}.log}"/>
     <property name="LOG_PATTERN_CONSOLE" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %highlight(%-5level) %logger{36} [%X{correlationId:-no-cid}] - %msg%n"/>
     <property name="LOG_PATTERN_FILE" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} [%X{correlationId:-no-cid}] - %msg%n"/>
-
-    <!-- Console Appender with structured JSON (for production) -->
-    <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
-            <includeMdcKeyName>correlationId</includeMdcKeyName>
-            <includeMdcKeyName>requestId</includeMdcKeyName>
-            <includeMdcKeyName>userId</includeMdcKeyName>
-            <includeMdcKeyName>service</includeMdcKeyName>
-            <includeMdcKeyName>requestPath</includeMdcKeyName>
-            <provider class="net.logstash.logback.composite.loggingevent.LoggingEventPatternJsonProvider">
-                <pattern>
-                    {
-                        "timestamp": "%d{yyyy-MM-dd'T'HH:mm:ss.SSS'Z'}",
-                        "level": "%level",
-                        "thread": "%thread",
-                        "logger": "%logger",
-                        "message": "%message",
-                        "stack_trace": "%exception{10}"
-                    }
-                </pattern>
-            </provider>
-        </encoder>
-    </appender>
 
     <!-- Rolling file appender -->
     <appender name="ROLLING_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
@@ -49,60 +25,25 @@
         </rollingPolicy>
     </appender>
 
-    <!-- Async appender for performance -->
-    <appender name="ASYNC" class="ch.qos.logback.classic.AsyncAppender">
-        <queueSize>512</queueSize>
-        <neverBlock>true</neverBlock>
-        <appender-ref ref="ROLLING_FILE"/>
+    <!-- Plain console appender (local development) -->
+    <appender name="CONSOLE_PATTERN" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${LOG_PATTERN_CONSOLE}</pattern>
+            <charset>utf8</charset>
+        </encoder>
     </appender>
 
-    <!-- JSON appender - only active in non-local profiles -->
-    <springProfile name="dev,staging,prod,production,docker">
-        <root level="INFO">
-            <appender-ref ref="JSON_CONSOLE"/>
-            <appender-ref ref="ASYNC"/>
-        </root>
-    </springProfile>
-
-    <!-- Console pattern appender - local development -->
-    <springProfile name="default,native,test,local">
-        <root level="INFO">
-            <appender-ref ref="CONSOLE"/>
-            <appender-ref ref="ASYNC"/>
-        </root>
-    </springProfile>
+    <root level="INFO">
+        <appender-ref ref="CONSOLE_PATTERN"/>
+        <appender-ref ref="ROLLING_FILE"/>
+    </root>
 
     <!-- Module-specific log levels -->
-    <logger name="com.skillinfinity" level="INFO" additivity="false">
-        <appender-ref ref="CONSOLE"/>
-        <appender-ref ref="ASYNC"/>
-    </logger>
+    <logger name="com.skillinfinity" level="INFO"/>
 
-    <logger name="org.springframework" level="WARN" additivity="false">
-        <appender-ref ref="CONSOLE"/>
-    </logger>
-
-    <logger name="org.springframework.security" level="WARN" additivity="false">
-        <appender-ref ref="CONSOLE"/>
-    </logger>
-
-    <logger name="org.springframework.amqp" level="WARN" additivity="false">
-        <appender-ref ref="CONSOLE"/>
-    </logger>
-
-    <logger name="org.springframework.data.redis" level="WARN" additivity="false">
-        <appender-ref ref="CONSOLE"/>
-    </logger>
-
-    <logger name="org.hibernate" level="WARN" additivity="false">
-        <appender-ref ref="CONSOLE"/>
-    </logger>
-
-    <logger name="com.netflix" level="WARN" additivity="false">
-        <appender-ref ref="CONSOLE"/>
-    </logger>
-
-    <logger name="org.apache.kafka" level="WARN" additivity="false">
-        <appender-ref ref="CONSOLE"/>
-    </logger>
+    <logger name="org.springframework" level="WARN"/>
+    <logger name="org.springframework.security" level="WARN"/>
+    <logger name="org.springframework.amqp" level="WARN"/>
+    <logger name="org.hibernate" level="WARN"/>
+    <logger name="com.netflix" level="WARN"/>
 </configuration>

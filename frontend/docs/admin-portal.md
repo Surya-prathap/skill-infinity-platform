@@ -16,7 +16,6 @@ premium interface backed by the `admin-service` microservice.
 | Session Management | `/admin/sessions` | Live/upcoming/completed/cancelled/rescheduled, revenue & duration KPIs, session details drawer |
 | Payments | `/admin/payments` | Transactions, refunds (approve/reject), subscriptions, coupons, revenue trend |
 | Wallet Management | `/admin/wallet` | Credits issued/outstanding, rewards, bonuses, refunds, transaction ledger |
-| Community Moderation | `/admin/community` | Moderation queue, risk analysis, communities, posts, polls, spam detection UI |
 | Review Moderation | `/admin/reviews` | Review queue, reports, helpful votes, ratings distribution, approve/reject |
 | Support Center | `/admin/support` | Ticket queue, priorities, assignment, reply composer, ticket timeline drawer |
 | Announcements | `/admin/announcements` | Builder with target audience, scheduling, templates, broadcast |

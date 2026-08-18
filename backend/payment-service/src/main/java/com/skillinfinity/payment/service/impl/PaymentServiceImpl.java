@@ -35,8 +35,6 @@ import com.skillinfinity.payment.service.CouponService;
 import com.skillinfinity.payment.service.PaymentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -56,9 +54,6 @@ import java.util.concurrent.ThreadLocalRandom;
 @RequiredArgsConstructor
 public class PaymentServiceImpl implements PaymentService {
 
-    private static final String CACHE_PAYMENT_SUMMARY = "paymentSummary";
-    private static final String CACHE_SUBSCRIPTION_STATUS = "subscriptionStatus";
-    private static final String CACHE_COUPON = "coupon";
     private static final String CURRENCY_CREDITS = "CREDITS";
 
     private final PaymentRepository paymentRepository;
@@ -74,7 +69,6 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional
-    @CacheEvict(value = CACHE_PAYMENT_SUMMARY, allEntries = true)
     public PaymentResponse initiatePayment(UUID userId, PaymentRequest request) {
         validateDuplicateReference(request.getReferenceId());
 
@@ -93,7 +87,10 @@ public class PaymentServiceImpl implements PaymentService {
             totalAmount = BigDecimal.ZERO;
         }
 
-        BigDecimal credits = totalAmount;
+        // The number of credits is supplied by the credit-pack purchase request
+        // (e.g. 10 credits for ₹109). Fall back to the amount only for legacy
+        // callers that did not specify an explicit credit count.
+        BigDecimal credits = request.getCredits() != null ? request.getCredits() : totalAmount;
 
         PaymentGateway gateway;
         try {
@@ -147,12 +144,19 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional
-    @CacheEvict(value = CACHE_PAYMENT_SUMMARY, allEntries = true)
     public PaymentResponse confirmPayment(UUID userId, PaymentConfirmationRequest request) {
         Payment payment = findPaymentById(UUID.fromString(request.getPaymentId()));
 
         if (!payment.getUserId().equals(userId)) {
             throw new BadRequestException("Payment does not belong to this user");
+        }
+
+        // Idempotency: the same Razorpay payment must never credit the wallet
+        // twice. A re-submitted verify for an already-completed payment returns
+        // the existing result instead of re-processing it.
+        if (payment.getStatus() == PaymentStatus.COMPLETED) {
+            log.info("Payment already completed — returning existing result: paymentId={}", payment.getId());
+            return paymentMapper.toPaymentResponse(payment);
         }
 
         if (payment.getStatus() != PaymentStatus.INITIATED && payment.getStatus() != PaymentStatus.PENDING) {
@@ -215,7 +219,6 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional
-    @CacheEvict(value = CACHE_PAYMENT_SUMMARY, allEntries = true)
     public PaymentResponse failPayment(UUID userId, PaymentFailureRequest request) {
         Payment payment = findPaymentById(UUID.fromString(request.getPaymentId()));
 
@@ -246,7 +249,6 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(value = CACHE_PAYMENT_SUMMARY, key = "#paymentId", unless = "#result == null")
     public PaymentResponse getPaymentById(UUID userId, UUID paymentId) {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Payment", paymentId.toString()));

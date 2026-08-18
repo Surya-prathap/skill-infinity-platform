@@ -3,8 +3,6 @@ import MenuIcon from '@mui/icons-material/Menu';
 import { Breadcrumbs } from './Breadcrumbs';
 import { SearchBar } from './SearchBar';
 import { ThemeToggle } from './ThemeToggle';
-import { LanguageSwitcher } from './LanguageSwitcher';
-import { NotificationBell } from './NotificationBell';
 import { ProfileMenu } from './ProfileMenu';
 
 interface DashboardHeaderProps {
@@ -48,8 +46,6 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onMenuClick })
           </Box>
         )}
         <ThemeToggle />
-        <LanguageSwitcher />
-        <NotificationBell />
         <ProfileMenu />
       </Toolbar>
     </AppBar>

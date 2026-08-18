@@ -12,7 +12,7 @@ Enterprise-grade React frontend for the Skill Infinity platform — "Where Knowl
 | Server State | TanStack Query |
 | Forms | React Hook Form + Zod 4 |
 | HTTP | Axios (interceptors, refresh queue, retry) |
-| Real-time | Socket.IO client (architecture-ready) |
+| Meetings | Discord invite links (no WebRTC / video infra) |
 | Utilities | Day.js, React Hot Toast, React Icons |
 | Quality | Oxlint, Prettier, Vitest, Testing Library |
 
@@ -26,7 +26,7 @@ npm run dev          # http://localhost:3000
 ### Scripts
 
 ```bash
-npm run dev          # Vite dev server (proxies /api → gateway :8080, /socket.io → :8090)
+npm run dev          # Vite dev server (proxies /api → gateway :8080)
 npm run build        # Type-check + production build
 npm run preview      # Preview the production build
 npm run lint         # Oxlint
@@ -40,13 +40,12 @@ npm run format       # Prettier
 
 Copy nothing — sensible defaults are provided:
 
-- `.env.development` — API gateway at `http://localhost:8080/api/v1`, Socket.IO at `:8090`
-- `.env.production` — relative `/api/v1` (proxied via nginx) + production WebSocket URL
+- `.env.development` — API gateway at `http://localhost:8080/api/v1`
+- `.env.production` — relative `/api/v1` (proxied via nginx)
 
 | Variable | Purpose |
 | --- | --- |
 | `VITE_API_BASE_URL` | Base URL for all REST calls |
-| `VITE_WS_URL` / `VITE_SOCKET_URL` | Socket.IO endpoint |
 | `VITE_API_TIMEOUT` | Request timeout (ms) |
 | `VITE_APP_ENV` / `VITE_APP_NAME` / `VITE_APP_VERSION` | Metadata |
 
@@ -67,7 +66,6 @@ src/
   providers/    Store, Query, composed AppProviders
   routes/       AppRouter with lazy routes + guards
   services/     Domain API services (auth, user)
-  socket/       Socket.IO preparation layer
   store/        Redux slices, selectors, typed hooks, persistence
   styles/       Global CSS
   theme/        Design system (colors, typography, components, animations)

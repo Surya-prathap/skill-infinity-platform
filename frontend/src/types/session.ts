@@ -6,13 +6,17 @@
 
 export type SessionStatus =
   | 'SCHEDULED'
+  | 'PENDING_APPROVAL'
+  | 'APPROVED'
   | 'CONFIRMED'
   | 'PENDING'
   | 'IN_PROGRESS'
   | 'COMPLETED'
   | 'CANCELLED'
+  | 'REJECTED'
   | 'RESCHEDULED'
-  | 'NO_SHOW';
+  | 'NO_SHOW'
+  | 'EXPIRED';
 
 export type BookingStatus =
   | 'PENDING'
@@ -50,6 +54,16 @@ export interface Session {
   price?: number;
   currency?: string;
   free?: boolean;
+  /** True for community mentoring sessions. */
+  community?: boolean;
+  /** Number of participants (community sessions). */
+  participantCount?: number;
+  /** Learner capacity of a community session (1–20). */
+  maxParticipants?: number;
+  /** Learners currently joined (excludes the host). */
+  learnerCount?: number;
+  /** Seats left before the session is full (0 = full). */
+  remainingSeats?: number;
   recordingUrl?: string;
   notes?: string;
   outcome?: string;
@@ -61,25 +75,14 @@ export interface Session {
   startedAt?: string;
   endedAt?: string;
   meetingLink?: MeetingInfo;
+  /** When the join window opens (start minus the join window), per the backend. */
+  joinAvailableAt?: string;
+  /** Backend-computed: may the current user join right now? */
+  joinAllowed?: boolean;
+  /** Backend-computed: is a meeting link stored for this session? */
+  sessionLinkAvailable?: boolean;
   createdAt?: string;
   updatedAt?: string;
-}
-
-export interface CalendarEvent {
-  id: string;
-  sessionId: string;
-  title: string;
-  description?: string;
-  startTime: string;
-  endTime: string;
-  timezone?: string;
-  location?: string;
-  provider?: string;
-}
-
-export interface CalendarData {
-  events: CalendarEvent[];
-  icsContent?: string;
 }
 
 /* ---------------- Request payloads (mirror backend) ---------------- */
@@ -89,14 +92,49 @@ export interface BookingRequest {
   learnerId?: string;
   mentorName?: string;
   learnerName?: string;
+  /** Learner email — used for booking status notifications (stored with the booking). */
+  learnerEmail?: string;
   topic: string;
   description?: string;
   preferredDate?: string;
   preferredStartTime: string;
   preferredEndTime: string;
   durationMinutes: number;
+  /** Selected mentor pricing plan — the backend computes the real cost. */
+  pricingId?: string;
+  /** Session cost in credits (1 credit = 10 minutes) — informational only. */
+  credits?: number;
   timezone?: string;
   learnerMessage?: string;
+}
+
+export interface CommunitySessionRequest {
+  topic: string;
+  description?: string;
+  startTime: string;
+  endTime: string;
+  timezone?: string;
+  /** Cost in credits (0–3). 0 = TRUE FREE session. */
+  cost: number;
+  /** Max learners (1–20). */
+  maxParticipants: number;
+}
+
+export interface CommunityAllowance {
+  limit: number;
+  used: number;
+  remaining: number;
+  month: string;
+}
+
+export interface CommunityImpact {
+  completedSessions: number;
+  learnersHelped: number;
+  communityHours: number;
+  level: number;
+  levelLabel?: string | null;
+  nextLevelAt: number;
+  nextLevelLabel?: string | null;
 }
 
 export interface BookingResponse {
@@ -106,12 +144,15 @@ export interface BookingResponse {
   sessionId?: string;
   mentorName?: string;
   learnerName?: string;
+  learnerEmail?: string;
   topic?: string;
   description?: string;
   preferredDate?: string;
   preferredStartTime?: string;
   preferredEndTime?: string;
   durationMinutes?: number;
+  /** Session cost in credits (0 for free/community). */
+  price?: number;
   timezone?: string;
   status: BookingStatus;
   mentorMessage?: string;

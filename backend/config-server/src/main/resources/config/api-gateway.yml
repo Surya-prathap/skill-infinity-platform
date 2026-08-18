@@ -1,0 +1,64 @@
+server:
+  port: ${API_GATEWAY_PORT:8080}
+
+# CORS origins allowed to call the gateway directly (cross-origin browser
+# access). The dockerized frontend proxies /api/v1 same-origin through nginx,
+# but local dev servers (Vite on 5173, etc.) and direct gateway calls need the
+# browser origin listed here or the browser blocks the request with a CORS 403.
+api-gateway:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost,http://127.0.0.1,http://localhost:5173,http://localhost:3000}
+
+app:
+  jwt:
+    # Shared with identity-service — must match the signing key used to mint tokens.
+    secret: ${JWT_SECRET:skill-infinity-dev-secret-change-me-in-production-0123456789}
+
+spring:
+  jackson:
+    time-zone: Asia/Kolkata
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+
+      # Fix for the "first request after idle takes 10-20s" stalls: Tomcat
+      # upstreams close keep-alive connections after ~60s idle, but the Netty
+      # pool kept handing out those dead sockets. Evict idle connections before
+      # the upstream closes them (30s < 60s) so a reused connection is never
+      # stale, and cap the lifetime so long-lived connections rotate.
+      httpclient:
+        pool:
+          max-idle-time: 30s
+          max-life-time: 10m
+          evict-in-background: 60s
+        # 60s absorbs JVM/JIT cold-start on the first request after a fresh
+        # boot on constrained hosts; warm requests complete in well under a
+        # second. Override via GATEWAY_RESPONSE_TIMEOUT.
+        response-timeout: ${GATEWAY_RESPONSE_TIMEOUT:60s}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_DEFAULT_ZONE:http://discovery-server:8761/eureka/}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: always
+      group:
+        readiness:
+          # Skip the slow discoveryComposite/Eureka remote-status fetch — the
+          # gateway only needs its own readiness to be "ready".
+          include:
+            - readinessState
+  tracing:
+    enabled: false

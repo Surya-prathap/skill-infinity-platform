@@ -45,8 +45,10 @@ export const GradientCard: React.FC<GradientCardProps> = ({
             top: -180,
             right: '4%',
             background: 'radial-gradient(circle, rgba(255,255,255,0.28), transparent 70%)',
-            filter: 'blur(34px)',
+            // No filter: blur() — the radial gradient already fades to transparent.
+            // Animating a blurred layer re-rasterizes every frame (frame-rate killer).
             pointerEvents: 'none',
+            willChange: 'transform',
           }}
         />
       )}

@@ -13,10 +13,6 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
     open-in-view: false
-  data:
-    redis:
-      host: localhost
-      port: 6379
   rabbitmq:
     host: localhost
     port: 5672
@@ -28,10 +24,6 @@ eureka:
     enabled: false
 
 payment:
-  cache:
-    payment-summary-ttl: 300
-    subscription-status-ttl: 300
-    coupon-ttl: 600
   credit:
     default-currency: CREDITS
     min-purchase-amount: 10

@@ -24,11 +24,8 @@ interface CommandResult {
 }
 
 const QUICK_ACTIONS: CommandResult[] = [
-  { label: 'Create announcement', group: 'Quick actions', path: ROUTES.ADMIN_ANNOUNCEMENTS, icon: '📣' },
   { label: 'Review mentor approvals', group: 'Quick actions', path: ROUTES.ADMIN_MENTORS, icon: '✅' },
-  { label: 'Generate revenue report', group: 'Quick actions', path: ROUTES.ADMIN_REPORTS, icon: '📊' },
   { label: 'Toggle maintenance mode', group: 'Quick actions', path: ROUTES.ADMIN_SETTINGS, icon: '🔧' },
-  { label: 'Export audit log', group: 'Quick actions', path: ROUTES.ADMIN_AUDIT, icon: '🧾' },
 ];
 
 export const AdminCommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {

@@ -24,7 +24,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
     <motion.div
       initial={{ opacity: 0, y: 18 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: index * 0.08, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: 0.35, delay: Math.min(index * 0.05, 0.2), ease: [0.16, 1, 0.3, 1] }}
       style={{ height: '100%' }}
     >
       <Card sx={{ p: 2.5, height: '100%', ...sx }}>

@@ -24,7 +24,6 @@ The Payment Service follows a clean architecture pattern with clear separation o
 ├─────────────────────────────────────────────────────────────┤
 │                  Repository Layer (JPA)                      │
 ├─────────────────────────────────────────────────────────────┤
-│               Database / Redis / RabbitMQ                    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -34,7 +33,7 @@ The Payment Service follows a clean architecture pattern with clear separation o
 - **Repository Pattern**: Data access abstraction
 - **DTO Pattern**: Entity-to-Response mapping via MapStruct
 - **Event-Driven Architecture**: RabbitMQ for async communication
-- **Caching**: Redis for payment summaries, subscription status, and coupons
+- **Caching**: none (direct DB reads)
 
 ## Responsibilities
 
@@ -152,7 +151,7 @@ PURCHASED → ACTIVE → EXPIRED
                   → SUSPENDED (by admin)
 ```
 
-## Caching (Redis)
+## Caching
 
 ### Cache Configuration
 
@@ -221,7 +220,6 @@ Caches are invalidated after any write operation.
 | Spring Cloud Config | 2023.0.6 | Configuration management |
 | Eureka | 2023.0.6 | Service discovery |
 | MySQL 8.0 | 8.0 | Primary database |
-| Redis 7 | 7 | Caching |
 | RabbitMQ | 3.x | Async messaging |
 | MapStruct | 1.5.5 | Entity-DTO mapping |
 | OpenAPI | 2.5.0 | API documentation |
@@ -252,7 +250,6 @@ payment-service:
     - config-server
     - discovery-server
     - mysql
-    - redis
     - rabbitmq
 ```
 
@@ -287,7 +284,6 @@ Environment variables:
 - `PAYMENT_SERVICE_PORT` (default: 8086)
 - `PAYMENT_DB_HOST`, `PAYMENT_DB_PORT`, `PAYMENT_DB_NAME`
 - `PAYMENT_DB_USERNAME`, `PAYMENT_DB_PASSWORD`
-- `REDIS_HOST`, `REDIS_PORT`
 - `RABBITMQ_HOST`, `RABBITMQ_PORT`
 - `EUREKA_DEFAULT_ZONE`
 
@@ -337,5 +333,4 @@ cd backend && mvn spring-boot:run -pl payment-service
 
 ### Outgoing Communication (Events)
 - **Wallet Service**: `CreditsPurchasedEvent` for credit addition
-- **Communication Service**: `PaymentCompletedEvent` for notifications
 - **Session Service**: Payment status for session bookings

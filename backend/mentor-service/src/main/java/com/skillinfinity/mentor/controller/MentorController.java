@@ -3,17 +3,13 @@ package com.skillinfinity.mentor.controller;
 import com.skillinfinity.common.dto.ApiResponse;
 import com.skillinfinity.common.dto.PageResponse;
 import com.skillinfinity.mentor.dto.request.AvailabilityRequest;
-import com.skillinfinity.mentor.dto.request.AchievementRequest;
 import com.skillinfinity.mentor.dto.request.BecomeMentorRequest;
-import com.skillinfinity.mentor.dto.request.CertificationRequest;
 import com.skillinfinity.mentor.dto.request.ExpertiseRequest;
 import com.skillinfinity.mentor.dto.request.LanguageRequest;
 import com.skillinfinity.mentor.dto.request.PricingRequest;
 import com.skillinfinity.mentor.dto.request.SearchRequest;
 import com.skillinfinity.mentor.dto.request.UpdateMentorProfileRequest;
-import com.skillinfinity.mentor.dto.response.AchievementResponse;
 import com.skillinfinity.mentor.dto.response.AvailabilityResponse;
-import com.skillinfinity.mentor.dto.response.CertificationResponse;
 import com.skillinfinity.mentor.dto.response.DashboardResponse;
 import com.skillinfinity.mentor.dto.response.ExpertiseResponse;
 import com.skillinfinity.mentor.dto.response.LanguageResponse;
@@ -79,6 +75,16 @@ public class MentorController {
             @RequestParam(defaultValue = "20") int size) {
         SearchRequest searchRequest = SearchRequest.builder().build();
         PageResponse<MentorSummaryResponse> response = mentorService.searchMentors(searchRequest, page, size);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @GetMapping("/admin/pending")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Get pending mentor applications", description = "Returns paginated list of mentors awaiting admin verification (admin only)")
+    public ResponseEntity<ApiResponse<PageResponse<MentorSummaryResponse>>> getPendingMentors(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        PageResponse<MentorSummaryResponse> response = mentorService.getPendingMentors(page, size);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -245,79 +251,6 @@ public class MentorController {
     }
 
     // ============================================================
-    // Certification Endpoints (Self-service)
-    // ============================================================
-
-    @PostMapping("/certifications")
-    @Operation(summary = "Add certification (self)", description = "Add certification to authenticated mentor's profile")
-    public ResponseEntity<ApiResponse<CertificationResponse>> addMyCertification(
-            @RequestHeader("X-User-ID") UUID userId,
-            @Valid @RequestBody CertificationRequest request) {
-        MentorResponse mentor = mentorService.getMentorByUserId(userId);
-        CertificationResponse response = mentorService.addCertification(mentor.getId(), request);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Certification added successfully", response));
-    }
-
-    @PutMapping("/certifications/{certificationId}")
-    @Operation(summary = "Update certification (self)", description = "Update authenticated mentor's certification")
-    public ResponseEntity<ApiResponse<CertificationResponse>> updateMyCertification(
-            @RequestHeader("X-User-ID") UUID userId,
-            @PathVariable UUID certificationId,
-            @Valid @RequestBody CertificationRequest request) {
-        MentorResponse mentor = mentorService.getMentorByUserId(userId);
-        CertificationResponse response = mentorService.updateCertification(mentor.getId(), certificationId, request);
-        return ResponseEntity.ok(ApiResponse.success("Certification updated successfully", response));
-    }
-
-    @DeleteMapping("/certifications/{certificationId}")
-    @Operation(summary = "Delete certification (self)", description = "Delete authenticated mentor's certification")
-    public ResponseEntity<ApiResponse<Void>> deleteMyCertification(
-            @RequestHeader("X-User-ID") UUID userId,
-            @PathVariable UUID certificationId) {
-        MentorResponse mentor = mentorService.getMentorByUserId(userId);
-        mentorService.deleteCertification(mentor.getId(), certificationId);
-        return ResponseEntity.ok(ApiResponse.success("Certification deleted successfully", null));
-    }
-
-    // Certification by mentor ID
-    @PostMapping("/{id}/certifications")
-    @Operation(summary = "Add certification by ID", description = "Add certification to a mentor by ID")
-    public ResponseEntity<ApiResponse<CertificationResponse>> addCertification(
-            @PathVariable UUID id,
-            @Valid @RequestBody CertificationRequest request) {
-        CertificationResponse response = mentorService.addCertification(id, request);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Certification added successfully", response));
-    }
-
-    @PutMapping("/{id}/certifications/{certificationId}")
-    @Operation(summary = "Update certification by ID", description = "Update certification for a mentor by ID")
-    public ResponseEntity<ApiResponse<CertificationResponse>> updateCertification(
-            @PathVariable UUID id,
-            @PathVariable UUID certificationId,
-            @Valid @RequestBody CertificationRequest request) {
-        CertificationResponse response = mentorService.updateCertification(id, certificationId, request);
-        return ResponseEntity.ok(ApiResponse.success("Certification updated successfully", response));
-    }
-
-    @DeleteMapping("/{id}/certifications/{certificationId}")
-    @Operation(summary = "Delete certification by ID", description = "Delete certification from a mentor by ID")
-    public ResponseEntity<ApiResponse<Void>> deleteCertification(
-            @PathVariable UUID id,
-            @PathVariable UUID certificationId) {
-        mentorService.deleteCertification(id, certificationId);
-        return ResponseEntity.ok(ApiResponse.success("Certification deleted successfully", null));
-    }
-
-    @GetMapping("/{id}/certifications")
-    @Operation(summary = "Get certifications", description = "Get all certifications for a mentor")
-    public ResponseEntity<ApiResponse<List<CertificationResponse>>> getCertifications(@PathVariable UUID id) {
-        List<CertificationResponse> response = mentorService.getCertifications(id);
-        return ResponseEntity.ok(ApiResponse.success(response));
-    }
-
-    // ============================================================
     // Pricing Endpoints
     // ============================================================
 
@@ -354,46 +287,6 @@ public class MentorController {
     @Operation(summary = "Get pricing", description = "Get all pricing options for a mentor")
     public ResponseEntity<ApiResponse<List<PricingResponse>>> getPricing(@PathVariable UUID id) {
         List<PricingResponse> response = mentorService.getPricing(id);
-        return ResponseEntity.ok(ApiResponse.success(response));
-    }
-
-    // ============================================================
-    // Achievement Endpoints
-    // ============================================================
-
-    @PostMapping("/{id}/achievements")
-    @Operation(summary = "Add achievement", description = "Add achievement/award to mentor profile")
-    public ResponseEntity<ApiResponse<AchievementResponse>> addAchievement(
-            @PathVariable UUID id,
-            @Valid @RequestBody AchievementRequest request) {
-        AchievementResponse response = mentorService.addAchievement(id, request);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Achievement added successfully", response));
-    }
-
-    @PutMapping("/{id}/achievements/{achievementId}")
-    @Operation(summary = "Update achievement", description = "Update mentor achievement")
-    public ResponseEntity<ApiResponse<AchievementResponse>> updateAchievement(
-            @PathVariable UUID id,
-            @PathVariable UUID achievementId,
-            @Valid @RequestBody AchievementRequest request) {
-        AchievementResponse response = mentorService.updateAchievement(id, achievementId, request);
-        return ResponseEntity.ok(ApiResponse.success("Achievement updated successfully", response));
-    }
-
-    @DeleteMapping("/{id}/achievements/{achievementId}")
-    @Operation(summary = "Delete achievement", description = "Delete mentor achievement")
-    public ResponseEntity<ApiResponse<Void>> deleteAchievement(
-            @PathVariable UUID id,
-            @PathVariable UUID achievementId) {
-        mentorService.deleteAchievement(id, achievementId);
-        return ResponseEntity.ok(ApiResponse.success("Achievement deleted successfully", null));
-    }
-
-    @GetMapping("/{id}/achievements")
-    @Operation(summary = "Get achievements", description = "Get all achievements for a mentor")
-    public ResponseEntity<ApiResponse<List<AchievementResponse>>> getAchievements(@PathVariable UUID id) {
-        List<AchievementResponse> response = mentorService.getAchievements(id);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 

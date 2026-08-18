@@ -9,7 +9,6 @@ import { useDocumentTitle } from '@/hooks';
 import { useAuth } from '@/hooks';
 import { ROUTES } from '@/constants';
 import { useMentorProfile } from '@/features/marketplace';
-import { usePricingQuery } from '@/features/mentor';
 import { useBookSessionMutation } from '@/features/sessions';
 
 export const BookingPage: React.FC = () => {
@@ -18,7 +17,6 @@ export const BookingPage: React.FC = () => {
   const { user } = useAuth();
 
   const { mentor, isOffline } = useMentorProfile(mentorId);
-  const { pricing } = usePricingQuery(mentorId);
   const bookMutation = useBookSessionMutation();
 
   useDocumentTitle(mentor ? `Book with ${mentor.profile?.headline?.split('·')[0] ?? 'Mentor'}` : 'Book a session');
@@ -59,7 +57,7 @@ export const BookingPage: React.FC = () => {
             subtitle={`Secure your spot with ${mentor.profile?.headline?.split('·')[0]?.trim() ?? 'your mentor'}`}
             actions={
               <Chip
-                label={`${pricing.length} session type${pricing.length === 1 ? '' : 's'} available`}
+                label={`${(mentor.pricingList ?? []).length} session type${(mentor.pricingList ?? []).length === 1 ? '' : 's'} available`}
                 color="primary"
                 variant="outlined"
                 sx={{ fontWeight: 700 }}
@@ -69,9 +67,13 @@ export const BookingPage: React.FC = () => {
           <BookingWizard
             mentor={mentor}
             name={mentor.profile?.headline?.split('·')[0]?.trim()}
-            pricing={pricing}
+            // The public mentor profile already carries the mentor's pricing and
+            // availability — no extra round-trips for the booking flow.
+            pricing={mentor.pricingList ?? []}
+            availability={mentor.availabilities}
             learnerId={user?.userId}
             learnerName={[user?.firstName, user?.lastName].filter(Boolean).join(' ') || user?.username}
+            learnerEmail={user?.email}
             onSubmit={handleSubmit}
           />
         </Card>

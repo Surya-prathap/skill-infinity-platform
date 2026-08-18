@@ -5,7 +5,6 @@ import com.skillinfinity.payment.dto.request.PaymentConfirmationRequest;
 import com.skillinfinity.payment.dto.request.PaymentFailureRequest;
 import com.skillinfinity.payment.dto.request.PaymentRequest;
 import com.skillinfinity.payment.dto.request.RefundRequest;
-import com.skillinfinity.payment.dto.request.SubscriptionRequest;
 import com.skillinfinity.payment.dto.response.PaymentResponse;
 import com.skillinfinity.payment.service.CouponService;
 import com.skillinfinity.payment.service.PaymentService;

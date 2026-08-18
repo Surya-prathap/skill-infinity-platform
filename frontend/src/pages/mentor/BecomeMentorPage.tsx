@@ -9,7 +9,6 @@ import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
 import TrendingUpOutlinedIcon from '@mui/icons-material/TrendingUpOutlined';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import CheckCircleOutlineOutlinedIcon from '@mui/icons-material/CheckCircleOutlineOutlined';
-import StarIcon from '@mui/icons-material/Star';
 import { Typography } from '@/components/ui/Typography';
 import { Stack } from '@/components/ui/Stack';
 import { GradientCard } from '@/components/mentor/GradientCard';
@@ -38,7 +37,7 @@ const PERKS = [
   {
     icon: <GroupsOutlinedIcon />,
     title: 'Grow your audience',
-    description: 'Reach thousands of ambitious learners across every major discipline.',
+    description: 'Reach ambitious learners across every major discipline.',
     color: '#EC4899',
   },
 ];
@@ -49,11 +48,11 @@ const HOW_IT_WORKS = [
   { step: '03', title: 'Get verified & go live', description: 'Our team reviews your application and activates your public profile.' },
 ];
 
-const STATS = [
-  { value: '2,500+', label: 'Active mentors' },
-  { value: '120k+', label: 'Sessions booked' },
-  { value: '4.9★', label: 'Average rating' },
-  { value: '$4.2M', label: 'Mentor earnings' },
+const MENTOR_NETWORK_FACTS = [
+  { value: 'Reviewed & approved', label: 'Every application is reviewed by the platform team' },
+  { value: 'Earn per session', label: 'Credits for every paid session you teach' },
+  { value: 'Withdraw in ₹', label: '1 credit = ₹10 · 10-credit minimum · 10% platform fee' },
+  { value: 'Keep learning', label: 'Spend learning credits on sessions with other mentors' },
 ];
 
 const fadeUp = {
@@ -103,7 +102,7 @@ export const BecomeMentorPage: React.FC = () => {
                 </Box>
               </Typography>
               <Typography variant="body1" sx={{ mt: 2.5, maxWidth: 560, opacity: 0.92, lineHeight: 1.7 }}>
-                Join thousands of verified professionals earning on their own terms.
+                Join a growing network of verified professionals earning on their own terms.
                 Build a premium profile, set your pricing, own your calendar and help
                 ambitious learners level up.
               </Typography>
@@ -157,23 +156,17 @@ export const BecomeMentorPage: React.FC = () => {
                   The Skill Infinity mentor network
                 </Typography>
                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
-                  {STATS.map((stat) => (
-                    <Box key={stat.label} sx={{ p: 2, borderRadius: 3, bgcolor: 'rgba(255,255,255,0.08)' }}>
-                      <Typography variant="h5" fontWeight={800} sx={{ color: '#5EEAD4' }}>
-                        {stat.value}
+                  {MENTOR_NETWORK_FACTS.map((fact) => (
+                    <Box key={fact.value} sx={{ p: 2, borderRadius: 3, bgcolor: 'rgba(255,255,255,0.08)' }}>
+                      <Typography variant="subtitle2" fontWeight={800} sx={{ color: '#5EEAD4' }}>
+                        {fact.value}
                       </Typography>
-                      <Typography variant="caption" sx={{ opacity: 0.85 }}>
-                        {stat.label}
+                      <Typography variant="caption" sx={{ opacity: 0.85, display: 'block', mt: 0.5 }}>
+                        {fact.label}
                       </Typography>
                     </Box>
                   ))}
                 </Box>
-                <Stack direction="row" alignItems="center" gap={1} sx={{ mt: 2.5, color: '#FCD34D' }}>
-                  <StarIcon sx={{ fontSize: 18 }} />
-                  <Typography variant="body2" fontWeight={600} sx={{ opacity: 0.95 }}>
-                    Rated 4.9/5 by learners across 40+ countries
-                  </Typography>
-                </Stack>
               </Box>
             </motion.div>
           </Grid>
@@ -341,7 +334,7 @@ export const BecomeMentorPage: React.FC = () => {
         gap={3}
         sx={{ mt: 5, py: 3, borderTop: 1, borderColor: 'divider', color: 'text.secondary' }}
       >
-        {['Payouts in 7 currencies', 'Free to apply', 'Cancel anytime', 'Dedicated support'].map((item) => (
+        {['Withdraw in INR', 'Free to apply', 'Approved by our team', 'Dedicated support'].map((item) => (
           <Stack key={item} direction="row" alignItems="center" gap={0.75}>
             <TrendingUpOutlinedIcon sx={{ fontSize: 16, color: 'success.main' }} />
             <Typography variant="body2" fontWeight={600}>

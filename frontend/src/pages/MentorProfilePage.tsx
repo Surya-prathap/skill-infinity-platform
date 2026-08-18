@@ -22,16 +22,9 @@ import { EmptyState, ErrorState } from '@/components/feedback';
 import { MentorHero } from '@/components/marketplace';
 import { useDocumentTitle } from '@/hooks';
 import { ROUTES } from '@/constants';
-import { useMentorProfile } from '@/features/marketplace';
-import { seedMentors } from '@/features/marketplace/data';
+import { useMentorProfile, useMentorSearch } from '@/features/marketplace';
+import { useMentorReviewsQuery } from '@/features/reviews';
 import { formatDate, formatCompactNumber } from '@/utils';
-import type { Review } from '@/types';
-
-const REVIEW_SEEDS: Review[] = [
-  { id: 'r-1', mentorId: 'm-001', learnerId: 'l-1', learnerName: 'Sarah Chen', rating: 5, title: 'Game-changing session', content: 'Alex broke down system design better than any course I have taken. The mock interviews were incredibly realistic.', helpfulCount: 24, createdAt: '2026-07-20T10:00:00', verified: true },
-  { id: 'r-2', mentorId: 'm-001', learnerId: 'l-2', learnerName: 'Marcus Reid', rating: 5, title: 'Worth every credit', content: 'Extremely structured sessions with actionable feedback. My confidence in interviews is night and day.', helpfulCount: 18, createdAt: '2026-07-12T14:00:00', verified: true },
-  { id: 'r-3', mentorId: 'm-001', learnerId: 'l-3', learnerName: 'Priya Sharma', rating: 4, title: 'Great depth', content: 'Deep knowledge of cloud architecture. Would love more hands-on labs next time.', helpfulCount: 9, createdAt: '2026-06-28T09:00:00', verified: true },
-];
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -45,7 +38,17 @@ export const MentorProfilePage: React.FC = () => {
   const { mentor, isOffline } = useMentorProfile(mentorId);
   useDocumentTitle(mentor?.profile?.headline ?? 'Mentor profile');
 
-  const reviews = useMemo<Review[]>(() => REVIEW_SEEDS, []);
+  const { reviews } = useMentorReviewsQuery(mentorId, undefined, 'RECENT');
+  const relatedQuery = useMentorSearch({
+    page: 0,
+    size: 4,
+    sortBy: 'rating',
+    sortDirection: 'DESC',
+  });
+  const related = useMemo(
+    () => relatedQuery.data.content.filter((m) => m.id !== mentorId).slice(0, 3),
+    [relatedQuery.data.content, mentorId],
+  );
 
   if (isOffline && !mentor) {
     return (
@@ -74,7 +77,6 @@ export const MentorProfilePage: React.FC = () => {
   const languages = mentor.languages ?? [];
   const skills = mentor.expertiseList ?? [];
   const availabilities = mentor.availabilities ?? [];
-  const related = seedMentors.filter((m) => m.id !== mentor.id).slice(0, 3);
 
   const book = () => navigate(ROUTES.BOOK_SESSION.replace(':mentorId', mentor.id));
 
@@ -429,7 +431,7 @@ export const MentorProfilePage: React.FC = () => {
                         </Typography>
                       </Box>
                       <Typography variant="subtitle1" fontWeight={800} sx={{ color: 'primary.main' }}>
-                        {plan.isFree ? 'Free' : `${plan.currency ?? 'USD'} ${plan.price}`}
+                        {plan.isFree ? 'Free' : `${plan.price} credits`}
                       </Typography>
                     </Box>
                   ))}
@@ -554,22 +556,22 @@ export const MentorProfilePage: React.FC = () => {
                         flexShrink: 0,
                       }}
                     >
-                      {(relatedMentor.profile?.headline ?? 'M').charAt(0)}
+                      {(relatedMentor.headline ?? 'M').charAt(0)}
                     </Box>
                     <Box sx={{ minWidth: 0 }}>
                       <Typography variant="subtitle2" fontWeight={800} noWrap>
-                        {relatedMentor.profile?.headline?.split('·')[0]?.trim()}
+                        {relatedMentor.headline?.split('·')[0]?.trim()}
                       </Typography>
                       <Typography variant="caption" color="text.secondary" noWrap>
-                        {relatedMentor.profile?.headline}
+                        {relatedMentor.headline}
                       </Typography>
                       <Stack direction="row" alignItems="center" gap={0.5} sx={{ color: '#F59E0B', mt: 0.5 }}>
                         <StarIcon sx={{ fontSize: 14 }} />
                         <Typography variant="caption" fontWeight={800}>
-                          {(relatedMentor.statistics?.averageRating ?? 0).toFixed(1)}
+                          {(relatedMentor.averageRating ?? 0).toFixed(1)}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                          · {formatCompactNumber(relatedMentor.statistics?.totalSessions ?? 0)} sessions
+                          · {formatCompactNumber(relatedMentor.totalSessions ?? 0)} sessions
                         </Typography>
                       </Stack>
                     </Box>

@@ -8,6 +8,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.PostLoad;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -18,6 +19,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.UUID;
 
 @Entity
@@ -55,10 +57,6 @@ public class Wallet {
     @Builder.Default
     private BigDecimal totalCreditsEarned = BigDecimal.ZERO;
 
-    @Column(name = "total_rewards", precision = 15, scale = 2)
-    @Builder.Default
-    private BigDecimal totalRewards = BigDecimal.ZERO;
-
     @Column(name = "total_bonus", precision = 15, scale = 2)
     @Builder.Default
     private BigDecimal totalBonus = BigDecimal.ZERO;
@@ -90,6 +88,23 @@ public class Wallet {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
+        normalizeMoneyFields();
+    }
+
+    /**
+     * Legacy rows (created before money columns were added, or via raw SQL)
+     * can carry NULL money values; JPA nulls them on load and every
+     * add()/subtract() would NPE. Normalize to ZERO so reads and writes stay
+     * safe regardless of row provenance.
+     */
+    @PostLoad
+    protected void normalizeMoneyFields() {
+        totalCreditsPurchased = Optional.ofNullable(totalCreditsPurchased).orElse(BigDecimal.ZERO);
+        totalCreditsSpent = Optional.ofNullable(totalCreditsSpent).orElse(BigDecimal.ZERO);
+        totalCreditsEarned = Optional.ofNullable(totalCreditsEarned).orElse(BigDecimal.ZERO);
+        totalBonus = Optional.ofNullable(totalBonus).orElse(BigDecimal.ZERO);
+        totalRefunds = Optional.ofNullable(totalRefunds).orElse(BigDecimal.ZERO);
+        frozenAmount = Optional.ofNullable(frozenAmount).orElse(BigDecimal.ZERO);
     }
 
     @PreUpdate

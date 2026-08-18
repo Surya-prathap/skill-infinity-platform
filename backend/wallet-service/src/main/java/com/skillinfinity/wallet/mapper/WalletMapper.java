@@ -1,18 +1,14 @@
 package com.skillinfinity.wallet.mapper;
 
-import com.skillinfinity.wallet.dto.response.LedgerEntryResponse;
-import com.skillinfinity.wallet.dto.response.RewardResponse;
 import com.skillinfinity.wallet.dto.response.TransactionResponse;
 import com.skillinfinity.wallet.dto.response.WalletBalanceResponse;
 import com.skillinfinity.wallet.dto.response.WalletResponse;
 import com.skillinfinity.wallet.dto.response.WalletAuditResponse;
 import com.skillinfinity.wallet.dto.response.WalletStatisticsResponse;
 import com.skillinfinity.wallet.entity.CreditTransaction;
-import com.skillinfinity.wallet.entity.Reward;
 import com.skillinfinity.wallet.entity.Wallet;
 import com.skillinfinity.wallet.entity.WalletAudit;
 import com.skillinfinity.wallet.entity.WalletBalance;
-import com.skillinfinity.wallet.entity.WalletLedger;
 import com.skillinfinity.wallet.entity.WalletStatistics;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -34,15 +30,28 @@ public interface WalletMapper {
 
     @Mapping(target = "transactionType", expression = "java(transaction.getTransactionType() != null ? transaction.getTransactionType().name() : null)")
     @Mapping(target = "status", expression = "java(transaction.getStatus() != null ? transaction.getStatus().name() : null)")
+    @Mapping(target = "direction", expression = "java(transactionDirection(transaction))")
     TransactionResponse toTransactionResponse(CreditTransaction transaction);
 
-    @Mapping(target = "entryType", expression = "java(entry.getEntryType() != null ? entry.getEntryType().name() : null)")
-    LedgerEntryResponse toLedgerEntryResponse(WalletLedger entry);
-
-    @Mapping(target = "rewardType", expression = "java(reward.getRewardType() != null ? reward.getRewardType().name() : null)")
-    RewardResponse toRewardResponse(Reward reward);
-
     WalletStatisticsResponse toStatisticsResponse(WalletStatistics statistics);
+
+    /**
+     * Maps a transaction to its credit direction so the UI never has to guess:
+     * CREDIT = credits gained, DEBIT = credits spent, HOLD = frozen/released
+     * (reserved, neither gained nor lost).
+     */
+    default String transactionDirection(CreditTransaction transaction) {
+        if (transaction == null || transaction.getTransactionType() == null) {
+            return null;
+        }
+        return switch (transaction.getTransactionType()) {
+            case CREDIT_PURCHASE, CREDIT_REFUND, PROMOTIONAL_CREDIT, REWARD_CREDIT,
+                    BONUS_CREDIT, SESSION_PAYMENT, REFERRAL_REWARD, COUPON_REDEMPTION -> "CREDIT";
+            case CREDIT_CONSUMPTION, CREDIT_TRANSFER, CREDIT_EXPIRATION, WITHDRAWAL -> "DEBIT";
+            case FREEZE, RELEASE -> "HOLD";
+            default -> "HOLD";
+        };
+    }
 
     WalletAuditResponse toAuditResponse(WalletAudit audit);
 }

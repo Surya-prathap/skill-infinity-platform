@@ -14,5 +14,6 @@ public enum TransactionType {
     COUPON_REDEMPTION,
     FREEZE,
     RELEASE,
+    WITHDRAWAL,
     ADJUSTMENT
 }

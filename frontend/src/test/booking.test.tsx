@@ -2,11 +2,32 @@ import { describe, expect, it, afterEach, vi } from 'vitest';
 import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { BookingWizard } from '@/components/booking/BookingWizard';
 import { renderWithProviders } from './testUtils';
-import { seedMentors } from '@/features/marketplace/data';
-import type { BookingRequest } from '@/types';
+import { testMentor } from './fixtures';
+import type { BookingRequest, MentorAvailability } from '@/types';
 
-const mentor = seedMentors[0];
+const mentor = testMentor;
 const pricing = mentor.pricingList ?? [];
+
+/**
+ * Recurring availability for every weekday so the wizard always has real dates
+ * and slots to render deterministically (the offline network adapter would
+ * otherwise leave the availability list empty and no dates would appear).
+ */
+const testAvailability: MentorAvailability[] = [
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+].map((day) => ({
+  dayOfWeek: day,
+  startTime: '09:00',
+  endTime: '17:00',
+  recurring: true,
+  active: true,
+}));
 
 const stepContent = async (text: string): Promise<void> => {
   await waitFor(() => expect(screen.queryByText(text)).not.toBeNull(), { timeout: 15000 });
@@ -24,6 +45,7 @@ describe('BookingWizard', () => {
         mentor={mentor}
         name={mentor.profile?.headline?.split('·')[0]?.trim()}
         pricing={pricing}
+        availability={testAvailability}
         learnerId="user-1"
         learnerName="Alex Morgan"
         onSubmit={onSubmit}

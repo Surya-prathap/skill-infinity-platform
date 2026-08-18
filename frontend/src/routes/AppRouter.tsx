@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
-import { Box, CircularProgress } from '@mui/material';
+import { Box, LinearProgress } from '@mui/material';
 import { AdminLayout, AuthLayout, DashboardLayout, ErrorLayout, MainLayout } from '@/layouts';
 import { AuthGuard, GuestGuard, RoleGuard } from '@/guards';
 import { ROLES, ROUTES } from '@/constants';
@@ -65,29 +65,9 @@ const EditProfilePage = lazyPage(async () => {
   const module = await import('@/pages/profile/EditProfilePage');
   return { default: module.EditProfilePage };
 });
-const EducationPage = lazyPage(async () => {
-  const module = await import('@/pages/profile/EducationPage');
-  return { default: module.EducationPage };
-});
-const ExperiencePage = lazyPage(async () => {
-  const module = await import('@/pages/profile/ExperiencePage');
-  return { default: module.ExperiencePage };
-});
 const SkillsPage = lazyPage(async () => {
   const module = await import('@/pages/profile/SkillsPage');
   return { default: module.SkillsPage };
-});
-const LanguagesPage = lazyPage(async () => {
-  const module = await import('@/pages/profile/LanguagesPage');
-  return { default: module.LanguagesPage };
-});
-const SocialLinksPage = lazyPage(async () => {
-  const module = await import('@/pages/profile/SocialLinksPage');
-  return { default: module.SocialLinksPage };
-});
-const ResumePage = lazyPage(async () => {
-  const module = await import('@/pages/profile/ResumePage');
-  return { default: module.ResumePage };
 });
 const MentorDashboardPage = lazyPage(async () => {
   const module = await import('@/pages/mentor/MentorDashboardPage');
@@ -97,6 +77,10 @@ const MentorRegistrationPage = lazyPage(async () => {
   const module = await import('@/pages/mentor/MentorRegistrationPage');
   return { default: module.MentorRegistrationPage };
 });
+const MentorApplicationSubmittedPage = lazyPage(async () => {
+  const module = await import('@/pages/mentor/MentorApplicationSubmittedPage');
+  return { default: module.MentorApplicationSubmittedPage };
+});
 const MentorAvailabilityPage = lazyPage(async () => {
   const module = await import('@/pages/mentor/MentorAvailabilityPage');
   return { default: module.MentorAvailabilityPage };
@@ -105,69 +89,13 @@ const MentorPricingPage = lazyPage(async () => {
   const module = await import('@/pages/mentor/MentorPricingPage');
   return { default: module.MentorPricingPage };
 });
-const MentorAnalyticsPage = lazyPage(async () => {
-  const module = await import('@/pages/mentor/MentorAnalyticsPage');
-  return { default: module.MentorAnalyticsPage };
-});
-const MentorCertificatesPage = lazyPage(async () => {
-  const module = await import('@/pages/mentor/MentorCertificatesPage');
-  return { default: module.MentorCertificatesPage };
-});
-const MentorAchievementsPage = lazyPage(async () => {
-  const module = await import('@/pages/mentor/MentorAchievementsPage');
-  return { default: module.MentorAchievementsPage };
-});
 const MentorSettingsPage = lazyPage(async () => {
   const module = await import('@/pages/mentor/MentorSettingsPage');
   return { default: module.MentorSettingsPage };
 });
-const CommunityHubPage = lazyPage(async () => {
-  const module = await import('@/pages/community/CommunityHubPage');
-  return { default: module.CommunityHubPage };
-});
-const CommunitiesPage = lazyPage(async () => {
-  const module = await import('@/pages/community/CommunitiesPage');
-  return { default: module.CommunitiesPage };
-});
-const CommunityDetailsPage = lazyPage(async () => {
-  const module = await import('@/pages/community/CommunityDetailsPage');
-  return { default: module.CommunityDetailsPage };
-});
-const PostDetailsPage = lazyPage(async () => {
-  const module = await import('@/pages/community/PostDetailsPage');
-  return { default: module.PostDetailsPage };
-});
-const LeaderboardPage = lazyPage(async () => {
-  const module = await import('@/pages/community/LeaderboardPage');
-  return { default: module.LeaderboardPage };
-});
-const ActivityPage = lazyPage(async () => {
-  const module = await import('@/pages/community/ActivityPage');
-  return { default: module.ActivityPage };
-});
-const AchievementsPage = lazyPage(async () => {
-  const module = await import('@/pages/community/AchievementsPage');
-  return { default: module.AchievementsPage };
-});
 const MentorReviewsPage = lazyPage(async () => {
-  const module = await import('@/pages/community/MentorReviewsPage');
+  const module = await import('@/pages/reviews/MentorReviewsPage');
   return { default: module.MentorReviewsPage };
-});
-const SearchPage = lazyPage(async () => {
-  const module = await import('@/pages/community/SearchPage');
-  return { default: module.SearchPage };
-});
-const CalendarPage = lazyPage(async () => {
-  const module = await import('@/pages/CalendarPage');
-  return { default: module.CalendarPage };
-});
-const CreditPurchasePage = lazyPage(async () => {
-  const module = await import('@/pages/CreditPurchasePage');
-  return { default: module.CreditPurchasePage };
-});
-const TransactionHistoryPage = lazyPage(async () => {
-  const module = await import('@/pages/TransactionHistoryPage');
-  return { default: module.TransactionHistoryPage };
 });
 const SessionDetailsPage = lazyPage(async () => {
   const module = await import('@/pages/SessionDetailsPage');
@@ -177,29 +105,17 @@ const WalletPage = lazyPage(async () => {
   const module = await import('@/pages/WalletPage');
   return { default: module.WalletPage };
 });
+const LearnerSubscriptionPage = lazyPage(async () => {
+  const module = await import('@/pages/SubscriptionPage');
+  return { default: module.LearnerSubscriptionPage };
+});
+const MentorSubscriptionPage = lazyPage(async () => {
+  const module = await import('@/pages/SubscriptionPage');
+  return { default: module.MentorSubscriptionPage };
+});
 const SessionsPage = lazyPage(async () => {
   const module = await import('@/pages/SessionsPage');
   return { default: module.SessionsPage };
-});
-const NotificationsPage = lazyPage(async () => {
-  const module = await import('@/pages/NotificationsPage');
-  return { default: module.NotificationsPage };
-});
-const CommunicationPage = lazyPage(async () => {
-  const module = await import('@/pages/CommunicationPage');
-  return { default: module.CommunicationPage };
-});
-const AnnouncementsPage = lazyPage(async () => {
-  const module = await import('@/pages/AnnouncementsPage');
-  return { default: module.AnnouncementsPage };
-});
-const MeetingsPage = lazyPage(async () => {
-  const module = await import('@/pages/MeetingsPage');
-  return { default: module.MeetingsPage };
-});
-const MeetingPage = lazyPage(async () => {
-  const module = await import('@/pages/MeetingPage');
-  return { default: module.MeetingPage };
 });
 const SettingsPage = lazyPage(async () => {
   const module = await import('@/pages/SettingsPage');
@@ -209,10 +125,6 @@ const AdminDashboardPage = lazyPage(async () => {
   const module = await import('@/pages/admin/AdminDashboardPage');
   return { default: module.AdminDashboardPage };
 });
-const AdminAnalyticsPage = lazyPage(async () => {
-  const module = await import('@/pages/admin/AnalyticsPage');
-  return { default: module.AnalyticsPage };
-});
 const AdminUsersPage = lazyPage(async () => {
   const module = await import('@/pages/admin/UsersPage');
   return { default: module.UsersPage };
@@ -221,53 +133,13 @@ const AdminMentorsPage = lazyPage(async () => {
   const module = await import('@/pages/admin/MentorsPage');
   return { default: module.MentorsPage };
 });
-const AdminSessionsPage = lazyPage(async () => {
-  const module = await import('@/pages/admin/SessionsPage');
-  return { default: module.SessionsPage };
-});
-const AdminPaymentsPage = lazyPage(async () => {
-  const module = await import('@/pages/admin/PaymentsPage');
-  return { default: module.PaymentsPage };
-});
-const AdminWalletPage = lazyPage(async () => {
-  const module = await import('@/pages/admin/WalletPage');
-  return { default: module.WalletPage };
-});
-const AdminCommunityPage = lazyPage(async () => {
-  const module = await import('@/pages/admin/CommunityModerationPage');
-  return { default: module.CommunityModerationPage };
-});
-const AdminReviewsPage = lazyPage(async () => {
-  const module = await import('@/pages/admin/ReviewsModerationPage');
-  return { default: module.ReviewsModerationPage };
-});
-const AdminSupportPage = lazyPage(async () => {
-  const module = await import('@/pages/admin/SupportCenterPage');
-  return { default: module.SupportCenterPage };
-});
-const AdminAnnouncementsPage = lazyPage(async () => {
-  const module = await import('@/pages/admin/AnnouncementsPage');
-  return { default: module.AnnouncementsPage };
-});
-const AdminReportsPage = lazyPage(async () => {
-  const module = await import('@/pages/admin/ReportsPage');
-  return { default: module.ReportsPage };
+const AdminWithdrawalsPage = lazyPage(async () => {
+  const module = await import('@/pages/admin/WithdrawalsPage');
+  return { default: module.WithdrawalsPage };
 });
 const AdminSettingsPage = lazyPage(async () => {
   const module = await import('@/pages/admin/SettingsPage');
   return { default: module.SettingsPage };
-});
-const AdminFeatureFlagsPage = lazyPage(async () => {
-  const module = await import('@/pages/admin/FeatureFlagsPage');
-  return { default: module.FeatureFlagsPage };
-});
-const AdminAuditLogsPage = lazyPage(async () => {
-  const module = await import('@/pages/admin/AuditLogsPage');
-  return { default: module.AuditLogsPage };
-});
-const AdminMonitoringPage = lazyPage(async () => {
-  const module = await import('@/pages/admin/MonitoringPage');
-  return { default: module.MonitoringPage };
 });
 const NotFoundPage = lazyPage(async () => {
   const module = await import('@/pages/NotFoundPage');
@@ -279,8 +151,15 @@ const UnauthorizedPage = lazyPage(async () => {
 });
 
 const RouteFallback: React.FC = () => (
-  <Box sx={{ minHeight: '50vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-    <CircularProgress thickness={4} />
+  <Box sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1400 }}>
+    <LinearProgress
+      variant="indeterminate"
+      sx={{
+        height: 3,
+        backgroundColor: 'transparent',
+        '& .MuiLinearProgress-bar': { borderRadius: 999 },
+      }}
+    />
   </Box>
 );
 
@@ -427,22 +306,6 @@ export const AppRouter: React.FC = () => {
               }
             />
             <Route
-              path="education"
-              element={
-                <Suspense fallback={<RouteFallback />}>
-                  <EducationPage />
-                </Suspense>
-              }
-            />
-            <Route
-              path="experience"
-              element={
-                <Suspense fallback={<RouteFallback />}>
-                  <ExperiencePage />
-                </Suspense>
-              }
-            />
-            <Route
               path="skills"
               element={
                 <Suspense fallback={<RouteFallback />}>
@@ -450,95 +313,28 @@ export const AppRouter: React.FC = () => {
                 </Suspense>
               }
             />
+            {/* Removed profile sections redirect to the overview. */}
+            <Route
+              path="education"
+              element={<Navigate to={ROUTES.PROFILE} replace />}
+            />
+            <Route
+              path="experience"
+              element={<Navigate to={ROUTES.PROFILE} replace />}
+            />
             <Route
               path="languages"
-              element={
-                <Suspense fallback={<RouteFallback />}>
-                  <LanguagesPage />
-                </Suspense>
-              }
+              element={<Navigate to={ROUTES.PROFILE} replace />}
             />
             <Route
               path="social"
-              element={
-                <Suspense fallback={<RouteFallback />}>
-                  <SocialLinksPage />
-                </Suspense>
-              }
+              element={<Navigate to={ROUTES.PROFILE} replace />}
             />
             <Route
               path="resume"
-              element={
-                <Suspense fallback={<RouteFallback />}>
-                  <ResumePage />
-                </Suspense>
-              }
+              element={<Navigate to={ROUTES.PROFILE} replace />}
             />
           </Route>
-          <Route
-            path={ROUTES.COMMUNITY}
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <CommunityHubPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path={ROUTES.COMMUNITIES}
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <CommunitiesPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path={ROUTES.COMMUNITY_DETAILS}
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <CommunityDetailsPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path={ROUTES.COMMUNITY_POST}
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <PostDetailsPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path={ROUTES.COMMUNITY_LEADERBOARD}
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <LeaderboardPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path={ROUTES.COMMUNITY_ACTIVITY}
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <ActivityPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path={ROUTES.COMMUNITY_ACHIEVEMENTS}
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <AchievementsPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path={ROUTES.COMMUNITY_SEARCH}
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <SearchPage />
-              </Suspense>
-            }
-          />
           <Route
             path={ROUTES.SESSIONS}
             element={
@@ -555,14 +351,11 @@ export const AppRouter: React.FC = () => {
               </Suspense>
             }
           />
-          <Route
-            path={ROUTES.CALENDAR}
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <CalendarPage />
-              </Suspense>
-            }
-          />
+          {/* Removed pages redirect to their closest remaining destination. */}
+          <Route path={ROUTES.CALENDAR} element={<Navigate to={ROUTES.SESSIONS} replace />} />
+          <Route path={ROUTES.CREDITS} element={<Navigate to={ROUTES.WALLET} replace />} />
+          <Route path={ROUTES.TRANSACTIONS} element={<Navigate to={ROUTES.WALLET} replace />} />
+          <Route path={ROUTES.MEETINGS} element={<Navigate to={ROUTES.SESSIONS} replace />} />
           <Route
             path={ROUTES.WALLET}
             element={
@@ -572,18 +365,10 @@ export const AppRouter: React.FC = () => {
             }
           />
           <Route
-            path={ROUTES.CREDITS}
+            path={ROUTES.SUBSCRIPTION}
             element={
               <Suspense fallback={<RouteFallback />}>
-                <CreditPurchasePage />
-              </Suspense>
-            }
-          />
-          <Route
-            path={ROUTES.TRANSACTIONS}
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <TransactionHistoryPage />
+                <LearnerSubscriptionPage />
               </Suspense>
             }
           />
@@ -592,46 +377,6 @@ export const AppRouter: React.FC = () => {
             element={
               <Suspense fallback={<RouteFallback />}>
                 <BookingPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path={ROUTES.NOTIFICATIONS}
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <NotificationsPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path={ROUTES.MESSAGES}
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <CommunicationPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path={ROUTES.MESSAGES_CONVERSATION}
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <CommunicationPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path={ROUTES.ANNOUNCEMENTS}
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <AnnouncementsPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path={ROUTES.MEETINGS}
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <MeetingsPage />
               </Suspense>
             }
           />
@@ -648,6 +393,14 @@ export const AppRouter: React.FC = () => {
             element={
               <Suspense fallback={<RouteFallback />}>
                 <MentorRegistrationPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.MENTOR_APPLICATION_SUBMITTED}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <MentorApplicationSubmittedPage />
               </Suspense>
             }
           />
@@ -681,36 +434,10 @@ export const AppRouter: React.FC = () => {
               </RoleGuard>
             }
           />
-          <Route
-            path={ROUTES.MENTOR_ANALYTICS}
-            element={
-              <RoleGuard roles={[ROLES.MENTOR]}>
-                <Suspense fallback={<RouteFallback />}>
-                  <MentorAnalyticsPage />
-                </Suspense>
-              </RoleGuard>
-            }
-          />
-          <Route
-            path={ROUTES.MENTOR_CERTIFICATES}
-            element={
-              <RoleGuard roles={[ROLES.MENTOR]}>
-                <Suspense fallback={<RouteFallback />}>
-                  <MentorCertificatesPage />
-                </Suspense>
-              </RoleGuard>
-            }
-          />
-          <Route
-            path={ROUTES.MENTOR_ACHIEVEMENTS}
-            element={
-              <RoleGuard roles={[ROLES.MENTOR]}>
-                <Suspense fallback={<RouteFallback />}>
-                  <MentorAchievementsPage />
-                </Suspense>
-              </RoleGuard>
-            }
-          />
+          {/* Removed mentor pages redirect to the studio. */}
+          <Route path={ROUTES.MENTOR_ANALYTICS} element={<Navigate to={ROUTES.MENTOR_DASHBOARD} replace />} />
+          <Route path={ROUTES.MENTOR_CERTIFICATES} element={<Navigate to={ROUTES.MENTOR_DASHBOARD} replace />} />
+          <Route path={ROUTES.MENTOR_ACHIEVEMENTS} element={<Navigate to={ROUTES.MENTOR_DASHBOARD} replace />} />
           <Route
             path={ROUTES.MENTOR_SETTINGS}
             element={
@@ -721,29 +448,26 @@ export const AppRouter: React.FC = () => {
               </RoleGuard>
             }
           />
+          <Route
+            path={ROUTES.MENTOR_SUBSCRIPTION}
+            element={
+              <RoleGuard roles={[ROLES.MENTOR]}>
+                <Suspense fallback={<RouteFallback />}>
+                  <MentorSubscriptionPage />
+                </Suspense>
+              </RoleGuard>
+            }
+          />
         </Route>
-
-        {/* ---------- Full-screen meeting (outside the dashboard chrome) ---------- */}
-        <Route
-          path={ROUTES.MEETING}
-          element={
-              <AuthGuard>
-              <Suspense fallback={<RouteFallback />}>
-                <MeetingPage />
-              </Suspense>
-              </AuthGuard>
-
-          }
-        />
 
         {/* ---------- Admin ---------- */}
         <Route
           element={
-
-              
+             <AuthGuard>
+               <RoleGuard roles={[ROLES.ADMIN]}>
                 <AdminLayout />
-
-
+               </RoleGuard>
+             </AuthGuard>
           }
         >
           <Route
@@ -760,14 +484,12 @@ export const AppRouter: React.FC = () => {
               <Navigate to={ROUTES.ADMIN} replace />
             }
           />
-          <Route
-            path={ROUTES.ADMIN_ANALYTICS}
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <AdminAnalyticsPage />
-              </Suspense>
-            }
-          />
+          {/* Removed admin pages redirect to the dashboard. */}
+          <Route path={ROUTES.ADMIN_ANALYTICS} element={<Navigate to={ROUTES.ADMIN} replace />} />
+          <Route path={ROUTES.ADMIN_SESSIONS} element={<Navigate to={ROUTES.ADMIN} replace />} />
+          <Route path={ROUTES.ADMIN_PAYMENTS} element={<Navigate to={ROUTES.ADMIN} replace />} />
+          <Route path={ROUTES.ADMIN_WALLET} element={<Navigate to={ROUTES.ADMIN_WITHDRAWALS} replace />} />
+          <Route path={ROUTES.ADMIN_REVIEWS} element={<Navigate to={ROUTES.ADMIN} replace />} />
           <Route
             path={ROUTES.ADMIN_USERS}
             element={
@@ -785,66 +507,10 @@ export const AppRouter: React.FC = () => {
             }
           />
           <Route
-            path={ROUTES.ADMIN_SESSIONS}
+            path={ROUTES.ADMIN_WITHDRAWALS}
             element={
               <Suspense fallback={<RouteFallback />}>
-                <AdminSessionsPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path={ROUTES.ADMIN_PAYMENTS}
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <AdminPaymentsPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path={ROUTES.ADMIN_WALLET}
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <AdminWalletPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path={ROUTES.ADMIN_COMMUNITY}
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <AdminCommunityPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path={ROUTES.ADMIN_REVIEWS}
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <AdminReviewsPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path={ROUTES.ADMIN_SUPPORT}
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <AdminSupportPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path={ROUTES.ADMIN_ANNOUNCEMENTS}
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <AdminAnnouncementsPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path={ROUTES.ADMIN_REPORTS}
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <AdminReportsPage />
+                <AdminWithdrawalsPage />
               </Suspense>
             }
           />
@@ -853,30 +519,6 @@ export const AppRouter: React.FC = () => {
             element={
               <Suspense fallback={<RouteFallback />}>
                 <AdminSettingsPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path={ROUTES.ADMIN_FEATURE_FLAGS}
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <AdminFeatureFlagsPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path={ROUTES.ADMIN_AUDIT}
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <AdminAuditLogsPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path={ROUTES.ADMIN_MONITORING}
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <AdminMonitoringPage />
               </Suspense>
             }
           />

@@ -63,6 +63,18 @@ public class SubscriptionHistory {
     @Column(name = "payment_id")
     private UUID paymentId;
 
+    /** Razorpay subscription ID once a Razorpay subscription is created. */
+    @Column(name = "razorpay_subscription_id", length = 100)
+    private String razorpaySubscriptionId;
+
+    /** Razorpay plan ID the subscription is billed against. */
+    @Column(name = "razorpay_plan_id", length = 100)
+    private String razorpayPlanId;
+
+    /** Razorpay payment ID of the latest charge (used for webhook idempotency). */
+    @Column(name = "razorpay_payment_id", length = 100)
+    private String razorpayPaymentId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

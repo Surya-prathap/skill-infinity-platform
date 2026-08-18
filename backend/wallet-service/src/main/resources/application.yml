@@ -7,15 +7,17 @@ spring:
   config:
     import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
   datasource:
-    url: jdbc:mysql://${WALLET_DB_HOST:localhost}:${WALLET_DB_PORT:3306}/${WALLET_DB_NAME:skill_infinity_wallet}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    url: jdbc:mysql://${WALLET_DB_HOST:localhost}:${WALLET_DB_PORT:3306}/${WALLET_DB_NAME:skill_infinity_wallet}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Kolkata
     username: ${WALLET_DB_USERNAME:root}
-    password: ${WALLET_DB_PASSWORD:Surya@2003}
+    password: ${WALLET_DB_PASSWORD:root123}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: 10
       minimum-idle: 5
       idle-timeout: 30000
       connection-timeout: 30000
+  jackson:
+    time-zone: Asia/Kolkata
   jpa:
     hibernate:
       ddl-auto: update
@@ -26,15 +28,6 @@ spring:
         format_sql: true
     open-in-view: false
   data:
-    redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
-      timeout: 2000ms
-      lettuce:
-        pool:
-          max-active: 8
-          max-idle: 4
-          min-idle: 2
   rabbitmq:
     host: ${RABBITMQ_HOST:localhost}
     port: ${RABBITMQ_PORT:5672}
@@ -95,10 +88,6 @@ logging:
       max-history: 7
 
 wallet:
-  cache:
-    balance-ttl: 300
-    statement-ttl: 600
-    statistics-ttl: 300
   credit:
     default-currency: CREDITS
     min-purchase-amount: 10
@@ -107,3 +96,9 @@ wallet:
   transaction:
     id-prefix: "TXN"
     id-length: 12
+
+app:
+  withdrawal:
+    credit-value-inr: 10
+    platform-fee-percent: 10.0
+    min-credits: 10

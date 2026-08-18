@@ -3,12 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { Typography } from '@/components/ui/Typography';
 import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import SchoolOutlinedIcon from '@mui/icons-material/SchoolOutlined';
-import WorkOutlineOutlinedIcon from '@mui/icons-material/WorkOutlineOutlined';
 import BoltOutlinedIcon from '@mui/icons-material/BoltOutlined';
-import TranslateIcon from '@mui/icons-material/Translate';
-import ShareOutlinedIcon from '@mui/icons-material/ShareOutlined';
-import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import CloudOffOutlinedIcon from '@mui/icons-material/CloudOffOutlined';
 import RocketLaunchOutlinedIcon from '@mui/icons-material/RocketLaunchOutlined';
 import { useDocumentTitle } from '@/hooks';
@@ -18,12 +13,7 @@ import { ROUTES } from '@/constants';
 const NAV_ITEMS = [
   { label: 'Overview', to: ROUTES.PROFILE, icon: <PersonOutlineOutlinedIcon fontSize="small" />, end: true },
   { label: 'Edit Profile', to: ROUTES.PROFILE_EDIT, icon: <EditOutlinedIcon fontSize="small" /> },
-  { label: 'Education', to: ROUTES.PROFILE_EDUCATION, icon: <SchoolOutlinedIcon fontSize="small" /> },
-  { label: 'Experience', to: ROUTES.PROFILE_EXPERIENCE, icon: <WorkOutlineOutlinedIcon fontSize="small" /> },
   { label: 'Skills', to: ROUTES.PROFILE_SKILLS, icon: <BoltOutlinedIcon fontSize="small" /> },
-  { label: 'Languages', to: ROUTES.PROFILE_LANGUAGES, icon: <TranslateIcon fontSize="small" /> },
-  { label: 'Social Links', to: ROUTES.PROFILE_SOCIAL, icon: <ShareOutlinedIcon fontSize="small" /> },
-  { label: 'Resume', to: ROUTES.PROFILE_RESUME, icon: <DescriptionOutlinedIcon fontSize="small" /> },
 ];
 
 export const ProfileLayout: React.FC = () => {

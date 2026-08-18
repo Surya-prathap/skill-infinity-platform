@@ -13,8 +13,6 @@ public final class ServiceConstants {
     public static final String SESSION_SERVICE = "session-service";
     public static final String WALLET_SERVICE = "wallet-service";
     public static final String PAYMENT_SERVICE = "payment-service";
-    public static final String COMMUNITY_SERVICE = "community-service";
-    public static final String COMMUNICATION_SERVICE = "communication-service";
     public static final String REVIEW_SERVICE = "review-service";
     public static final String ADMIN_SERVICE = "admin-service";
     public static final String API_GATEWAY = "api-gateway";
@@ -29,8 +27,6 @@ public final class ServiceConstants {
     public static final String SESSION_API = API_V1 + "/sessions";
     public static final String WALLET_API = API_V1 + "/wallet";
     public static final String PAYMENT_API = API_V1 + "/payments";
-    public static final String COMMUNITY_API = API_V1 + "/community";
-    public static final String COMMUNICATION_API = API_V1 + "/communication";
     public static final String REVIEW_API = API_V1 + "/reviews";
     public static final String ADMIN_API = API_V1 + "/admin";
 

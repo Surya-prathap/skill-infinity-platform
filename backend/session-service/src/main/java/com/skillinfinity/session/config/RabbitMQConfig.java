@@ -21,6 +21,10 @@ public class RabbitMQConfig {
     public static final String SESSION_REMINDER_QUEUE = "session.reminder.queue";
     public static final String SESSION_RESCHEDULED_QUEUE = "session.rescheduled.queue";
 
+    // Reviews live in this service; only completed-session markers are needed
+    // so learners can review sessions they actually completed.
+    public static final String REVIEW_SESSION_COMPLETED_QUEUE = "review.session.completed.queue";
+
     public static final String SESSION_BOOKED_ROUTING_KEY = "session.booked";
     public static final String SESSION_APPROVED_ROUTING_KEY = "session.approved";
     public static final String SESSION_REJECTED_ROUTING_KEY = "session.rejected";
@@ -116,6 +120,20 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(sessionRescheduledQueue())
                 .to(sessionExchange())
                 .with(SESSION_RESCHEDULED_ROUTING_KEY);
+    }
+
+    /* ---------------- Review: completed-session markers ---------------- */
+
+    @Bean
+    public Queue reviewSessionCompletedQueue() {
+        return new Queue(REVIEW_SESSION_COMPLETED_QUEUE, true);
+    }
+
+    @Bean
+    public Binding reviewSessionCompletedBinding() {
+        return BindingBuilder.bind(reviewSessionCompletedQueue())
+                .to(sessionExchange())
+                .with(SESSION_COMPLETED_ROUTING_KEY);
     }
 
     @Bean

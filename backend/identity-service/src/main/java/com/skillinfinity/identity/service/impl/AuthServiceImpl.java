@@ -1,6 +1,7 @@
 package com.skillinfinity.identity.service.impl;
 
 import com.skillinfinity.common.exception.BadRequestException;
+import com.skillinfinity.common.exception.ConflictException;
 import com.skillinfinity.common.exception.ResourceNotFoundException;
 import com.skillinfinity.identity.dto.request.ChangePasswordRequest;
 import com.skillinfinity.identity.dto.request.LoginRequest;
@@ -8,10 +9,12 @@ import com.skillinfinity.identity.dto.request.RefreshTokenRequest;
 import com.skillinfinity.identity.dto.request.RegisterRequest;
 import com.skillinfinity.identity.dto.response.AuthResponse;
 import com.skillinfinity.identity.dto.response.TokenValidationResponse;
+import com.skillinfinity.identity.dto.response.UserAdminResponse;
 import com.skillinfinity.identity.dto.response.UserInfoResponse;
 import com.skillinfinity.identity.entity.RefreshToken;
 import com.skillinfinity.identity.entity.Role;
 import com.skillinfinity.identity.entity.UserCredential;
+import com.skillinfinity.identity.event.IdentityEventPublisher;
 import com.skillinfinity.identity.repository.RefreshTokenRepository;
 import com.skillinfinity.identity.repository.RoleRepository;
 import com.skillinfinity.identity.repository.UserCredentialRepository;
@@ -28,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -43,18 +47,19 @@ public class AuthServiceImpl implements AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationManager authenticationManager;
     private final PasswordEncoder passwordEncoder;
+    private final IdentityEventPublisher eventPublisher;
 
     @Override
     @Transactional
     public AuthResponse register(RegisterRequest request) {
         if (userCredentialRepository.existsByEmail(request.getEmail())) {
             log.warn("Registration failed: email already exists - {}", request.getEmail());
-            throw new BadRequestException("Email already registered: " + request.getEmail());
+            throw new ConflictException("This account is already registered. Please sign in instead.");
         }
 
         if (request.getUsername() != null && userCredentialRepository.existsByUsername(request.getUsername())) {
             log.warn("Registration failed: username already exists - {}", request.getUsername());
-            throw new BadRequestException("Username already taken: " + request.getUsername());
+            throw new ConflictException("This username is already taken. Please sign in instead.");
         }
 
         Role learnerRole = roleRepository.findByName("ROLE_LEARNER")
@@ -69,6 +74,11 @@ public class AuthServiceImpl implements AuthService {
 
         user = userCredentialRepository.save(user);
         log.info("User registered successfully: {} with id: {}", user.getEmail(), user.getId());
+
+        // Announce the new account so the admin-service user index stays in sync.
+        eventPublisher.publishUserRegistered(
+                user.getId(), user.getEmail(), user.getUsername(),
+                user.getRoles().stream().map(Role::getName).collect(Collectors.toSet()));
 
         String accessToken = jwtTokenProvider.generateAccessToken(user);
         String refreshToken = jwtTokenProvider.generateRefreshToken(user.getId());
@@ -89,7 +99,12 @@ public class AuthServiceImpl implements AuthService {
             throw new BadRequestException("Invalid email or password");
         }
 
-        UserCredential user = userCredentialRepository.findByEmailAndEnabledTrue(request.getEmail())
+        // Lock the row (SELECT ... FOR UPDATE) BEFORE any insert/update so two
+        // concurrent logins for the same account serialize instead of deadlocking:
+        // the refresh-token INSERT takes an S lock on the user row (FK check) while
+        // the last_login_at UPDATE wants an X lock — two overlapping logins with
+        // both S locks would deadlock and stall login for tens of seconds.
+        UserCredential user = userCredentialRepository.findByEmailAndEnabledTrueForUpdate(request.getEmail())
                 .orElseThrow(() -> new BadRequestException("Account is disabled or not found"));
 
         user.setLastLoginAt(LocalDateTime.now());
@@ -182,6 +197,22 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<UserAdminResponse> getAdminUsers() {
+        return userCredentialRepository.findAll().stream()
+                .map(user -> UserAdminResponse.builder()
+                        .id(user.getId())
+                        .email(user.getEmail())
+                        .username(user.getUsername())
+                        .roles(user.getRoles().stream().map(Role::getName).collect(Collectors.toSet()))
+                        .enabled(user.isEnabled())
+                        .lastLoginAt(user.getLastLoginAt())
+                        .createdAt(user.getCreatedAt())
+                        .build())
+                .toList();
+    }
+
+    @Override
     public UserInfoResponse getCurrentUser(String userId) {
         UserCredential user = userCredentialRepository.findById(UUID.fromString(userId))
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
@@ -235,10 +266,15 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private void saveRefreshToken(UserCredential user, String token) {
+        // Use the configured refresh-token lifetime (default 7 days), NOT the
+        // access-token lifetime. The previous arithmetic
+        // (accessExpiration / 1000 * 7) capped refresh tokens at ~105 minutes
+        // (15 min access x 7), which silently logged users out every couple of
+        // hours and forced constant re-logins.
         RefreshToken refreshToken = RefreshToken.builder()
                 .token(token)
                 .userCredential(user)
-                .expiresAt(LocalDateTime.now().plusSeconds(jwtTokenProvider.getAccessTokenExpiration() / 1000 * 7))
+                .expiresAt(LocalDateTime.now().plusSeconds(jwtTokenProvider.getRefreshTokenExpiration() / 1000))
                 .revoked(false)
                 .build();
         refreshTokenRepository.save(refreshToken);

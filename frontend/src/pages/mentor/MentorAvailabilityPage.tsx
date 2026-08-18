@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   Box,
@@ -11,10 +11,8 @@ import {
   Select,
 } from '@mui/material';
 import { motion } from 'framer-motion';
-import dayjs from 'dayjs';
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
-import EventBusyOutlinedIcon from '@mui/icons-material/EventBusyOutlined';
 import ScheduleOutlinedIcon from '@mui/icons-material/ScheduleOutlined';
 import PublicOutlinedIcon from '@mui/icons-material/PublicOutlined';
 import { Typography } from '@/components/ui/Typography';
@@ -25,8 +23,7 @@ import { AnalyticsCard } from '@/components/mentor/AnalyticsCard';
 import { GradientCard } from '@/components/mentor/GradientCard';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useDocumentTitle } from '@/hooks';
-import { getStoredValue, setStoredValue, showSuccess } from '@/utils';
-import { DAY_LABELS, TIMEZONES } from '@/features/mentor/constants';
+import { TIMEZONES } from '@/features/mentor/constants';
 import { availabilityToDraft } from '@/features/mentor/storage';
 import { AvailabilityEditor } from '@/features/mentor/components';
 import {
@@ -35,8 +32,6 @@ import {
   useSaveAvailabilityMutation,
 } from '@/features/mentor/hooks';
 import type { AvailabilityRequest, MentorAvailability } from '@/types';
-
-const BLOCKED_KEY = 'skill_mentor_blocked_dates';
 
 const toRequest = (slot: MentorAvailability): AvailabilityRequest => ({
   dayOfWeek: slot.dayOfWeek,
@@ -71,12 +66,7 @@ export const MentorAvailabilityPage: React.FC = () => {
     editing: false,
     item: null,
   });
-  const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [dropDay, setDropDay] = useState<string | null>(null);
   const [timezone, setTimezone] = useState(mentor?.profile?.timezone ?? '');
-  const [blockedDates, setBlockedDates] = useState<string[]>(() =>
-    getStoredValue<string[]>(BLOCKED_KEY, []),
-  );
 
   useEffect(() => {
     setSlots(availabilities);
@@ -123,38 +113,6 @@ export const MentorAvailabilityPage: React.FC = () => {
     setEditor({ open: false, editing: false, item: null });
   };
 
-  const handleDrop = (dayOfWeek: string) => {
-    if (!draggingId) return;
-    const target = slots.find((slot) => slot.id === draggingId);
-    if (target) {
-      markDirty(slots.map((slot) => (slot.id === draggingId ? { ...slot, dayOfWeek } : slot)));
-      showSuccess(`Moved to ${DAY_LABELS[dayOfWeek] ?? dayOfWeek}`);
-    }
-    setDraggingId(null);
-    setDropDay(null);
-  };
-
-  /* ---------------- Blocked dates ---------------- */
-  const toggleBlockedDate = (date: string) => {
-    const next = blockedDates.includes(date)
-      ? blockedDates.filter((d) => d !== date)
-      : [...blockedDates, date];
-    setBlockedDates(next);
-    setStoredValue(BLOCKED_KEY, next);
-  };
-
-  const calendarDays = useMemo(() => {
-    const start = dayjs().startOf('month');
-    const end = dayjs().endOf('month');
-    const days: dayjs.Dayjs[] = [];
-    let cursor = start;
-    while (cursor.isBefore(end) || cursor.isSame(end, 'day')) {
-      days.push(cursor);
-      cursor = cursor.add(1, 'day');
-    }
-    return days;
-  }, []);
-
   /* ---------------- Save ---------------- */
   const handleSave = () => {
     saveMutation.mutate(slots.map(toRequest));
@@ -192,8 +150,7 @@ export const MentorAvailabilityPage: React.FC = () => {
                 Availability
               </Typography>
               <Typography variant="body2" sx={{ opacity: 0.85 }}>
-                {activeSlotCount} active slot{activeSlotCount === 1 ? '' : 's'} ·{' '}
-                {blockedDates.length} blocked date{blockedDates.length === 1 ? '' : 's'}
+                {activeSlotCount} active slot{activeSlotCount === 1 ? '' : 's'}
                 {isOffline ? ' · offline preview' : ''}
               </Typography>
             </Box>
@@ -221,7 +178,7 @@ export const MentorAvailabilityPage: React.FC = () => {
 
       {/* ================= Controls ================= */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid size={{ xs: 12, md: 5 }}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <motion.div
             initial="hidden"
             animate="visible"
@@ -270,96 +227,6 @@ export const MentorAvailabilityPage: React.FC = () => {
             </Card>
           </motion.div>
         </Grid>
-        <Grid size={{ xs: 12, md: 7 }}>
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={fadeUp}
-            style={{ height: '100%' }}
-          >
-            <Card sx={{ p: 3, height: '100%' }}>
-              <Stack direction="row" alignItems="center" gap={1.25} sx={{ mb: 2 }}>
-                <EventBusyOutlinedIcon sx={{ color: 'error.main' }} />
-                <Typography variant="h6" fontWeight={700}>
-                  Blocked dates
-                </Typography>
-              </Stack>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Pick dates when you're unavailable — they are excluded from generated time slots.
-              </Typography>
-              <Box
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(7, 1fr)',
-                  gap: 0.5,
-                  maxWidth: 520,
-                }}
-              >
-                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((label, index) => (
-                  <Box
-                    key={index}
-                    component="span"
-                    sx={{
-                      fontSize: '0.65rem',
-                      textAlign: 'center',
-                      fontWeight: 700,
-                      color: 'text.disabled',
-                      py: 0.5,
-                    }}
-                  >
-                    {label}
-                  </Box>
-                ))}
-                {calendarDays.map((day) => {
-                  const iso = day.format('YYYY-MM-DD');
-                  const blocked = blockedDates.includes(iso);
-                  const isPast = day.isBefore(dayjs(), 'day');
-                  return (
-                    <Box
-                      key={iso}
-                      role="checkbox"
-                      aria-checked={blocked}
-                      tabIndex={isPast ? -1 : 0}
-                      onClick={() => !isPast && toggleBlockedDate(iso)}
-                      onKeyDown={(event) => {
-                        if (!isPast && (event.key === 'Enter' || event.key === ' ')) {
-                          event.preventDefault();
-                          toggleBlockedDate(iso);
-                        }
-                      }}
-                      sx={{
-                        aspectRatio: '1',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '0.72rem',
-                        fontWeight: 700,
-                        borderRadius: 1.5,
-                        cursor: isPast ? 'default' : 'pointer',
-                        color: isPast ? 'text.disabled' : blocked ? '#fff' : 'text.primary',
-                        bgcolor: blocked ? 'error.main' : isPast ? 'action.hover' : 'transparent',
-                        transition: 'all 0.15s ease',
-                        '&:hover': {
-                          bgcolor: isPast
-                            ? 'action.hover'
-                            : blocked
-                              ? 'error.dark'
-                              : 'action.selected',
-                        },
-                        '&:focus-visible': {
-                          outline: '3px solid rgba(239,68,68,0.3)',
-                          outlineOffset: 1,
-                        },
-                      }}
-                    >
-                      {day.format('D')}
-                    </Box>
-                  );
-                })}
-              </Box>
-            </Card>
-          </motion.div>
-        </Grid>
       </Grid>
 
       {/* ================= Editor ================= */}
@@ -376,7 +243,7 @@ export const MentorAvailabilityPage: React.FC = () => {
       {/* ================= Weekly calendar ================= */}
       <AnalyticsCard
         title="Weekly Schedule"
-        subtitle="Drag slots between days · click a slot to edit · use × to remove"
+        subtitle="Available days & times · click a slot to edit · use × to remove"
         icon={<CalendarMonthOutlinedIcon />}
         iconColor="#EC4899"
         action={
@@ -413,34 +280,19 @@ export const MentorAvailabilityPage: React.FC = () => {
                 },
               })
             }
-            onDragStartSlot={(slot) => setDraggingId(slot.id ?? null)}
-            onDragEndSlot={() => {
-              setDraggingId(null);
-              setDropDay(null);
-            }}
-            onDropOnDay={(day) => handleDrop(day)}
-            onHoverDay={setDropDay}
-            draggingId={draggingId}
-            dropDay={dropDay}
           />
         )}
         <Stack direction="row" flexWrap="wrap" gap={1} sx={{ mt: 2 }}>
           <Chip
             size="small"
             icon={<ScheduleOutlinedIcon sx={{ fontSize: 14 }} />}
-            label="Drag & drop slots between days"
+            label="Available days & times"
             variant="outlined"
           />
           <Chip
             size="small"
             icon={<CalendarMonthOutlinedIcon sx={{ fontSize: 14 }} />}
             label="Tap a slot to edit"
-            variant="outlined"
-          />
-          <Chip
-            size="small"
-            icon={<EventBusyOutlinedIcon sx={{ fontSize: 14 }} />}
-            label="Blocked dates excluded from bookings"
             variant="outlined"
           />
         </Stack>

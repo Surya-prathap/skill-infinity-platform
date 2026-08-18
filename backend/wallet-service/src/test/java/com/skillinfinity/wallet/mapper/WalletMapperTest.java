@@ -1,21 +1,15 @@
 package com.skillinfinity.wallet.mapper;
 
-import com.skillinfinity.wallet.dto.response.LedgerEntryResponse;
-import com.skillinfinity.wallet.dto.response.RewardResponse;
 import com.skillinfinity.wallet.dto.response.TransactionResponse;
 import com.skillinfinity.wallet.dto.response.WalletBalanceResponse;
 import com.skillinfinity.wallet.dto.response.WalletResponse;
 import com.skillinfinity.wallet.dto.response.WalletAuditResponse;
 import com.skillinfinity.wallet.dto.response.WalletStatisticsResponse;
 import com.skillinfinity.wallet.entity.CreditTransaction;
-import com.skillinfinity.wallet.entity.Reward;
 import com.skillinfinity.wallet.entity.Wallet;
 import com.skillinfinity.wallet.entity.WalletAudit;
 import com.skillinfinity.wallet.entity.WalletBalance;
-import com.skillinfinity.wallet.entity.WalletLedger;
 import com.skillinfinity.wallet.entity.WalletStatistics;
-import com.skillinfinity.wallet.enumeration.LedgerEntryType;
-import com.skillinfinity.wallet.enumeration.RewardType;
 import com.skillinfinity.wallet.enumeration.TransactionStatus;
 import com.skillinfinity.wallet.enumeration.TransactionType;
 import com.skillinfinity.wallet.enumeration.WalletStatus;
@@ -51,7 +45,6 @@ class WalletMapperTest {
                 .totalCreditsPurchased(BigDecimal.valueOf(1000))
                 .totalCreditsSpent(BigDecimal.valueOf(500))
                 .totalCreditsEarned(BigDecimal.valueOf(200))
-                .totalRewards(BigDecimal.valueOf(100))
                 .totalBonus(BigDecimal.valueOf(50))
                 .totalRefunds(BigDecimal.valueOf(25))
                 .frozenAmount(BigDecimal.valueOf(100))
@@ -123,55 +116,6 @@ class WalletMapperTest {
     }
 
     @Test
-    void shouldMapLedgerEntryToResponse() {
-        UUID id = UUID.randomUUID();
-        UUID transactionId = UUID.randomUUID();
-
-        WalletLedger entry = WalletLedger.builder()
-                .id(id)
-                .entryNumber("LED-20240101-0001")
-                .entryType(LedgerEntryType.CREDIT)
-                .amount(BigDecimal.valueOf(100))
-                .balanceAfter(BigDecimal.valueOf(500))
-                .description("Credit entry")
-                .referenceId("REF-001")
-                .transactionId(transactionId)
-                .build();
-
-        LedgerEntryResponse response = mapper.toLedgerEntryResponse(entry);
-
-        assertNotNull(response);
-        assertEquals(id, response.getId());
-        assertEquals("LED-20240101-0001", response.getEntryNumber());
-        assertEquals("CREDIT", response.getEntryType());
-        assertEquals(BigDecimal.valueOf(100), response.getAmount());
-        assertEquals(BigDecimal.valueOf(500), response.getBalanceAfter());
-    }
-
-    @Test
-    void shouldMapRewardToResponse() {
-        UUID id = UUID.randomUUID();
-
-        Reward reward = Reward.builder()
-                .id(id)
-                .rewardType(RewardType.SIGNUP_BONUS)
-                .amount(BigDecimal.valueOf(50))
-                .description("Welcome bonus")
-                .reason("New user signup")
-                .redeemed(false)
-                .build();
-
-        RewardResponse response = mapper.toRewardResponse(reward);
-
-        assertNotNull(response);
-        assertEquals(id, response.getId());
-        assertEquals("SIGNUP_BONUS", response.getRewardType());
-        assertEquals(BigDecimal.valueOf(50), response.getAmount());
-        assertEquals("Welcome bonus", response.getDescription());
-        assertFalse(response.isRedeemed());
-    }
-
-    @Test
     void shouldMapStatisticsToResponse() {
         UUID id = UUID.randomUUID();
 
@@ -185,7 +129,6 @@ class WalletMapperTest {
                 .averageTransactionAmount(BigDecimal.valueOf(150))
                 .largestCredit(BigDecimal.valueOf(1000))
                 .largestDebit(BigDecimal.valueOf(500))
-                .totalRewardsClaimed(10)
                 .activeDays(30)
                 .build();
 

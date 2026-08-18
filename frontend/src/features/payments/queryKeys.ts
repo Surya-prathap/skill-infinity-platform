@@ -5,4 +5,5 @@ export const paymentKeys = {
   invoice: (invoiceId: string) => [...paymentKeys.all, 'invoice', invoiceId] as const,
   coupon: (code: string, amount: number) =>
     [...paymentKeys.all, 'coupon', code, amount] as const,
+  packages: () => [...paymentKeys.all, 'credit-packages'] as const,
 } as const;

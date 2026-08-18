@@ -40,7 +40,7 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({ items, limit = 8 }) 
             key={`${item.action}-${index}`}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: index * 0.05 }}
+            transition={{ duration: 0.25, delay: Math.min(index * 0.03, 0.18) }}
           >
             <Stack direction="row" spacing={1.5} alignItems="flex-start">
               <Box

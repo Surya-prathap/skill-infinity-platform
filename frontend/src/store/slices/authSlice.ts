@@ -18,7 +18,7 @@ const initialState: AuthState = {
   user: null,
   status: 'idle',
   error: null,
-  rememberMe: true,
+  rememberMe: false,
 };
 
 const toUser = (payload: AuthResponse): AuthUser => ({
@@ -116,6 +116,17 @@ const authSlice = createSlice({
     setUser(state, action: PayloadAction<AuthUser>) {
       state.user = action.payload;
     },
+    /**
+     * Silent refresh-token rotation (see api/client.ts): the axios layer
+     * already stored the NEW tokens — this keeps the Redux session (and what
+     * gets persisted next) in sync without touching the user/status.
+     */
+    tokensRefreshed(state, action: PayloadAction<{ accessToken: string; refreshToken: string }>) {
+      state.accessToken = action.payload.accessToken;
+      state.refreshToken = action.payload.refreshToken;
+      state.status = 'authenticated';
+      state.error = null;
+    },
     setRememberMe(state, action: PayloadAction<boolean>) {
       state.rememberMe = action.payload;
     },
@@ -140,8 +151,16 @@ const authSlice = createSlice({
         state.status = 'loading';
         state.error = null;
       })
-      .addCase(register.fulfilled, (state, action) => {
-        applyAuth(state, action.payload);
+      .addCase(register.fulfilled, (state) => {
+        // Registration creates the account but does NOT sign the user in —
+        // they must log in explicitly with their new credentials. The backend
+        // returns tokens for a smooth future, but they are deliberately
+        // discarded here so no session is established on register.
+        state.accessToken = null;
+        state.refreshToken = null;
+        state.user = null;
+        state.status = 'unauthenticated';
+        state.error = null;
       })
       .addCase(register.rejected, (state, action) => {
         state.status = 'unauthenticated';
@@ -167,7 +186,7 @@ const authSlice = createSlice({
   },
 });
 
-export const { setCredentials, clearCredentials, setUser, setRememberMe, setAuthError } =
+export const { setCredentials, clearCredentials, setUser, setRememberMe, setAuthError, tokensRefreshed } =
   authSlice.actions;
 
 export default authSlice.reducer;

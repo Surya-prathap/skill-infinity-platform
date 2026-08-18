@@ -66,7 +66,7 @@ export const UserDrawer: React.FC<UserDrawerProps> = ({ user, open, onClose, onT
             {[
               { label: 'Sessions', value: String(user.sessionsCompleted) },
               { label: 'Total spend', value: formatCurrency(user.totalSpend) },
-              { label: 'Wallet', value: formatCurrency(user.walletBalance) },
+              { label: 'Wallet', value: `${user.walletBalance.toLocaleString('en-IN')} credits` },
               { label: 'Joined', value: formatDate(user.joinedAt) },
             ].map((stat) => (
               <Box

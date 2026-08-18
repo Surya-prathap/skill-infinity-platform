@@ -30,6 +30,13 @@ public class CreditRequest {
 
     private String referenceType;
 
+    /**
+     * Which bucket the credit lands in: WELCOME, PURCHASED, LEARNING or
+     * WITHDRAWABLE. Defaults to PURCHASED when absent (backward compatible
+     * with the payment-service purchase event).
+     */
+    private String creditType;
+
     private UUID sessionId;
 
     private UUID mentorId;

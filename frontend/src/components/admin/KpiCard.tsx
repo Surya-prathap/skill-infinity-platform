@@ -43,7 +43,7 @@ export const KpiCard: React.FC<KpiCardProps> = ({
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.45, delay: index * 0.08, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: 0.35, delay: Math.min(index * 0.04, 0.24), ease: [0.16, 1, 0.3, 1] }}
       style={{ height: '100%' }}
     >
       <Card hoverable sx={{ p: 2.5, height: '100%', position: 'relative', overflow: 'hidden' }}>

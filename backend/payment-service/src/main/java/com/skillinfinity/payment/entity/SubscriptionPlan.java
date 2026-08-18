@@ -1,7 +1,10 @@
 package com.skillinfinity.payment.entity;
 
+import com.skillinfinity.payment.enumeration.SubscriptionPlanType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -32,6 +35,11 @@ public class SubscriptionPlan {
     @Column(name = "name", nullable = false, unique = true, length = 50)
     private String name;
 
+    /** Audience this plan targets — LEARNER or MENTOR. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type", length = 10)
+    private SubscriptionPlanType type;
+
     @Column(name = "description", length = 500)
     private String description;
 
@@ -50,6 +58,18 @@ public class SubscriptionPlan {
 
     @Column(name = "max_sessions_per_month")
     private Integer maxSessionsPerMonth;
+
+    /**
+     * Discount applied to credit purchases while this plan is the user's
+     * active subscription (Learner Plus = 5, Learner Pro = 10).
+     */
+    @Column(name = "credit_discount_percent", precision = 5, scale = 2)
+    @Builder.Default
+    private java.math.BigDecimal creditDiscountPercent = java.math.BigDecimal.ZERO;
+
+    /** Razorpay plan ID created for this plan (recurring subscription). */
+    @Column(name = "razorpay_plan_id", length = 100)
+    private String razorpayPlanId;
 
     @Column(name = "features", columnDefinition = "TEXT")
     private String features;

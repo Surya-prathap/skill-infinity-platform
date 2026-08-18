@@ -10,7 +10,6 @@ import com.skillinfinity.session.dto.request.SearchRequest;
 import com.skillinfinity.session.dto.request.SessionRequest;
 import com.skillinfinity.session.dto.response.AttendanceResponse;
 import com.skillinfinity.session.dto.response.BookingResponse;
-import com.skillinfinity.session.dto.response.CalendarResponse;
 import com.skillinfinity.session.dto.response.MeetingResponse;
 import com.skillinfinity.session.dto.response.SessionResponse;
 import com.skillinfinity.session.service.SessionService;
@@ -98,10 +97,10 @@ class SessionControllerTest {
 
     @Test
     void shouldGetSessionById() {
-        when(sessionService.getSessionById(sessionId)).thenReturn(sessionResponse);
+        when(sessionService.getSessionById(sessionId, userId)).thenReturn(sessionResponse);
 
         ResponseEntity<ApiResponse<SessionResponse>> response =
-                sessionController.getSessionById(sessionId);
+                sessionController.getSessionById(sessionId, userId);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertTrue(response.getBody().success());
@@ -343,38 +342,15 @@ class SessionControllerTest {
     @Test
     void shouldGetMeetingLink() {
         MeetingResponse meetingResponse = MeetingResponse.builder()
-                .meetingUrl("https://meet.example.com/123")
+                .meetingUrl("https://discord.gg/abc123")
                 .build();
-        when(sessionService.getMeetingLink(sessionId)).thenReturn(meetingResponse);
+        when(sessionService.getMeetingLink(sessionId, userId)).thenReturn(meetingResponse);
 
         ResponseEntity<ApiResponse<MeetingResponse>> response =
-                sessionController.getMeetingLink(sessionId);
+                sessionController.getMeetingLink(sessionId, userId);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertTrue(response.getBody().success());
     }
 
-    @Test
-    void shouldGetCalendar() {
-        CalendarResponse calendarResponse = CalendarResponse.builder()
-                .events(List.of())
-                .build();
-        when(sessionService.getCalendar(userId, null, null)).thenReturn(calendarResponse);
-
-        ResponseEntity<ApiResponse<CalendarResponse>> response =
-                sessionController.getCalendar(userId, null, null);
-
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertTrue(response.getBody().success());
-    }
-
-    @Test
-    void shouldExportCalendar() {
-        when(sessionService.exportCalendarIcs(userId)).thenReturn("BEGIN:VCALENDAR\nEND:VCALENDAR");
-
-        ResponseEntity<String> response = sessionController.exportCalendar(userId);
-
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertTrue(response.getBody().contains("BEGIN:VCALENDAR"));
-    }
 }

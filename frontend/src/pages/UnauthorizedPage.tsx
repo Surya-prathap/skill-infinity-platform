@@ -4,12 +4,13 @@ import { Typography } from '@/components/ui/Typography';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useNavigate } from 'react-router-dom';
-import { ROUTES } from '@/constants';
-import { useDocumentTitle } from '@/hooks';
+import { getHomeRoute } from '@/constants';
+import { useAuth, useDocumentTitle } from '@/hooks';
 
 export const UnauthorizedPage: React.FC = () => {
   useDocumentTitle('Access Denied');
   const navigate = useNavigate();
+  const { roles } = useAuth();
 
   return (
     <Stack alignItems="center" spacing={2} sx={{ textAlign: 'center', py: 6, px: 3 }}>
@@ -42,7 +43,7 @@ export const UnauthorizedPage: React.FC = () => {
         <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => navigate(-1)}>
           Go Back
         </Button>
-        <Button variant="contained" onClick={() => navigate(ROUTES.DASHBOARD)}>
+        <Button variant="contained" onClick={() => navigate(getHomeRoute(roles))}>
           Go to Dashboard
         </Button>
       </Stack>

@@ -4,15 +4,32 @@ import axios, {
   type AxiosResponse,
   type InternalAxiosRequestConfig,
 } from 'axios';
+
+/**
+ * Requests flagged `silent: true` skip the global loading bar — used for
+ * background polls (role sync) that must not flash the UI.
+ */
+declare module 'axios' {
+  export interface AxiosRequestConfig {
+    silent?: boolean;
+  }
+  export interface InternalAxiosRequestConfig {
+    silent?: boolean;
+  }
+}
 import { APP_CONFIG } from '@/config';
-import { API_ENDPOINTS } from '@/constants';
+import { API_ENDPOINTS, PERSIST_KEYS } from '@/constants';
 import type { ApiResponse, AuthResponse } from '@/types';
 import { tokenManager } from './tokenManager';
 import { requestStarted, requestFinished } from './loadingBridge';
-import { onSessionExpired } from './sessionExpiryBridge';
+import { onSessionExpired, onTokensRefreshed } from './sessionExpiryBridge';
 
 interface RetryableRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
+  /** Marks a request already retried after a transient network-level failure. */
+  _networkRetry?: boolean;
+  /** When true, the global loading bar is not triggered for this request. */
+  silent?: boolean;
 }
 
 const API_BASE_URL = APP_CONFIG.apiBaseUrl;
@@ -31,7 +48,9 @@ apiClient.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  requestStarted();
+  if (!(config as RetryableRequestConfig).silent) {
+    requestStarted();
+  }
   return config;
 });
 
@@ -67,6 +86,9 @@ const refreshAccessToken = async (): Promise<string | null> => {
     const data = response.data?.data;
     if (!data?.accessToken) return null;
     tokenManager.setTokens(data.accessToken, data.refreshToken ?? refreshToken);
+    // Keep the Redux session in sync so the UI never holds a stale token that
+    // would be persisted over the fresh one on the next store write.
+    onTokensRefreshed(data.accessToken, data.refreshToken ?? refreshToken);
     return data.accessToken;
   } catch {
     return null;
@@ -79,6 +101,14 @@ let redirecting = false;
 const handleSessionExpired = async (): Promise<void> => {
   tokenManager.clearTokens();
   onSessionExpired();
+  // Drop the persisted session blob synchronously: redux-persist writes it
+  // asynchronously, so without this the hard reload below could rehydrate a
+  // stale session and immediately bounce the user back in (then out) again.
+  try {
+    window.sessionStorage.removeItem(PERSIST_KEYS.ROOT);
+  } catch {
+    /* storage unavailable — tokens are already cleared */
+  }
   if (redirecting) return;
   if (window.location.pathname.startsWith('/login')) return;
   redirecting = true;
@@ -88,19 +118,46 @@ const handleSessionExpired = async (): Promise<void> => {
 /* ---------------- Response interceptor: refresh + retry ---------------- */
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => {
-    requestFinished();
+    if (!(response.config as RetryableRequestConfig).silent) {
+      requestFinished();
+    }
     return response;
   },
   async (error: AxiosError) => {
-    requestFinished();
-    const original = error.config as RetryableRequestConfig | undefined;
+    const failed = error.config as RetryableRequestConfig | undefined;
+    if (!failed?.silent) {
+      requestFinished();
+    }
+    const original = failed;
     const status = error.response?.status;
+
+    // Transient network-level failure (connection reset while the backend is
+    // GC-stalled, proxy hiccup, etc.): the request never received an HTTP
+    // response, so it is safe to retry once. Timeouts (ECONNABORTED) and
+    // explicit cancellations are excluded — they should surface immediately.
+    // Only idempotent reads (GET/HEAD/OPTIONS) are retried: re-sending an auth
+    // POST that actually succeeded server-side mints a second refresh token
+    // and makes a slow login feel like it ran "three times" — the auth forms
+    // surface the backend error directly instead.
+    const method = (original?.method ?? 'get').toUpperCase();
+    const isIdempotent = method === 'GET' || method === 'HEAD' || method === 'OPTIONS';
+    const isAuthEndpoint = original?.url?.includes('/auth/');
+    if (
+      !error.response &&
+      error.code !== 'ECONNABORTED' &&
+      error.code !== 'ERR_CANCELED' &&
+      isIdempotent &&
+      !isAuthEndpoint &&
+      !original?._networkRetry
+    ) {
+      original!._networkRetry = true;
+      await new Promise((resolve) => window.setTimeout(resolve, 600));
+      return apiClient(original!);
+    }
 
     if (status !== 401 || !original) {
       return Promise.reject(error);
     }
-
-    const isAuthEndpoint = original.url?.includes('/auth/');
 
     // Never try to refresh for auth endpoints themselves (e.g. bad credentials).
     if (isAuthEndpoint) {

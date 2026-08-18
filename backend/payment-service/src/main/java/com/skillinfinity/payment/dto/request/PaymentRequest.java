@@ -23,12 +23,15 @@ public class PaymentRequest {
 
     @NotNull(message = "Amount is required")
     @DecimalMin(value = "0.01", message = "Amount must be greater than zero")
-    @Schema(description = "Payment amount", example = "100.00", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "Amount", example = "109.00", requiredMode = Schema.RequiredMode.REQUIRED)
     private BigDecimal amount;
 
-    @Schema(description = "Currency", example = "CREDITS")
+    @Schema(description = "Number of credits purchased with this payment", example = "10")
+    private BigDecimal credits;
+
+    @Schema(description = "Currency", example = "INR")
     @Builder.Default
-    private String currency = "CREDITS";
+    private String currency = "INR";
 
     @Schema(description = "Description of the payment", example = "Purchase of 100 credits")
     @Size(max = 500, message = "Description cannot exceed 500 characters")

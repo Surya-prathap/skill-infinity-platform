@@ -28,7 +28,7 @@ The Skill Infinity Platform implements a comprehensive testing strategy across m
 - **Scope**: Service interactions with databases, message queues, caches
 - **Framework**: Spring Boot Test, Testcontainers
 - **Target Coverage**: 80%+ integration paths
-- **Key Areas**: Database operations, Redis caching, RabbitMQ messaging
+- **Key Areas**: Database operations, RabbitMQ messaging
 
 ### Repository Tests
 - **Scope**: JPA repository operations, custom queries
@@ -70,11 +70,6 @@ The Skill Infinity Platform implements a comprehensive testing strategy across m
 - **Framework**: Spring Rabbit Test, Testcontainers
 - **Key Tests**: Message serialization, queue binding, consumer acknowledgment
 
-### Redis Cache Tests
-- **Scope**: Cache operations, TTL, eviction
-- **Framework**: Embedded Redis, Spring Cache Test
-- **Key Tests**: Cache put/get, TTL expiration, cache eviction
-
 ### API Gateway Tests
 - **Scope**: Route validation, filter execution, header propagation
 - **Framework**: Spring Cloud Gateway Test, WebTestClient
@@ -96,7 +91,7 @@ Each service uses an `application-test.yml` with:
 - H2 in-memory database (MySQL mode)
 - Disabled config server (mock fallback)
 - Disabled Eureka client
-- Mock Redis/RabbitMQ (autoconfiguration excluded)
+- Mock RabbitMQ (autoconfiguration excluded)
 - Test-specific logging levels
 
 ## CI Pipeline Integration
@@ -122,8 +117,6 @@ Tests are executed in the CI pipeline:
 | Session Service | 90% | 80% | 85% |
 | Wallet Service | 90% | 80% | 85% |
 | Payment Service | 90% | 80% | 85% |
-| Communication Service | 85% | 75% | 80% |
-| Community Service | 85% | 75% | 80% |
 | Review Service | 90% | 80% | 85% |
 | Admin Service | 85% | 75% | 80% |
 | **Platform Average** | **87%** | **77%** | **82%** |

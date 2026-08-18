@@ -134,7 +134,7 @@ export const pricingSchema = z
       .max(90, 'Discount cannot exceed 90%')
       .optional()
       .nullable(),
-    durationMinutes: z.coerce.number().min(15, 'Minimum 15 minutes').max(480, 'Maximum 8 hours'),
+    durationMinutes: z.coerce.number().min(10, 'Minimum 10 minutes').max(480, 'Maximum 8 hours'),
     isFree: z.boolean(),
     description: optionalText('Description must be 500 characters or fewer', 500),
   })
@@ -167,7 +167,7 @@ export const availabilitySchema = z
       .or(z.literal('')),
     slotDurationMinutes: z.coerce
       .number()
-      .min(15, 'Minimum 15 minutes')
+      .min(10, 'Minimum 10 minutes')
       .max(180, 'Maximum 3 hours'),
     recurring: z.boolean(),
     timezone: optionalText('Select a timezone', 50),

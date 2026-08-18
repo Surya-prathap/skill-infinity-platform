@@ -2,18 +2,14 @@ package com.skillinfinity.mentor.service.impl;
 
 import com.skillinfinity.common.dto.PageResponse;
 import com.skillinfinity.common.exception.BadRequestException;
-import com.skillinfinity.mentor.dto.request.AchievementRequest;
 import com.skillinfinity.mentor.dto.request.AvailabilityRequest;
 import com.skillinfinity.mentor.dto.request.BecomeMentorRequest;
-import com.skillinfinity.mentor.dto.request.CertificationRequest;
 import com.skillinfinity.mentor.dto.request.ExpertiseRequest;
 import com.skillinfinity.mentor.dto.request.LanguageRequest;
 import com.skillinfinity.mentor.dto.request.PricingRequest;
 import com.skillinfinity.mentor.dto.request.SearchRequest;
 import com.skillinfinity.mentor.dto.request.UpdateMentorProfileRequest;
-import com.skillinfinity.mentor.dto.response.AchievementResponse;
 import com.skillinfinity.mentor.dto.response.AvailabilityResponse;
-import com.skillinfinity.mentor.dto.response.CertificationResponse;
 import com.skillinfinity.mentor.dto.response.DashboardResponse;
 import com.skillinfinity.mentor.dto.response.ExpertiseResponse;
 import com.skillinfinity.mentor.dto.response.LanguageResponse;
@@ -21,9 +17,7 @@ import com.skillinfinity.mentor.dto.response.MentorResponse;
 import com.skillinfinity.mentor.dto.response.MentorSummaryResponse;
 import com.skillinfinity.mentor.dto.response.PricingResponse;
 import com.skillinfinity.mentor.dto.response.TimeSlotResponse;
-import com.skillinfinity.mentor.entity.Achievement;
 import com.skillinfinity.mentor.entity.Category;
-import com.skillinfinity.mentor.entity.Certification;
 import com.skillinfinity.mentor.entity.Education;
 import com.skillinfinity.mentor.entity.Experience;
 import com.skillinfinity.mentor.entity.Expertise;
@@ -41,15 +35,12 @@ import com.skillinfinity.mentor.enumeration.MentorStatus;
 import com.skillinfinity.mentor.enumeration.SlotStatus;
 import com.skillinfinity.mentor.enumeration.TeachingLevel;
 import com.skillinfinity.mentor.exception.CategoryNotFoundException;
-import com.skillinfinity.mentor.exception.CertificationNotFoundException;
 import com.skillinfinity.mentor.exception.DuplicateSkillException;
 import com.skillinfinity.mentor.exception.InvalidAvailabilityException;
 import com.skillinfinity.mentor.exception.MentorNotFoundException;
 import com.skillinfinity.mentor.event.MentorEventPublisher;
 import com.skillinfinity.mentor.mapper.MentorMapper;
-import com.skillinfinity.mentor.repository.AchievementRepository;
 import com.skillinfinity.mentor.repository.CategoryRepository;
-import com.skillinfinity.mentor.repository.CertificationRepository;
 import com.skillinfinity.mentor.repository.ExpertiseRepository;
 import com.skillinfinity.mentor.repository.LanguageRepository;
 import com.skillinfinity.mentor.repository.MentorAvailabilityRepository;
@@ -67,8 +58,6 @@ import com.skillinfinity.mentor.repository.TimeSlotRepository;
 import com.skillinfinity.mentor.service.MentorService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -99,6 +88,14 @@ public class MentorServiceImpl implements MentorService {
             "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"
     );
 
+    /**
+     * The session durations a mentor may configure for a session type. This is
+     * the backend source of truth — the frontend selector mirrors it. 10 and
+     * 20 minute sessions are supported (session-service enforces a 10-minute
+     * minimum on actual session times).
+     */
+    private static final List<Integer> SUPPORTED_SESSION_DURATIONS = List.of(10, 20, 30, 45, 60, 90, 120);
+
     private final MentorRepository mentorRepository;
     private final MentorProfileRepository mentorProfileRepository;
     private final MentorStatisticsRepository mentorStatisticsRepository;
@@ -108,8 +105,6 @@ public class MentorServiceImpl implements MentorService {
     private final TimeSlotRepository timeSlotRepository;
     private final PricingRepository pricingRepository;
     private final LanguageRepository languageRepository;
-    private final CertificationRepository certificationRepository;
-    private final AchievementRepository achievementRepository;
     private final MentorExperienceRepository mentorExperienceRepository;
     private final MentorEducationRepository mentorEducationRepository;
     private final CategoryRepository categoryRepository;
@@ -121,7 +116,6 @@ public class MentorServiceImpl implements MentorService {
 
     @Override
     @Transactional
-    @CacheEvict(value = {"mentorSearch", "popularMentors"}, allEntries = true)
     public MentorResponse becomeMentor(UUID userId, BecomeMentorRequest request) {
         if (mentorRepository.existsByUserId(userId)) {
             throw new BadRequestException("User is already a mentor: " + userId);
@@ -170,7 +164,6 @@ public class MentorServiceImpl implements MentorService {
 
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(value = "mentorProfiles", key = "#mentorId", unless = "#result == null")
     public MentorResponse getMentorById(UUID mentorId) {
         Mentor mentor = findMentorById(mentorId);
         return mentorMapper.toMentorResponse(mentor);
@@ -199,7 +192,6 @@ public class MentorServiceImpl implements MentorService {
 
     @Override
     @Transactional
-    @CacheEvict(value = {"mentorProfiles", "mentorSearch"}, key = "#mentorId", allEntries = true)
     public MentorResponse updateMentorProfile(UUID mentorId, UUID userId, UpdateMentorProfileRequest request) {
         Mentor mentor = findMentorById(mentorId);
         validateOwnership(mentor, userId);
@@ -239,7 +231,6 @@ public class MentorServiceImpl implements MentorService {
 
     @Override
     @Transactional
-    @CacheEvict(value = {"mentorProfiles", "mentorSearch"}, key = "#mentorId", allEntries = true)
     public void deleteMentorProfile(UUID mentorId, UUID userId) {
         Mentor mentor = findMentorById(mentorId);
         validateOwnership(mentor, userId);
@@ -248,68 +239,7 @@ public class MentorServiceImpl implements MentorService {
     }
 
     @Override
-    @Transactional
-    @CacheEvict(value = "mentorProfiles", key = "#mentorId")
-    public AchievementResponse addAchievement(UUID mentorId, AchievementRequest request) {
-        Mentor mentor = findMentorById(mentorId);
-        Achievement achievement = Achievement.builder()
-                .mentor(mentor)
-                .title(request.getTitle())
-                .description(request.getDescription())
-                .type(request.getType())
-                .dateAchieved(request.getDateAchieved())
-                .issuer(request.getIssuer())
-                .url(request.getUrl())
-                .sortOrder(request.getSortOrder())
-                .build();
-        achievement = achievementRepository.save(achievement);
-        log.info("Achievement added: mentorId={}, title={}", mentorId, request.getTitle());
-        return mentorMapper.toAchievementResponse(achievement);
-    }
-
-    @Override
-    @Transactional
-    @CacheEvict(value = "mentorProfiles", key = "#mentorId")
-    public AchievementResponse updateAchievement(UUID mentorId, UUID achievementId, AchievementRequest request) {
-        Achievement achievement = achievementRepository.findById(achievementId)
-                .orElseThrow(() -> new MentorNotFoundException("achievementId", achievementId.toString()));
-        if (!achievement.getMentor().getId().equals(mentorId)) {
-            throw new BadRequestException("Achievement does not belong to this mentor");
-        }
-        if (request.getTitle() != null) achievement.setTitle(request.getTitle());
-        if (request.getDescription() != null) achievement.setDescription(request.getDescription());
-        if (request.getType() != null) achievement.setType(request.getType());
-        if (request.getDateAchieved() != null) achievement.setDateAchieved(request.getDateAchieved());
-        if (request.getIssuer() != null) achievement.setIssuer(request.getIssuer());
-        if (request.getUrl() != null) achievement.setUrl(request.getUrl());
-        achievement.setSortOrder(request.getSortOrder());
-        achievement = achievementRepository.save(achievement);
-        return mentorMapper.toAchievementResponse(achievement);
-    }
-
-    @Override
-    @Transactional
-    @CacheEvict(value = "mentorProfiles", key = "#mentorId")
-    public void deleteAchievement(UUID mentorId, UUID achievementId) {
-        Achievement achievement = achievementRepository.findById(achievementId)
-                .orElseThrow(() -> new MentorNotFoundException("achievementId", achievementId.toString()));
-        if (!achievement.getMentor().getId().equals(mentorId)) {
-            throw new BadRequestException("Achievement does not belong to this mentor");
-        }
-        achievementRepository.delete(achievement);
-    }
-
-    @Override
     @Transactional(readOnly = true)
-    public List<AchievementResponse> getAchievements(UUID mentorId) {
-        return achievementRepository.findByMentorIdOrderByDateAchievedDesc(mentorId).stream()
-                .map(mentorMapper::toAchievementResponse)
-                .toList();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    @Cacheable(value = "mentorSearch", key = "#request.toString() + '-' + #page + '-' + #size", unless = "#result == null")
     public PageResponse<MentorSummaryResponse> searchMentors(SearchRequest request, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "statistics.averageRating"));
 
@@ -333,8 +263,20 @@ public class MentorServiceImpl implements MentorService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public PageResponse<MentorSummaryResponse> getPendingMentors(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "createdAt"));
+        Page<Mentor> mentorPage = mentorRepository.findByStatus(MentorStatus.PENDING_VERIFICATION, pageable);
+
+        List<MentorSummaryResponse> content = mentorPage.getContent().stream()
+                .map(mentorMapper::toMentorSummaryResponse)
+                .toList();
+
+        return PageResponse.of(content, page, size, mentorPage.getTotalElements());
+    }
+
+    @Override
     @Transactional
-    @CacheEvict(value = "mentorProfiles", key = "#mentorId")
     public ExpertiseResponse addExpertise(UUID mentorId, ExpertiseRequest request) {
         Mentor mentor = findMentorById(mentorId);
 
@@ -381,7 +323,6 @@ public class MentorServiceImpl implements MentorService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "mentorProfiles", key = "#mentorId")
     public ExpertiseResponse updateExpertise(UUID mentorId, UUID expertiseId, ExpertiseRequest request) {
         Expertise expertise = expertiseRepository.findById(expertiseId)
                 .orElseThrow(() -> new MentorNotFoundException("expertiseId", expertiseId.toString()));
@@ -419,7 +360,6 @@ public class MentorServiceImpl implements MentorService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "mentorProfiles", key = "#mentorId")
     public void deleteExpertise(UUID mentorId, UUID expertiseId) {
         Expertise expertise = expertiseRepository.findById(expertiseId)
                 .orElseThrow(() -> new MentorNotFoundException("expertiseId", expertiseId.toString()));
@@ -440,7 +380,6 @@ public class MentorServiceImpl implements MentorService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "mentorProfiles", key = "#mentorId")
     public List<AvailabilityResponse> addAvailability(UUID mentorId, List<AvailabilityRequest> requests) {
         Mentor mentor = findMentorById(mentorId);
         List<MentorAvailability> saved = new ArrayList<>();
@@ -479,7 +418,6 @@ public class MentorServiceImpl implements MentorService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "mentorProfiles", key = "#mentorId")
     public List<AvailabilityResponse> updateAvailability(UUID mentorId, List<AvailabilityRequest> requests) {
         mentorAvailabilityRepository.deleteByMentorId(mentorId);
         return addAvailability(mentorId, requests);
@@ -579,16 +517,16 @@ public class MentorServiceImpl implements MentorService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "mentorProfiles", key = "#mentorId")
     public PricingResponse addPricing(UUID mentorId, PricingRequest request) {
         Mentor mentor = findMentorById(mentorId);
+        validatePricingDuration(request.getDurationMinutes());
 
         Pricing pricing = Pricing.builder()
                 .mentor(mentor)
                 .sessionType(request.getSessionType())
                 .price(request.getPrice() != null ? request.getPrice() : BigDecimal.ZERO)
                 .originalPrice(request.getOriginalPrice())
-                .currency(request.getCurrency() != null ? request.getCurrency() : "USD")
+                .currency(request.getCurrency() != null ? request.getCurrency() : "INR")
                 .discountPercentage(request.getDiscountPercentage())
                 .durationMinutes(request.getDurationMinutes())
                 .isFree(request.isFree())
@@ -602,7 +540,6 @@ public class MentorServiceImpl implements MentorService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "mentorProfiles", key = "#mentorId")
     public PricingResponse updatePricing(UUID mentorId, UUID pricingId, PricingRequest request) {
         Pricing pricing = pricingRepository.findById(pricingId)
                 .orElseThrow(() -> new MentorNotFoundException("pricingId", pricingId.toString()));
@@ -610,6 +547,9 @@ public class MentorServiceImpl implements MentorService {
             throw new BadRequestException("Pricing does not belong to this mentor");
         }
 
+        if (request.getDurationMinutes() != null) {
+            validatePricingDuration(request.getDurationMinutes());
+        }
         if (request.getSessionType() != null) pricing.setSessionType(request.getSessionType());
         if (request.getPrice() != null) pricing.setPrice(request.getPrice());
         if (request.getOriginalPrice() != null) pricing.setOriginalPrice(request.getOriginalPrice());
@@ -625,7 +565,6 @@ public class MentorServiceImpl implements MentorService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "mentorProfiles", key = "#mentorId")
     public void deletePricing(UUID mentorId, UUID pricingId) {
         Pricing pricing = pricingRepository.findById(pricingId)
                 .orElseThrow(() -> new MentorNotFoundException("pricingId", pricingId.toString()));
@@ -645,7 +584,6 @@ public class MentorServiceImpl implements MentorService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "mentorProfiles", key = "#mentorId")
     public LanguageResponse addLanguage(UUID mentorId, LanguageRequest request) {
         Mentor mentor = findMentorById(mentorId);
 
@@ -666,7 +604,6 @@ public class MentorServiceImpl implements MentorService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "mentorProfiles", key = "#mentorId")
     public LanguageResponse updateLanguage(UUID mentorId, UUID languageId, LanguageRequest request) {
         Language language = languageRepository.findById(languageId)
                 .orElseThrow(() -> new MentorNotFoundException("languageId", languageId.toString()));
@@ -685,7 +622,6 @@ public class MentorServiceImpl implements MentorService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "mentorProfiles", key = "#mentorId")
     public void deleteLanguage(UUID mentorId, UUID languageId) {
         Language language = languageRepository.findById(languageId)
                 .orElseThrow(() -> new MentorNotFoundException("languageId", languageId.toString()));
@@ -700,76 +636,6 @@ public class MentorServiceImpl implements MentorService {
     public List<LanguageResponse> getLanguages(UUID mentorId) {
         return languageRepository.findByMentorIdOrderBySortOrderAsc(mentorId).stream()
                 .map(mentorMapper::toLanguageResponse)
-                .toList();
-    }
-
-    @Override
-    @Transactional
-    @CacheEvict(value = "mentorProfiles", key = "#mentorId")
-    public CertificationResponse addCertification(UUID mentorId, CertificationRequest request) {
-        Mentor mentor = findMentorById(mentorId);
-
-        Certification certification = Certification.builder()
-                .mentor(mentor)
-                .title(request.getTitle())
-                .issuingOrganization(request.getIssuingOrganization())
-                .credentialId(request.getCredentialId())
-                .credentialUrl(request.getCredentialUrl())
-                .issueDate(request.getIssueDate())
-                .expiryDate(request.getExpiryDate())
-                .doesNotExpire(request.isDoesNotExpire())
-                .description(request.getDescription())
-                .fileUrl(request.getFileUrl())
-                .sortOrder(request.getSortOrder())
-                .build();
-
-        certification = certificationRepository.save(certification);
-        log.info("Certification added: mentorId={}, title={}", mentorId, request.getTitle());
-        return mentorMapper.toCertificationResponse(certification);
-    }
-
-    @Override
-    @Transactional
-    @CacheEvict(value = "mentorProfiles", key = "#mentorId")
-    public CertificationResponse updateCertification(UUID mentorId, UUID certificationId, CertificationRequest request) {
-        Certification certification = certificationRepository.findById(certificationId)
-                .orElseThrow(() -> new CertificationNotFoundException("id", certificationId.toString()));
-        if (!certification.getMentor().getId().equals(mentorId)) {
-            throw new BadRequestException("Certification does not belong to this mentor");
-        }
-
-        if (request.getTitle() != null) certification.setTitle(request.getTitle());
-        if (request.getIssuingOrganization() != null) certification.setIssuingOrganization(request.getIssuingOrganization());
-        if (request.getCredentialId() != null) certification.setCredentialId(request.getCredentialId());
-        if (request.getCredentialUrl() != null) certification.setCredentialUrl(request.getCredentialUrl());
-        if (request.getIssueDate() != null) certification.setIssueDate(request.getIssueDate());
-        if (request.getExpiryDate() != null) certification.setExpiryDate(request.getExpiryDate());
-        certification.setDoesNotExpire(request.isDoesNotExpire());
-        if (request.getDescription() != null) certification.setDescription(request.getDescription());
-        if (request.getFileUrl() != null) certification.setFileUrl(request.getFileUrl());
-        certification.setSortOrder(request.getSortOrder());
-
-        certification = certificationRepository.save(certification);
-        return mentorMapper.toCertificationResponse(certification);
-    }
-
-    @Override
-    @Transactional
-    @CacheEvict(value = "mentorProfiles", key = "#mentorId")
-    public void deleteCertification(UUID mentorId, UUID certificationId) {
-        Certification certification = certificationRepository.findById(certificationId)
-                .orElseThrow(() -> new CertificationNotFoundException("id", certificationId.toString()));
-        if (!certification.getMentor().getId().equals(mentorId)) {
-            throw new BadRequestException("Certification does not belong to this mentor");
-        }
-        certificationRepository.delete(certification);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<CertificationResponse> getCertifications(UUID mentorId) {
-        return certificationRepository.findByMentorIdOrderByIssueDateDesc(mentorId).stream()
-                .map(mentorMapper::toCertificationResponse)
                 .toList();
     }
 
@@ -802,7 +668,6 @@ public class MentorServiceImpl implements MentorService {
 
     @Override
     @Transactional
-    @CacheEvict(value = {"mentorProfiles", "mentorSearch"}, allEntries = true)
     public MentorResponse verifyMentor(UUID mentorId, UUID adminId, boolean verified, String rejectionReason) {
         Mentor mentor = findMentorById(mentorId);
         mentor.setVerified(verified);
@@ -824,9 +689,29 @@ public class MentorServiceImpl implements MentorService {
         return mentorMapper.toMentorResponse(mentor);
     }
 
+    /**
+     * Backend source of truth for session-type durations: only the seven
+     * supported values (10, 20, 30, 45, 60, 90, 120 minutes) are accepted.
+     * Mirrors the frontend SESSION_DURATIONS selector — the two never diverge.
+     */
+    private void validatePricingDuration(Integer durationMinutes) {
+        if (durationMinutes == null) {
+            throw new BadRequestException("Session duration is required");
+        }
+        if (!SUPPORTED_SESSION_DURATIONS.contains(durationMinutes)) {
+            throw new BadRequestException("Session duration must be one of: "
+                    + SUPPORTED_SESSION_DURATIONS + " minutes");
+        }
+    }
+
     private void validateAvailabilityRequest(AvailabilityRequest request) {
         if (!VALID_DAYS.contains(request.getDayOfWeek().toUpperCase()) && !request.isRecurring()) {
             throw new InvalidAvailabilityException("Invalid day of week: " + request.getDayOfWeek());
+        }
+
+        if (request.getSlotDurationMinutes() != null
+                && (request.getSlotDurationMinutes() < 10 || request.getSlotDurationMinutes() > 180)) {
+            throw new InvalidAvailabilityException("Slot duration must be between 10 and 180 minutes");
         }
 
         try {
@@ -867,7 +752,7 @@ public class MentorServiceImpl implements MentorService {
 
     private int calculateProfileCompletion(Mentor mentor) {
         int score = 0;
-        int total = 10;
+        int total = 9;
 
         MentorProfile profile = mentor.getProfile();
         if (profile == null) return 0;
@@ -881,7 +766,6 @@ public class MentorServiceImpl implements MentorService {
         if (mentor.getExpertiseList() != null && !mentor.getExpertiseList().isEmpty()) score++;
         if (mentor.getPricingList() != null && !mentor.getPricingList().isEmpty()) score++;
         if (mentor.getLanguages() != null && !mentor.getLanguages().isEmpty()) score++;
-        if (mentor.getCertifications() != null && !mentor.getCertifications().isEmpty()) score++;
 
         return Math.min((int) Math.round((double) score / total * 100), 100);
     }

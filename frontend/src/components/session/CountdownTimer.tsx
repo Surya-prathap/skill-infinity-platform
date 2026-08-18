@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Box } from '@mui/material';
 import { motion } from 'framer-motion';
 import { Typography } from '@/components/ui/Typography';
+import { parseApiTime } from '@/utils';
 
 interface CountdownTimerProps {
   target: string | Date;
@@ -17,7 +18,7 @@ interface TimeLeft {
 }
 
 const getTimeLeft = (target: string | Date): TimeLeft => {
-  const diff = new Date(target).getTime() - Date.now();
+  const diff = (parseApiTime(target)?.valueOf() ?? 0) - Date.now();
   if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0, done: true };
   return {
     days: Math.floor(diff / 86_400_000),

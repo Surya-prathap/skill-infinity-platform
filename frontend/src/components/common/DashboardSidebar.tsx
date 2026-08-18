@@ -9,7 +9,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Logo } from './Logo';
 import { Avatar } from '@/components/ui';
 import { useAuth } from '@/hooks';
-import { ROLE_LABELS, ROUTES } from '@/constants';
+import { getPrimaryRole, ROLE_LABELS, ROUTES } from '@/constants';
 import { showSuccess } from '@/utils';
 import type { NavItem } from '@/types';
 
@@ -61,7 +61,9 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
   }, [location.pathname]);
 
   const displayName = user?.firstName || user?.username || user?.email || 'Member';
-  const roleLabel = user?.roles?.[0] ? ROLE_LABELS[user.roles[0]] : 'Member';
+  // Roles are unordered — resolve the most privileged one (e.g. a mentor who
+  // still carries ROLE_LEARNER must be labelled "Mentor", not "Learner").
+  const roleLabel = ROLE_LABELS[getPrimaryRole(roles)];
 
   const renderNavItem = (item: NavItem, mini: boolean) => {
     const active = isItemActive(item, location.pathname);
@@ -199,8 +201,11 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
       <Box sx={{ p: mini ? 1 : 1.5, display: 'flex', alignItems: 'center', gap: 1.25 }}>
         {mini ? (
           <Tooltip title={`${displayName} — Sign out`} placement="right">
-            <IconButton onClick={handleLogout} sx={{ mx: 'auto' }}>
-              <LogoutIcon fontSize="small" color="action" />
+            <IconButton
+              onClick={handleLogout}
+              sx={{ mx: 'auto', color: 'text.secondary', '&:hover': { color: 'error.main' } }}
+            >
+              <LogoutIcon fontSize="small" />
             </IconButton>
           </Tooltip>
         ) : (

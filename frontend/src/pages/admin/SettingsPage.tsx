@@ -20,7 +20,6 @@ const CATEGORY_LABELS: Record<string, string> = {
   payments: 'Payments',
   wallet: 'Wallet',
   notifications: 'Notifications',
-  community: 'Community',
   mentors: 'Mentors',
   sessions: 'Sessions',
 };

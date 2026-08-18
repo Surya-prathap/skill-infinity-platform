@@ -26,6 +26,13 @@ public class SessionEvent {
     private LocalDateTime endTime;
     private String timezone;
     private int durationMinutes;
+
+    /** Session cost in credits (0 for community/free sessions). */
+    private double credits;
+
+    /** True for community (free) mentoring sessions. */
+    private boolean community;
+
     private String reason;
     private LocalDateTime timestamp;
     private String source;

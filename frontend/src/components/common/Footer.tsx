@@ -5,7 +5,8 @@ import SendIcon from '@mui/icons-material/Send';
 import { FaGithub, FaLinkedin, FaXTwitter, FaYoutube } from 'react-icons/fa6';
 import { Link as RouterLink } from 'react-router-dom';
 import { Logo } from './Logo';
-import { APP_DESCRIPTION, ROUTES } from '@/constants';
+import { APP_DESCRIPTION, ROUTES, getHomeRoute } from '@/constants';
+import { useAuth } from '@/hooks';
 import { showSuccess } from '@/utils';
 
 const FOOTER_COLUMNS: Array<{ title: string; links: Array<{ label: string; to: string }> }> = [
@@ -14,7 +15,6 @@ const FOOTER_COLUMNS: Array<{ title: string; links: Array<{ label: string; to: s
     links: [
       { label: 'Find Mentors', to: ROUTES.MENTORS },
       { label: 'Book Sessions', to: ROUTES.SESSIONS },
-      { label: 'Community', to: ROUTES.COMMUNITY },
       { label: 'Wallet & Credits', to: ROUTES.WALLET },
     ],
   },
@@ -47,6 +47,7 @@ const SOCIALS = [
 
 export const Footer: React.FC = () => {
   const year = new Date().getFullYear();
+  const { roles } = useAuth();
 
   const handleNewsletter = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -102,19 +103,24 @@ export const Footer: React.FC = () => {
                   {column.title}
                 </Typography>
                 <Stack spacing={1}>
-                  {column.links.map((link) => (
-                    <Link
-                      key={link.label}
-                      component={RouterLink}
-                      to={link.to}
-                      color="text.secondary"
-                      underline="hover"
-                      variant="body2"
-                      sx={{ '&:hover': { color: 'primary.main' } }}
-                    >
-                      {link.label}
-                    </Link>
-                  ))}
+                  {column.links.map((link) => {
+                    // "Dashboard" always points at the dashboard matching the
+                    // signed-in user's role (admin console / mentor studio / learner).
+                    const to = link.label === 'Dashboard' ? getHomeRoute(roles) : link.to;
+                    return (
+                      <Link
+                        key={link.label}
+                        component={RouterLink}
+                        to={to}
+                        color="text.secondary"
+                        underline="hover"
+                        variant="body2"
+                        sx={{ '&:hover': { color: 'primary.main' } }}
+                      >
+                        {link.label}
+                      </Link>
+                    );
+                  })}
                 </Stack>
               </Grid>
             ))}
