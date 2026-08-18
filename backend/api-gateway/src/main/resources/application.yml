@@ -1,0 +1,129 @@
+server:
+  port: ${API_GATEWAY_PORT:8080}
+
+spring:
+  application:
+    name: api-gateway
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
+  main:
+    web-application-type: reactive
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+
+      # Evict idle pooled connections before upstream keep-alive close (~60s)
+      # so the first request after idle never waits on a stale socket (10-20s).
+      httpclient:
+        pool:
+          max-idle-time: 30s
+          max-life-time: 10m
+          evict-in-background: 60s
+        response-timeout: ${GATEWAY_RESPONSE_TIMEOUT:60s}
+      routes:
+        - id: identity-service
+          uri: lb://identity-service
+          predicates:
+            - Path=/api/v1/auth/**
+          filters:
+            - StripPrefix=0
+
+        - id: user-service
+          uri: lb://user-service
+          predicates:
+            - Path=/api/v1/users/**
+          filters:
+            - StripPrefix=0
+
+        - id: mentor-service
+          uri: lb://mentor-service
+          predicates:
+            - Path=/api/v1/mentors/**
+          filters:
+            - StripPrefix=0
+
+        - id: session-service
+          uri: lb://session-service
+          predicates:
+            - Path=/api/v1/sessions/**
+          filters:
+            - StripPrefix=0
+
+        - id: wallet-service
+          uri: lb://wallet-service
+          predicates:
+            - Path=/api/v1/wallet/**
+          filters:
+            - StripPrefix=0
+
+        - id: payment-service
+          uri: lb://payment-service
+          predicates:
+            - Path=/api/v1/payments/**
+          filters:
+            - StripPrefix=0
+
+        # Reviews are hosted by the session-service (merged from review-service).
+        - id: session-reviews
+          uri: lb://session-service
+          predicates:
+            - Path=/api/v1/reviews/**
+          filters:
+            - StripPrefix=0
+
+        - id: admin-service
+          uri: lb://admin-service
+          predicates:
+            - Path=/api/v1/admin/**
+          filters:
+            - StripPrefix=0
+
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin
+
+eureka:
+  instance:
+    prefer-ip-address: ${EUREKA_PREFER_IP:true}
+  client:
+    service-url:
+      defaultZone: ${EUREKA_DEFAULT_ZONE:http://localhost:8761/eureka/}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,gateway
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+  info:
+    env:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+info:
+  app:
+    name: ${spring.application.name}
+    description: Skill Infinity API Gateway
+    version: @project.version@
+
+logging:
+  level:
+    com.skillinfinity: INFO
+    org.springframework.cloud.gateway: INFO
+    org.springframework.cloud.gateway.route: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %highlight(%-5level) %logger{36} - %msg%n"
+  file:
+    name: ${API_GATEWAY_LOG_DIR:logs}/${spring.application.name}.log
+  logback:
+    rollingpolicy:
+      max-file-size: 10MB
+      max-history: 7

@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: payment-service
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+    open-in-view: false
+  rabbitmq:
+    host: localhost
+    port: 5672
+    template:
+      exchange: test.exchange
+
+eureka:
+  client:
+    enabled: false
+
+payment:
+  credit:
+    default-currency: CREDITS
+    min-purchase-amount: 10
+    max-purchase-amount: 10000
+    conversion-rate: 1.0
+  transaction:
+    id-prefix: "PAY"
+    id-length: 12
+  invoice:
+    id-prefix: "INV"
+    due-days: 30
+  receipt:
+    id-prefix: "RCT"
+  refund:
+    max-days-after-payment: 30
+    auto-approve-threshold: 1000

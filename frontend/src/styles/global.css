@@ -1,0 +1,135 @@
+/* ============================================================
+   Skill Infinity — Global Styles
+   ============================================================ */
+
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+/* ---------- Scrollbar ---------- */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(120, 120, 160, 0.35);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(120, 120, 160, 0.6);
+  background-clip: content-box;
+  border: 2px solid transparent;
+}
+
+/* ---------- Selection ---------- */
+::selection {
+  background: rgba(109, 93, 246, 0.25);
+}
+
+/* ---------- Utilities ---------- */
+
+/* Gradient text */
+.text-gradient {
+  background: linear-gradient(120deg, #6d5df6 0%, #43c6c0 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* Glassmorphism surface */
+.glass {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+.dark .glass,
+[data-theme='dark'] .glass {
+  background: rgba(18, 26, 43, 0.72);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Animated gradient background (transform-based so the compositor handles it) */
+.animated-gradient {
+  position: relative;
+  overflow: hidden;
+}
+.animated-gradient::before {
+  content: '';
+  position: absolute;
+  inset: -50%;
+  background: linear-gradient(-45deg, #6d5df6, #43c6c0, #7c3aed, #3b82f6);
+  background-size: 200% 200%;
+  animation: gradient-shift 12s ease infinite;
+  will-change: transform;
+}
+.animated-gradient > * {
+  position: relative;
+}
+@keyframes gradient-shift {
+  0% {
+    transform: translate3d(-12%, -6%, 0);
+  }
+  50% {
+    transform: translate3d(12%, 6%, 0);
+  }
+  100% {
+    transform: translate3d(-12%, -6%, 0);
+  }
+}
+
+/* Dot grid pattern for hero sections */
+.dot-grid {
+  background-image: radial-gradient(rgba(120, 120, 160, 0.25) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+/* Shimmer for skeleton borders */
+@keyframes shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+
+/* Presence pulse ring */
+@keyframes presencePing {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  75%,
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
