@@ -33,6 +33,9 @@ public class BookingRequest {
     @Schema(description = "Learner name", example = "Jane Smith")
     private String learnerName;
 
+    @Schema(description = "Learner email — used for booking status notifications", example = "jane@example.com")
+    private String learnerEmail;
+
     @NotBlank(message = "Topic is required")
     @Schema(description = "Session topic", example = "Advanced Java Concepts")
     private String topic;
@@ -54,7 +57,10 @@ public class BookingRequest {
     @Schema(description = "Session duration in minutes", example = "60")
     private int durationMinutes;
 
-    @Schema(description = "Session cost in credits (1 credit = 10 minutes)", example = "6")
+    @Schema(description = "Selected mentor pricing plan (used by the backend to compute the cost server-side)")
+    private UUID pricingId;
+
+    @Schema(description = "Session cost in credits (1 credit = 10 minutes) — informational only, the backend recomputes it from the mentor's pricing", example = "6")
     private double credits;
 
     @Schema(description = "Timezone", example = "America/New_York")

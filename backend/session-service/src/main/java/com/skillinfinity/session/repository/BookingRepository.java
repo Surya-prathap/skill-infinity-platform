@@ -19,7 +19,15 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
 
     Page<Booking> findByMentorIdOrderByCreatedAtDesc(UUID mentorId, Pageable pageable);
 
+    Page<Booking> findByMentorIdInOrderByCreatedAtDesc(List<UUID> mentorIds, Pageable pageable);
+
     Page<Booking> findByLearnerIdOrderByCreatedAtDesc(UUID learnerId, Pageable pageable);
+
+    Page<Booking> findByMentorIdAndStatus(UUID mentorId, BookingStatus status, Pageable pageable);
+
+    Page<Booking> findByMentorIdInAndStatus(List<UUID> mentorIds, BookingStatus status, Pageable pageable);
+
+    Page<Booking> findByLearnerIdAndStatus(UUID learnerId, BookingStatus status, Pageable pageable);
 
     List<Booking> findByMentorIdAndStatus(UUID mentorId, BookingStatus status);
 
@@ -37,4 +45,32 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
     long countByLearnerIdSince(@Param("learnerId") UUID learnerId, @Param("since") LocalDateTime since);
 
     boolean existsByMentorIdAndLearnerIdAndStatus(UUID mentorId, UUID learnerId, BookingStatus status);
+
+    @Query("SELECT COUNT(b) > 0 FROM Booking b "
+            + "WHERE b.mentorId = :mentorId "
+            + "AND b.status IN ('PENDING', 'APPROVED') "
+            + "AND b.preferredStartTime IS NOT NULL "
+            + "AND b.preferredEndTime IS NOT NULL "
+            + "AND b.preferredStartTime < :endTime AND b.preferredEndTime > :startTime")
+    boolean existsOverlappingBooking(@Param("mentorId") UUID mentorId,
+                                     @Param("startTime") LocalDateTime startTime,
+                                     @Param("endTime") LocalDateTime endTime);
+
+    /**
+     * The SAME learner's own pending/approved booking for an overlapping slot.
+     * Used for booking idempotency: a retried "Book" request (e.g. after a
+     * frontend timeout where the backend already committed) returns the
+     * existing booking instead of creating a duplicate or freezing credits
+     * twice. Other learners' bookings are deliberately excluded.
+     */
+    @Query("SELECT b FROM Booking b "
+            + "WHERE b.mentorId = :mentorId AND b.learnerId = :learnerId "
+            + "AND b.status IN ('PENDING', 'APPROVED') "
+            + "AND b.preferredStartTime IS NOT NULL AND b.preferredEndTime IS NOT NULL "
+            + "AND b.preferredStartTime < :endTime AND b.preferredEndTime > :startTime "
+            + "ORDER BY b.createdAt DESC")
+    Optional<Booking> findOverlappingByMentorAndLearner(@Param("mentorId") UUID mentorId,
+                                                        @Param("learnerId") UUID learnerId,
+                                                        @Param("startTime") LocalDateTime startTime,
+                                                        @Param("endTime") LocalDateTime endTime);
 }

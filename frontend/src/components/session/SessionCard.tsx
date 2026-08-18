@@ -1,4 +1,4 @@
-import { Box, Button } from '@mui/material';
+import { Box, Button, Chip } from '@mui/material';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
@@ -12,17 +12,22 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Avatar } from '@/components/ui/Avatar';
 import { formatDateTime } from '@/utils';
 import { ROUTES } from '@/constants';
+import { getJoinButtonLabel, getSessionJoinState, getSessionMeetingUrl, joinSessionMeeting } from '@/features/sessions';
 import type { Session } from '@/types';
 
 const STATUS_COLOR: Record<string, 'success' | 'warning' | 'error' | 'info' | 'default'> = {
   CONFIRMED: 'success',
   SCHEDULED: 'info',
+  APPROVED: 'success',
+  PENDING_APPROVAL: 'warning',
   PENDING: 'warning',
   IN_PROGRESS: 'info',
   COMPLETED: 'success',
   CANCELLED: 'error',
+  REJECTED: 'error',
   RESCHEDULED: 'warning',
   NO_SHOW: 'error',
+  EXPIRED: 'error',
 };
 
 const statusLabel = (status: string): string =>
@@ -35,18 +40,27 @@ interface SessionCardProps {
 
 export const SessionCard: React.FC<SessionCardProps> = ({ session, index = 0 }) => {
   const navigate = useNavigate();
-  const isUpcoming = ['CONFIRMED', 'SCHEDULED', 'PENDING', 'IN_PROGRESS'].includes(session.status);
+  // Joinability comes from the backend's start/end timestamps — an approved
+  // session stays visible and joinable until its end time.
+  const joinState = getSessionJoinState(session);
+  const isUpcoming = ['CONFIRMED', 'SCHEDULED', 'APPROVED', 'PENDING', 'PENDING_APPROVAL', 'IN_PROGRESS'].includes(
+    session.status,
+  );
+  // The Join button is present whenever the join window is open — it must
+  // never be removed. When no real invite is configured the button still
+  // shows, and clicking answers "Meeting link is not available yet." (the
+  // backend never fabricates a URL, the frontend never opens Discord Home).
+  const canJoin = joinState.eligible;
+  const hasMeetingLink = Boolean(getSessionMeetingUrl(session));
+  const joinHint =
+    joinState.message ?? (joinState.eligible && !hasMeetingLink ? 'Meeting link is not available yet.' : undefined);
   const [mentorFirst, mentorLast] = (session.mentorName ?? 'Mentor').split(' ');
 
   const open = () => navigate(ROUTES.SESSION_DETAILS.replace(':sessionId', session.id));
 
-  /**
-   * Session meetings always run in the app's meeting room (/meet/{sessionId}) —
-   * the room resolves the session and its meeting link. Legacy external join
-   * URLs in the database are ignored so joining never opens a dead link.
-   */
+  /** Opens the session's Discord invite — backend-validated, window-gated. */
   const openJoin = () => {
-    navigate(`/meet/${session.id}`);
+    void joinSessionMeeting(session.id);
   };
 
   return (
@@ -118,13 +132,18 @@ export const SessionCard: React.FC<SessionCardProps> = ({ session, index = 0 }) 
               {session.durationMinutes} min
             </Typography>
           </Stack>
-          {isUpcoming && (
+          {canJoin && hasMeetingLink && (
             <Stack direction="row" alignItems="center" gap={0.5} sx={{ color: 'success.main' }}>
               <VideoCallOutlinedIcon sx={{ fontSize: 15 }} />
               <Typography variant="caption" fontWeight={600}>
                 Meeting ready
               </Typography>
             </Stack>
+          )}
+          {isUpcoming && joinHint && (
+            <Typography variant="caption" fontWeight={600} sx={{ color: 'text.secondary' }}>
+              {joinHint}
+            </Typography>
           )}
           {session.rating !== undefined && (
             <Stack direction="row" alignItems="center" gap={0.5} sx={{ color: '#F59E0B' }}>
@@ -136,11 +155,35 @@ export const SessionCard: React.FC<SessionCardProps> = ({ session, index = 0 }) 
           )}
         </Stack>
 
+        {/* Community session cost + seats — real backend values, never fabricated. */}
+        {session.community && (
+          <Stack direction="row" alignItems="center" gap={1.5} sx={{ mb: 2 }}>
+            <Chip
+              label={(session.price ?? 0) === 0 ? 'FREE' : `${session.price} credit${(session.price ?? 0) > 1 ? 's' : ''}`}
+              size="small"
+              color={(session.price ?? 0) === 0 ? 'success' : 'primary'}
+              variant={(session.price ?? 0) === 0 ? 'filled' : 'outlined'}
+              sx={{ fontWeight: 800 }}
+            />
+            {session.maxParticipants !== undefined && (
+              <Typography
+                variant="caption"
+                fontWeight={700}
+                color={(session.remainingSeats ?? 0) === 0 ? 'error.main' : 'text.secondary'}
+              >
+                {(session.remainingSeats ?? 0) === 0
+                  ? 'Full'
+                  : `${session.remainingSeats} seat${(session.remainingSeats ?? 0) === 1 ? '' : 's'} left`}
+              </Typography>
+            )}
+          </Stack>
+        )}
+
         <Box sx={{ mt: 'auto', display: 'flex', gap: 1.5 }}>
           <Button fullWidth variant="contained" size="small" onClick={open}>
             {isUpcoming ? 'View details' : 'View summary'}
           </Button>
-          {isUpcoming && (
+          {canJoin && (
             <Button
               fullWidth
               variant="outlined"
@@ -148,7 +191,7 @@ export const SessionCard: React.FC<SessionCardProps> = ({ session, index = 0 }) 
               onClick={openJoin}
               startIcon={<VideoCallOutlinedIcon />}
             >
-              Join
+              {getJoinButtonLabel(session)}
             </Button>
           )}
         </Box>

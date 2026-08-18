@@ -30,7 +30,6 @@ public class RabbitMQConfig {
     public static final String WALLET_REFUND_COMPLETED_QUEUE = "wallet.refund.completed.queue";
     public static final String WALLET_FROZEN_QUEUE = "wallet.frozen.queue";
     public static final String WALLET_RELEASED_QUEUE = "wallet.released.queue";
-    public static final String WALLET_REWARD_EARNED_QUEUE = "wallet.reward.earned.queue";
     public static final String WALLET_CREATED_QUEUE = "wallet.created.queue";
 
     public static final String WALLET_CREDITED_ROUTING_KEY = "wallet.credited";
@@ -39,7 +38,6 @@ public class RabbitMQConfig {
     public static final String WALLET_REFUND_COMPLETED_ROUTING_KEY = "wallet.refund.completed";
     public static final String WALLET_FROZEN_ROUTING_KEY = "wallet.frozen";
     public static final String WALLET_RELEASED_ROUTING_KEY = "wallet.released";
-    public static final String WALLET_REWARD_EARNED_ROUTING_KEY = "wallet.reward.earned";
     public static final String WALLET_CREATED_ROUTING_KEY = "wallet.created";
 
     @Bean
@@ -95,11 +93,6 @@ public class RabbitMQConfig {
     @Bean
     public Queue walletReleasedQueue() {
         return new Queue(WALLET_RELEASED_QUEUE, true);
-    }
-
-    @Bean
-    public Queue walletRewardEarnedQueue() {
-        return new Queue(WALLET_REWARD_EARNED_QUEUE, true);
     }
 
     @Bean
@@ -161,13 +154,6 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(walletReleasedQueue())
                 .to(walletExchange())
                 .with(WALLET_RELEASED_ROUTING_KEY);
-    }
-
-    @Bean
-    public Binding walletRewardEarnedBinding() {
-        return BindingBuilder.bind(walletRewardEarnedQueue())
-                .to(walletExchange())
-                .with(WALLET_REWARD_EARNED_ROUTING_KEY);
     }
 
     @Bean

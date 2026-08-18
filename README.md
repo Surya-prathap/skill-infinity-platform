@@ -47,8 +47,8 @@ Skill Infinity is an enterprise-grade knowledge-sharing platform that connects l
 ┌──────▼──────────────────────────────────────────────────────────┐
 │                    Infrastructure Layer                          │
 │                                                                  │
-│  MySQL(8)     Redis(7)     RabbitMQ     MinIO                    │
-│  (per-svc)    (cache)      (events)     (storage)                │
+│  MySQL(8)      RabbitMQ                                          │
+│  (per-svc)      (events)                                         │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -59,9 +59,7 @@ Skill Infinity is an enterprise-grade knowledge-sharing platform that connects l
 | **Frontend** | React 19, TypeScript, Material UI 9, React Router 7, Axios 1 |
 | **Backend** | Java 21, Spring Boot 3.2.5, Spring Cloud 2023.0.6, Maven |
 | **Database** | MySQL 8.0 (per-service schemas) |
-| **Cache** | Redis 7 |
 | **Message Broker** | RabbitMQ 3 |
-| **Object Storage** | MinIO |
 | **Containerization** | Docker & Docker Compose |
 | **API Documentation** | Springdoc OpenAPI |
 
@@ -98,9 +96,7 @@ skill-infinity/
 | Service | Port | Description |
 |---------|------|-------------|
 | MySQL | 3306 | Primary database (per-service schemas) |
-| Redis | 6379 | Cache & temporary data |
 | RabbitMQ | 5672/15672 | Event broker / Management UI |
-| MinIO | 9000/9001 | Object storage / Console |
 | Config Server | 8888 | Centralized configuration |
 | Discovery Server | 8761 | Eureka service registry |
 | API Gateway | 8080 | Single entry point |
@@ -135,7 +131,7 @@ chmod +x scripts/start-dev.sh
 # Option 2: Start services individually
 
 # 1. Infrastructure
-docker compose -f docker/docker-compose.yml up -d mysql redis rabbitmq minio
+docker compose -f docker/docker-compose.yml up -d mysql rabbitmq
 
 # 2. Build backend
 cd backend && mvn clean install -DskipTests
@@ -203,9 +199,7 @@ See [.env.example](.env.example) for all configurable environment variables.
 | `CONFIG_SERVER_URL` | `http://localhost:8888` | Config Server URL |
 | `EUREKA_DEFAULT_ZONE` | `http://localhost:8761/eureka/` | Eureka service URL |
 | `MYSQL_ROOT_PASSWORD` | *(required)* | MySQL root password |
-| `REDIS_HOST` | `redis` | Redis hostname |
 | `RABBITMQ_USER` | `guest` | RabbitMQ username |
-| `MINIO_ACCESS_KEY` | `minioadmin` | MinIO access key |
 | `VITE_API_BASE_URL` | `http://localhost:8080` | Frontend API URL |
 
 ## Ports Used
@@ -214,13 +208,10 @@ See [.env.example](.env.example) for all configurable environment variables.
 |------|---------|
 | 3306 | MySQL |
 | 5173 | Frontend (dev) |
-| 6379 | Redis |
 | 5672 | RabbitMQ AMQP |
 | 8080 | API Gateway |
 | 8761 | Discovery Server (Eureka) |
 | 8888 | Config Server |
-| 9000 | MinIO API |
-| 9001 | MinIO Console |
 | 15672 | RabbitMQ Management |
 
 ## Microservices Architecture
@@ -279,7 +270,7 @@ Once running:
 - [x] Discovery Server (Eureka with Config Server integration)
 - [x] API Gateway (global filters, CORS, routing)
 - [x] React Frontend (TypeScript, Material UI, Axios, Router)
-- [x] Docker Compose (MySQL, Redis, RabbitMQ, MinIO, all app services)
+- [x] Docker Compose (MySQL, RabbitMQ, all app services)
 - [x] Dockerfiles (multi-stage builds)
 - [x] Documentation (API standards, architecture, setup)
 - [x] GitHub templates (CI, PR, issues, CODEOWNERS)

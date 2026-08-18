@@ -20,6 +20,14 @@ public class TransactionResponse {
     private UUID id;
     private String transactionNumber;
     private String transactionType;
+
+    /**
+     * Reliable credit direction derived from the transaction type:
+     * CREDIT (credits gained), DEBIT (credits spent) or HOLD (freeze/release).
+     * The frontend renders signs/colors from this field — never from guessing.
+     */
+    private String direction;
+
     private String status;
     private BigDecimal amount;
     private BigDecimal balanceBefore;

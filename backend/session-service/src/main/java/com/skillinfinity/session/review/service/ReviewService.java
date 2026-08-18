@@ -1,9 +1,6 @@
 package com.skillinfinity.session.review.service;
 
-import com.skillinfinity.session.review.dto.request.ReplyRequest;
-import com.skillinfinity.session.review.dto.request.ReportRequest;
 import com.skillinfinity.session.review.dto.request.ReviewRequest;
-import com.skillinfinity.session.review.dto.request.VoteRequest;
 import com.skillinfinity.session.review.dto.response.RatingResponse;
 import com.skillinfinity.session.review.dto.response.ReviewResponse;
 import org.springframework.data.domain.Page;
@@ -11,6 +8,11 @@ import org.springframework.data.domain.Page;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Minimal rating flow: a learner who completed a session can write one review
+ * (rating + comment). Reviews are approved on creation and listed on the
+ * mentor's public profile.
+ */
 public interface ReviewService {
 
     ReviewResponse createReview(ReviewRequest request, UUID learnerId);
@@ -19,33 +21,17 @@ public interface ReviewService {
 
     void deleteReview(UUID reviewId, UUID userId);
 
-    ReviewResponse getReview(UUID reviewId, UUID currentUserId);
+    ReviewResponse getReview(UUID reviewId);
 
-    Page<ReviewResponse> getReviewsByMentor(UUID mentorId, int page, int size, UUID currentUserId);
+    Page<ReviewResponse> getReviewsByMentor(UUID mentorId, int page, int size);
 
-    Page<ReviewResponse> getReviewsByLearner(UUID learnerId, int page, int size, UUID currentUserId);
+    Page<ReviewResponse> getSessionReviews(UUID sessionId, int page, int size);
 
-    Page<ReviewResponse> getReviewsBySession(UUID sessionId, int page, int size, UUID currentUserId);
-
-    Page<ReviewResponse> searchReviews(String query, int page, int size, UUID currentUserId);
-
-    ReviewResponse replyToReview(ReplyRequest request, UUID mentorId);
-
-    void voteReview(VoteRequest request, UUID userId);
-
-    void reportReview(ReportRequest request, UUID userId);
+    List<ReviewResponse> getRecentReviews(UUID mentorId, int limit);
 
     RatingResponse getAverageRating(UUID mentorId);
 
     RatingResponse getRatingBreakdown(UUID mentorId);
 
-    List<ReviewResponse> getRecentReviews(UUID mentorId, int limit);
-
-    List<RatingResponse.TopMentorResponse> getTopRatedMentors(int limit);
-
-    Page<ReviewResponse> getSessionReviews(UUID sessionId, int page, int size, UUID currentUserId);
-
     RatingResponse.RatingStatisticsResponse getMentorRatingStatistics(UUID mentorId);
-
-    void moderateReview(UUID reviewId, String status, String reason, UUID adminId);
 }

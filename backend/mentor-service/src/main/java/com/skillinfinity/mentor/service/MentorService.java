@@ -3,16 +3,12 @@ package com.skillinfinity.mentor.service;
 import com.skillinfinity.common.dto.PageResponse;
 import com.skillinfinity.mentor.dto.request.AvailabilityRequest;
 import com.skillinfinity.mentor.dto.request.BecomeMentorRequest;
-import com.skillinfinity.mentor.dto.request.CertificationRequest;
 import com.skillinfinity.mentor.dto.request.ExpertiseRequest;
 import com.skillinfinity.mentor.dto.request.LanguageRequest;
 import com.skillinfinity.mentor.dto.request.PricingRequest;
 import com.skillinfinity.mentor.dto.request.SearchRequest;
 import com.skillinfinity.mentor.dto.request.UpdateMentorProfileRequest;
-import com.skillinfinity.mentor.dto.request.AchievementRequest;
-import com.skillinfinity.mentor.dto.response.AchievementResponse;
 import com.skillinfinity.mentor.dto.response.AvailabilityResponse;
-import com.skillinfinity.mentor.dto.response.CertificationResponse;
 import com.skillinfinity.mentor.dto.response.DashboardResponse;
 import com.skillinfinity.mentor.dto.response.EducationResponse;
 import com.skillinfinity.mentor.dto.response.ExperienceResponse;
@@ -71,20 +67,8 @@ public interface MentorService {
     void deleteLanguage(UUID mentorId, UUID languageId);
     List<LanguageResponse> getLanguages(UUID mentorId);
 
-    // Certifications
-    CertificationResponse addCertification(UUID mentorId, CertificationRequest request);
-    CertificationResponse updateCertification(UUID mentorId, UUID certificationId, CertificationRequest request);
-    void deleteCertification(UUID mentorId, UUID certificationId);
-    List<CertificationResponse> getCertifications(UUID mentorId);
-
     // Dashboard
     DashboardResponse getDashboard(UUID mentorId);
-
-    // Achievements
-    AchievementResponse addAchievement(UUID mentorId, AchievementRequest request);
-    AchievementResponse updateAchievement(UUID mentorId, UUID achievementId, AchievementRequest request);
-    void deleteAchievement(UUID mentorId, UUID achievementId);
-    List<AchievementResponse> getAchievements(UUID mentorId);
 
     // Verify mentor (admin)
     MentorResponse verifyMentor(UUID mentorId, UUID adminId, boolean verified, String rejectionReason);

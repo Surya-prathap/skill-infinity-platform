@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import {
   Box,
   Button,
@@ -25,13 +25,10 @@ import { Card } from '@/components/ui/Card';
 import { Stack } from '@/components/ui/Stack';
 import { Typography } from '@/components/ui/Typography';
 import { EmptyState, PageSkeleton } from '@/components/feedback';
-import { InvoicePreview, PaymentMethodCard, PAYMENT_METHOD_OPTIONS } from '@/components/wallet';
+import { InvoicePreview } from '@/components/wallet';
 import { useDocumentTitle } from '@/hooks';
 import { formatCurrency, formatDate, getErrorMessage, showSuccess, showError } from '@/utils';
-import {
-  useConfirmPaymentMutation,
-  useInitiatePaymentMutation,
-} from '@/features/wallet';
+import { useRazorpaySubscriptionPurchase } from '@/features/payments';
 import type { MySubscription, SubscriptionPlan } from '@/types';
 
 interface SubscriptionPlansPageProps {
@@ -51,6 +48,121 @@ const formatPlanPrice = (price: number, currency?: string): string => {
 const formatPlanDuration = (durationDays?: number): string =>
   durationDays && durationDays !== 30 ? `/ ${durationDays} days` : '/ month';
 
+interface PlanCardProps {
+  plan: SubscriptionPlan;
+  isCurrent: boolean;
+  isPopular: boolean;
+  purchasing: boolean;
+  onPurchase: (plan: SubscriptionPlan) => void;
+}
+
+/**
+ * A single subscription plan card. Memoized so toggling the checkout dialog or
+ * a "processing…" state only re-renders the affected card instead of the whole
+ * plans grid (the previous inline map re-rendered every card on any state
+ * change, which is what made the page feel slow to render).
+ */
+const PlanCard = memo<PlanCardProps>(({ plan, isCurrent, isPopular, purchasing, onPurchase }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 16 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.35 }}
+    style={{ height: '100%' }}
+  >
+    <Card
+      sx={{
+        p: 3,
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        position: 'relative',
+        border: 2,
+        borderColor: isCurrent ? 'success.main' : isPopular ? 'primary.main' : 'divider',
+        transition: 'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
+        '&:hover': { transform: 'translateY(-4px)', boxShadow: '0 16px 40px rgba(109,93,246,0.12)' },
+      }}
+    >
+      {isPopular && (
+        <Chip
+          label="Most popular"
+          size="small"
+          color="primary"
+          sx={{ position: 'absolute', top: -12, right: 16, fontWeight: 800 }}
+        />
+      )}
+      {isCurrent && (
+        <Chip
+          label="Your plan"
+          size="small"
+          color="success"
+          sx={{ position: 'absolute', top: -12, left: 16, fontWeight: 800 }}
+        />
+      )}
+      <Typography variant="h6" fontWeight={800}>
+        {plan.name}
+      </Typography>
+      {plan.description && (
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, minHeight: 40 }}>
+          {plan.description}
+        </Typography>
+      )}
+      <Stack direction="row" alignItems="baseline" gap={1} sx={{ my: 2 }}>
+        <Typography variant="h4" fontWeight={900} sx={{ letterSpacing: '-0.03em' }}>
+          {formatPlanPrice(plan.price, plan.currency)}
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          {formatPlanDuration(plan.durationDays)}
+        </Typography>
+      </Stack>
+      <Stack spacing={1.25} sx={{ mb: 3, flexGrow: 1 }}>
+        {(plan.features?.length ? plan.features : ['No benefits listed']).map((feature) => (
+          <Stack key={feature} direction="row" alignItems="center" gap={1.25}>
+            <Box
+              sx={{
+                width: 20,
+                height: 20,
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#fff',
+                background: 'linear-gradient(135deg, #10B981, #34D399)',
+                flexShrink: 0,
+              }}
+            >
+              <CheckIcon sx={{ fontSize: 13 }} />
+            </Box>
+            <Typography variant="body2" fontWeight={600}>
+              {feature}
+            </Typography>
+          </Stack>
+        ))}
+      </Stack>
+      {plan.price <= 0 ? (
+        <Button variant="outlined" disabled sx={{ fontWeight: 800, py: 1.25 }}>
+          Free forever
+        </Button>
+      ) : isCurrent ? (
+        <Button variant="outlined" disabled sx={{ fontWeight: 800, py: 1.25 }}>
+          Current plan
+        </Button>
+      ) : (
+        <Button
+          variant="contained"
+          disabled={purchasing}
+          startIcon={purchasing ? <CircularProgress size={16} color="inherit" /> : undefined}
+          onClick={() => onPurchase(plan)}
+          sx={{ fontWeight: 800, py: 1.25 }}
+        >
+          {purchasing ? 'Processing…' : `Subscribe · ${formatPlanPrice(plan.price, plan.currency)}`}
+        </Button>
+      )}
+    </Card>
+  </motion.div>
+));
+
+PlanCard.displayName = 'PlanCard';
+
 /**
  * Subscription plans with visible benefits. Learner and mentor subscriptions
  * are paid platform features — clearly separate from earned Community Mentor
@@ -66,7 +178,6 @@ export const SubscriptionPlansPage: React.FC<SubscriptionPlansPageProps> = ({ ro
 
   /* ---------- Checkout state — subscription purchase goes through a real payment step ---------- */
   const [checkoutPlan, setCheckoutPlan] = useState<SubscriptionPlan | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState(PAYMENT_METHOD_OPTIONS[0].id);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [paymentComplete, setPaymentComplete] = useState(false);
@@ -102,26 +213,29 @@ export const SubscriptionPlansPage: React.FC<SubscriptionPlansPageProps> = ({ ro
     onError: (error) => showError(getErrorMessage(error)),
   });
 
-  const initiate = useInitiatePaymentMutation();
-  const confirm = useConfirmPaymentMutation();
+  const subscribeRazorpay = useRazorpaySubscriptionPurchase();
 
   /** Plans are filtered server-side by audience. The fallback guard keeps
    *  legacy backend responses (which lack a type) from leaking cross-role
-   *  plans onto the page. */
-  const plans = (plansQuery.data ?? []).filter((plan) =>
-    plan.type
-      ? plan.type === expectedPlanType
-      : plan.name.toLowerCase().startsWith(isMentor ? 'mentor' : 'learner'),
+   *  plans onto the page. Memoized so toggling checkout/cancel dialogs never
+   *  recomputes the list. */
+  const plans = useMemo(
+    () =>
+      (plansQuery.data ?? []).filter((plan) =>
+        plan.type
+          ? plan.type === expectedPlanType
+          : plan.name.toLowerCase().startsWith(isMentor ? 'mentor' : 'learner'),
+      ),
+    [plansQuery.data, expectedPlanType, isMentor],
   );
   const current = mineQuery.data;
 
   /** Opens the payment checkout for the chosen plan (no payment happens yet). */
-  const purchase = (plan: SubscriptionPlan) => {
+  const purchase = useCallback((plan: SubscriptionPlan) => {
     setCheckoutPlan(plan);
-    setPaymentMethod(PAYMENT_METHOD_OPTIONS[0].id);
     setPaymentError(null);
     setPaymentComplete(false);
-  };
+  }, []);
 
   const closeCheckout = (): void => {
     if (processingPayment) return;
@@ -130,47 +244,26 @@ export const SubscriptionPlansPage: React.FC<SubscriptionPlansPageProps> = ({ ro
     setPaymentError(null);
   };
 
-  /** Runs the payment: initiate → gateway confirm → activation. */
+  /** Runs the Razorpay subscription checkout: create → checkout → verify → activation. */
   const confirmCheckout = (): void => {
     if (!checkoutPlan) return;
     setPurchasingPlan(checkoutPlan.id);
     setProcessingPayment(true);
     setPaymentError(null);
-    initiate.mutate(
-      {
-        amount: checkoutPlan.price,
-        currency: checkoutPlan.currency === 'CREDITS' ? 'INR' : (checkoutPlan.currency ?? 'INR'),
-        description: `Subscription: ${checkoutPlan.name}`,
-        referenceType: 'SUBSCRIPTION',
-        subscriptionPlanId: checkoutPlan.id,
-        gateway: paymentMethod === 'stripe' ? 'STRIPE' : paymentMethod === 'razorpay' ? 'RAZORPAY' : 'INTERNAL',
+    subscribeRazorpay.mutate(checkoutPlan.id, {
+      onSuccess: () => {
+        setProcessingPayment(false);
+        setPurchasingPlan(null);
+        setPaymentComplete(true);
+        void queryClient.invalidateQueries({ queryKey: MY_SUBSCRIPTION_KEY });
       },
-      {
-        onSuccess: (payment) => {
-          confirm.mutate(
-            { paymentId: payment.id, gatewayPaymentId: `gw-${payment.id}` },
-            {
-              onSuccess: () => {
-                setProcessingPayment(false);
-                setPurchasingPlan(null);
-                setPaymentComplete(true);
-                void queryClient.invalidateQueries({ queryKey: MY_SUBSCRIPTION_KEY });
-              },
-              onError: () => {
-                setProcessingPayment(false);
-                setPurchasingPlan(null);
-                setPaymentError('Payment could not be completed. Please try again.');
-              },
-            },
-          );
-        },
-        onError: (error) => {
-          setProcessingPayment(false);
-          setPurchasingPlan(null);
-          setPaymentError(getErrorMessage(error) || 'Payment could not be initiated. Please try again.');
-        },
+      onError: (error) => {
+        setProcessingPayment(false);
+        setPurchasingPlan(null);
+        const message = getErrorMessage(error) || 'Payment could not be completed. Please try again.';
+        setPaymentError(/cancel/i.test(message) ? 'Payment cancelled. Your subscription has not been activated.' : message);
       },
-    );
+    });
   };
 
   return (
@@ -347,110 +440,17 @@ export const SubscriptionPlansPage: React.FC<SubscriptionPlansPageProps> = ({ ro
             Available plans
           </Typography>
           <Grid container spacing={3}>
-            {plans.map((plan, index) => {
-              const isCurrent = current?.plan.id === plan.id;
-              const isPopular = index === 1 && plans.length > 1;
-              return (
-                <Grid key={plan.id} size={{ xs: 12, sm: 6, lg: 4 }}>
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.45, delay: index * 0.08 }}
-                    style={{ height: '100%' }}
-                  >
-                    <Card
-                      sx={{
-                        p: 3,
-                        height: '100%',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        position: 'relative',
-                        border: 2,
-                        borderColor: isCurrent ? 'success.main' : isPopular ? 'primary.main' : 'divider',
-                        transition: 'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
-                        '&:hover': { transform: 'translateY(-4px)', boxShadow: '0 16px 40px rgba(109,93,246,0.12)' },
-                      }}
-                    >
-                      {isPopular && (
-                        <Chip
-                          label="Most popular"
-                          size="small"
-                          color="primary"
-                          sx={{ position: 'absolute', top: -12, right: 16, fontWeight: 800 }}
-                        />
-                      )}
-                      {isCurrent && (
-                        <Chip
-                          label="Your plan"
-                          size="small"
-                          color="success"
-                          sx={{ position: 'absolute', top: -12, left: 16, fontWeight: 800 }}
-                        />
-                      )}
-                      <Typography variant="h6" fontWeight={800}>
-                        {plan.name}
-                      </Typography>
-                      {plan.description && (
-                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, minHeight: 40 }}>
-                          {plan.description}
-                        </Typography>
-                      )}
-                      <Stack direction="row" alignItems="baseline" gap={1} sx={{ my: 2 }}>
-                        <Typography variant="h4" fontWeight={900} sx={{ letterSpacing: '-0.03em' }}>
-                          {formatPlanPrice(plan.price, plan.currency)}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {formatPlanDuration(plan.durationDays)}
-                        </Typography>
-                      </Stack>
-                      <Stack spacing={1.25} sx={{ mb: 3, flexGrow: 1 }}>
-                        {(plan.features?.length ? plan.features : ['No benefits listed']).map((feature) => (
-                          <Stack key={feature} direction="row" alignItems="center" gap={1.25}>
-                            <Box
-                              sx={{
-                                width: 20,
-                                height: 20,
-                                borderRadius: '50%',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: '#fff',
-                                background: 'linear-gradient(135deg, #10B981, #34D399)',
-                                flexShrink: 0,
-                              }}
-                            >
-                              <CheckIcon sx={{ fontSize: 13 }} />
-                            </Box>
-                            <Typography variant="body2" fontWeight={600}>
-                              {feature}
-                            </Typography>
-                          </Stack>
-                        ))}
-                      </Stack>
-                      {plan.price <= 0 ? (
-                        <Button variant="outlined" disabled sx={{ fontWeight: 800, py: 1.25 }}>
-                          Free forever
-                        </Button>
-                      ) : isCurrent ? (
-                        <Button variant="outlined" disabled sx={{ fontWeight: 800, py: 1.25 }}>
-                          Current plan
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="contained"
-                          disabled={purchasingPlan === plan.id}
-                          startIcon={purchasingPlan === plan.id ? <CircularProgress size={16} color="inherit" /> : undefined}
-                          onClick={() => purchase(plan)}
-                          sx={{ fontWeight: 800, py: 1.25 }}
-                        >
-                          {purchasingPlan === plan.id ? 'Processing…' : `Subscribe · ${formatPlanPrice(plan.price, plan.currency)}`}
-                        </Button>
-                      )}
-                    </Card>
-                  </motion.div>
-                </Grid>
-              );
-            })}
+            {plans.map((plan, index) => (
+              <Grid key={plan.id} size={{ xs: 12, sm: 6, lg: 4 }}>
+                <PlanCard
+                  plan={plan}
+                  isCurrent={current?.plan.id === plan.id}
+                  isPopular={index === 1 && plans.length > 1}
+                  purchasing={purchasingPlan === plan.id}
+                  onPurchase={purchase}
+                />
+              </Grid>
+            ))}
           </Grid>
         </>
       )}
@@ -512,19 +512,10 @@ export const SubscriptionPlansPage: React.FC<SubscriptionPlansPageProps> = ({ ro
                 </Typography>
               </Stack>
 
-              <Typography variant="subtitle1" fontWeight={800} sx={{ mb: 1.5 }}>
-                Payment method
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                You will complete the payment securely in the Razorpay checkout — cards, UPI and
+                net banking are all supported there.
               </Typography>
-              <Stack spacing={1.25} sx={{ mb: 3 }}>
-                {PAYMENT_METHOD_OPTIONS.map((method) => (
-                  <PaymentMethodCard
-                    key={method.id}
-                    method={method}
-                    selected={paymentMethod === method.id}
-                    onSelect={() => setPaymentMethod(method.id)}
-                  />
-                ))}
-              </Stack>
 
               <InvoicePreview
                 subtotal={checkoutPlan.price}
@@ -563,7 +554,7 @@ export const SubscriptionPlansPage: React.FC<SubscriptionPlansPageProps> = ({ ro
                 {processingPayment ? 'Processing…' : `Pay ${formatCurrency(checkoutPlan.price, checkoutPlan.currency === 'CREDITS' ? 'INR' : (checkoutPlan.currency ?? 'INR'))}`}
               </Button>
               <Typography variant="caption" color="text.disabled" sx={{ display: 'block', textAlign: 'center', mt: 1.5 }}>
-                Secured by Stripe · Razorpay · UPI — instant activation
+                Secured by Razorpay · UPI, cards & net banking — monthly billing, cancel anytime
               </Typography>
             </Box>
           </>

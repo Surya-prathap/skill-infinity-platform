@@ -7,8 +7,6 @@ import com.skillinfinity.wallet.dto.request.DebitRequest;
 import com.skillinfinity.wallet.dto.request.FreezeRequest;
 import com.skillinfinity.wallet.dto.request.WalletRequest;
 import com.skillinfinity.wallet.dto.request.WithdrawalRequestDto;
-import com.skillinfinity.wallet.dto.response.LedgerEntryResponse;
-import com.skillinfinity.wallet.dto.response.RewardResponse;
 import com.skillinfinity.wallet.dto.response.TransactionResponse;
 import com.skillinfinity.wallet.dto.response.WalletAuditResponse;
 import com.skillinfinity.wallet.dto.response.WalletBalanceResponse;

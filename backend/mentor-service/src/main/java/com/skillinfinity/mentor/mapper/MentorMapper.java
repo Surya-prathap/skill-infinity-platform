@@ -1,8 +1,6 @@
 package com.skillinfinity.mentor.mapper;
 
-import com.skillinfinity.mentor.dto.response.AchievementResponse;
 import com.skillinfinity.mentor.dto.response.AvailabilityResponse;
-import com.skillinfinity.mentor.dto.response.CertificationResponse;
 import com.skillinfinity.mentor.dto.response.DashboardResponse;
 import com.skillinfinity.mentor.dto.response.EducationResponse;
 import com.skillinfinity.mentor.dto.response.ExperienceResponse;
@@ -16,8 +14,6 @@ import com.skillinfinity.mentor.dto.response.MentorSummaryResponse;
 import com.skillinfinity.mentor.dto.response.PricingResponse;
 import com.skillinfinity.mentor.dto.response.SocialProfileResponse;
 import com.skillinfinity.mentor.dto.response.TimeSlotResponse;
-import com.skillinfinity.mentor.entity.Achievement;
-import com.skillinfinity.mentor.entity.Certification;
 import com.skillinfinity.mentor.entity.Education;
 import com.skillinfinity.mentor.entity.Experience;
 import com.skillinfinity.mentor.entity.Expertise;
@@ -45,8 +41,6 @@ public interface MentorMapper {
     @Mapping(target = "availabilities", source = "availabilities", qualifiedByName = "toAvailabilityResponseList")
     @Mapping(target = "pricingList", source = "pricingList", qualifiedByName = "toPricingResponseList")
     @Mapping(target = "languages", source = "languages", qualifiedByName = "toLanguageResponseList")
-    @Mapping(target = "certifications", source = "certifications", qualifiedByName = "toCertificationResponseList")
-    @Mapping(target = "achievements", source = "achievements", qualifiedByName = "toAchievementResponseList")
     @Mapping(target = "experiences", source = "experiences", qualifiedByName = "toExperienceResponseList")
     @Mapping(target = "educationList", source = "educationList", qualifiedByName = "toEducationResponseList")
     @Mapping(target = "socialProfiles", source = "socialProfiles", qualifiedByName = "toSocialProfileResponseList")
@@ -93,19 +87,6 @@ public interface MentorMapper {
 
     @Named("toLanguageResponseList")
     List<LanguageResponse> toLanguageResponseList(List<Language> languages);
-
-    @Named("toCertificationResponse")
-    @Mapping(target = "verificationStatus", expression = "java(certification.getVerificationStatus() != null ? certification.getVerificationStatus().name() : null)")
-    CertificationResponse toCertificationResponse(Certification certification);
-
-    @Named("toCertificationResponseList")
-    List<CertificationResponse> toCertificationResponseList(List<Certification> certifications);
-
-    @Named("toAchievementResponse")
-    AchievementResponse toAchievementResponse(Achievement achievement);
-
-    @Named("toAchievementResponseList")
-    List<AchievementResponse> toAchievementResponseList(List<Achievement> achievements);
 
     @Named("toExperienceResponse")
     ExperienceResponse toExperienceResponse(Experience experience);

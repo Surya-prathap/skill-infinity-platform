@@ -103,7 +103,15 @@ export default defineConfig({
     setupFiles: ['./vitest.setup.ts'],
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     css: false,
-    testTimeout: 20000,
-    hookTimeout: 20000,
+    // The suite renders heavy MUI + framer-motion pages in jsdom; running too
+    // many files at once starves the CPU and makes fixed-sleep tests flake.
+    // Cap parallelism so timing (not contention) decides results.
+    maxWorkers: 4,
+    fileParallelism: true,
+    // Heavy MUI + framer-motion pages render slowly when the whole suite runs
+    // in parallel; individual renders can take >20s, so keep the budget well
+    // above the slowest test (assertions still run against real content).
+    testTimeout: 40000,
+    hookTimeout: 30000,
   },
 });

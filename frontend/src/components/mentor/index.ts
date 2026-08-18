@@ -8,6 +8,4 @@ export { AvailabilityCalendar } from './AvailabilityCalendar';
 export { CalendarSlot } from './CalendarSlot';
 export { AnalyticsCard } from './AnalyticsCard';
 export { ProgressCard } from './ProgressCard';
-export { CertificateCard } from './CertificateCard';
-export { AchievementCard } from './AchievementCard';
 export { SettingsSection } from './SettingsSection';

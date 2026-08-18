@@ -18,11 +18,11 @@ declare module 'axios' {
   }
 }
 import { APP_CONFIG } from '@/config';
-import { API_ENDPOINTS } from '@/constants';
+import { API_ENDPOINTS, PERSIST_KEYS } from '@/constants';
 import type { ApiResponse, AuthResponse } from '@/types';
 import { tokenManager } from './tokenManager';
 import { requestStarted, requestFinished } from './loadingBridge';
-import { onSessionExpired } from './sessionExpiryBridge';
+import { onSessionExpired, onTokensRefreshed } from './sessionExpiryBridge';
 
 interface RetryableRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
@@ -86,6 +86,9 @@ const refreshAccessToken = async (): Promise<string | null> => {
     const data = response.data?.data;
     if (!data?.accessToken) return null;
     tokenManager.setTokens(data.accessToken, data.refreshToken ?? refreshToken);
+    // Keep the Redux session in sync so the UI never holds a stale token that
+    // would be persisted over the fresh one on the next store write.
+    onTokensRefreshed(data.accessToken, data.refreshToken ?? refreshToken);
     return data.accessToken;
   } catch {
     return null;
@@ -98,6 +101,14 @@ let redirecting = false;
 const handleSessionExpired = async (): Promise<void> => {
   tokenManager.clearTokens();
   onSessionExpired();
+  // Drop the persisted session blob synchronously: redux-persist writes it
+  // asynchronously, so without this the hard reload below could rehydrate a
+  // stale session and immediately bounce the user back in (then out) again.
+  try {
+    window.sessionStorage.removeItem(PERSIST_KEYS.ROOT);
+  } catch {
+    /* storage unavailable — tokens are already cleared */
+  }
   if (redirecting) return;
   if (window.location.pathname.startsWith('/login')) return;
   redirecting = true;
@@ -124,22 +135,29 @@ apiClient.interceptors.response.use(
     // GC-stalled, proxy hiccup, etc.): the request never received an HTTP
     // response, so it is safe to retry once. Timeouts (ECONNABORTED) and
     // explicit cancellations are excluded — they should surface immediately.
-    // If the first attempt actually succeeded server-side but the response was
-    // lost, a retried register/login simply returns the duplicate-account
-    // message, which the auth forms already handle gracefully.
-    if (!error.response && error.code !== 'ECONNABORTED' && error.code !== 'ERR_CANCELED') {
-      if (!original?._networkRetry) {
-        original!._networkRetry = true;
-        await new Promise((resolve) => window.setTimeout(resolve, 600));
-        return apiClient(original!);
-      }
+    // Only idempotent reads (GET/HEAD/OPTIONS) are retried: re-sending an auth
+    // POST that actually succeeded server-side mints a second refresh token
+    // and makes a slow login feel like it ran "three times" — the auth forms
+    // surface the backend error directly instead.
+    const method = (original?.method ?? 'get').toUpperCase();
+    const isIdempotent = method === 'GET' || method === 'HEAD' || method === 'OPTIONS';
+    const isAuthEndpoint = original?.url?.includes('/auth/');
+    if (
+      !error.response &&
+      error.code !== 'ECONNABORTED' &&
+      error.code !== 'ERR_CANCELED' &&
+      isIdempotent &&
+      !isAuthEndpoint &&
+      !original?._networkRetry
+    ) {
+      original!._networkRetry = true;
+      await new Promise((resolve) => window.setTimeout(resolve, 600));
+      return apiClient(original!);
     }
 
     if (status !== 401 || !original) {
       return Promise.reject(error);
     }
-
-    const isAuthEndpoint = original.url?.includes('/auth/');
 
     // Never try to refresh for auth endpoints themselves (e.g. bad credentials).
     if (isAuthEndpoint) {

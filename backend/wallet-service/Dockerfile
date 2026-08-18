@@ -13,6 +13,9 @@ RUN apk add --no-cache curl wget && \
 WORKDIR /app
 COPY --from=builder /workspace/wallet-service/target/wallet-service-1.0.0-SNAPSHOT.jar /app/app.jar
 
+# Runs as a non-root user; give it a writable log directory
+RUN mkdir -p /app/logs && chown -R skillinfinity:skillinfinity /app/logs
+
 ENV JAVA_OPTS="-XX:+UseG1GC \
     -XX:MaxRAMPercentage=40.0 \
     -XX:MaxMetaspaceSize=192m \
@@ -23,6 +26,7 @@ ENV JAVA_OPTS="-XX:+UseG1GC \
     -XX:HeapDumpPath=/tmp/heapdump.hprof \
     -Djava.security.egd=file:/dev/./urandom \
     -Dfile.encoding=UTF-8 \
+    -Duser.timezone=Asia/Kolkata \
     -Dnetworkaddress.cache.ttl=60 \
     -Dnetworkaddress.cache.negative.ttl=10"
 

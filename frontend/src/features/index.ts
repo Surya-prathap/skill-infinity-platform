@@ -14,6 +14,5 @@ export * from './sessions';
 export * from './wallet';
 export * from './payments';
 export * from './reviews';
-export * from './meeting';
 /* Admin hooks are imported from their own feature module directly to avoid
    name collisions with other domains. */

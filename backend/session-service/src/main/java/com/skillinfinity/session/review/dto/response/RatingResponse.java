@@ -13,7 +13,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Rating and analytics response")
+@Schema(description = "Rating summary response")
 public class RatingResponse {
 
     @Schema(description = "Mentor ID")
@@ -21,9 +21,6 @@ public class RatingResponse {
 
     @Schema(description = "Average rating")
     private double averageRating;
-
-    @Schema(description = "Median rating")
-    private double medianRating;
 
     @Schema(description = "Total number of reviews")
     private int totalReviews;
@@ -53,23 +50,6 @@ public class RatingResponse {
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
-    @Schema(description = "Top rated mentor response")
-    public static class TopMentorResponse {
-
-        @Schema(description = "Mentor ID")
-        private UUID mentorId;
-
-        @Schema(description = "Average rating")
-        private double averageRating;
-
-        @Schema(description = "Total reviews")
-        private long totalReviews;
-    }
-
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
     @Schema(description = "Rating statistics response")
     public static class RatingStatisticsResponse {
 
@@ -79,25 +59,7 @@ public class RatingResponse {
         @Schema(description = "Average rating")
         private double averageRating;
 
-        @Schema(description = "Median rating")
-        private double medianRating;
-
         @Schema(description = "Total reviews")
         private int totalReviews;
-
-        @Schema(description = "Total replies")
-        private int totalReplies;
-
-        @Schema(description = "Total helpful votes")
-        private int totalHelpfulVotes;
-
-        @Schema(description = "Total reports")
-        private int totalReports;
-
-        @Schema(description = "Review growth rate")
-        private double reviewGrowthRate;
-
-        @Schema(description = "Engagement score")
-        private double engagementScore;
     }
 }

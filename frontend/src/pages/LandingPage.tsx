@@ -173,9 +173,14 @@ export const LandingPage: React.FC = () => {
   // Real data from the mentor-service search endpoint (public). No hardcoded
   // mentors or fabricated statistics — empty states are shown when there is
   // no real data to display.
+  //
+  // Only the top-4 mentors are rendered; `totalElements` still carries the
+  // real platform count for the hero stats. Fetching 100 full summary rows
+  // (each mapping the mentor's profile + statistics) made the hero + Top
+  // Mentors section wait on a heavy request before anything painted.
   const { data, isLoading, isOffline } = useMentorSearch({
     page: 0,
-    size: 100,
+    size: 8,
     sortBy: 'rating',
     sortDirection: 'DESC',
   });

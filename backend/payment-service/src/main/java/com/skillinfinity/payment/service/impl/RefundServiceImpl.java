@@ -22,7 +22,6 @@ import com.skillinfinity.payment.repository.RefundRepository;
 import com.skillinfinity.payment.service.RefundService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -43,7 +42,6 @@ import java.util.concurrent.ThreadLocalRandom;
 @RequiredArgsConstructor
 public class RefundServiceImpl implements RefundService {
 
-    private static final String CACHE_PAYMENT_SUMMARY = "paymentSummary";
 
     private final PaymentRepository paymentRepository;
     private final RefundRepository refundRepository;
@@ -55,7 +53,6 @@ public class RefundServiceImpl implements RefundService {
 
     @Override
     @Transactional
-    @CacheEvict(value = {CACHE_PAYMENT_SUMMARY, "coupon"}, allEntries = true)
     public PaymentResponse requestRefund(UUID userId, RefundRequest request) {
         Payment payment = paymentRepository.findById(UUID.fromString(request.getPaymentId()))
                 .orElseThrow(() -> new ResourceNotFoundException("Payment", request.getPaymentId()));
@@ -106,7 +103,6 @@ public class RefundServiceImpl implements RefundService {
 
     @Override
     @Transactional
-    @CacheEvict(value = {CACHE_PAYMENT_SUMMARY, "coupon"}, allEntries = true)
     public PaymentResponse approveRefund(UUID adminId, UUID refundId) {
         Refund refund = refundRepository.findById(refundId)
                 .orElseThrow(() -> new ResourceNotFoundException("Refund", refundId.toString()));

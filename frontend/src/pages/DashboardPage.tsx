@@ -15,13 +15,11 @@ import { AreaChart } from '@/components/charts';
 import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
 import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
 import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
-import StarOutlineOutlinedIcon from '@mui/icons-material/StarOutlineOutlined';
 import AccessTimeFilledOutlinedIcon from '@mui/icons-material/AccessTimeFilledOutlined';
 import AutoGraphOutlinedIcon from '@mui/icons-material/AutoGraphOutlined';
 import ExploreOutlinedIcon from '@mui/icons-material/ExploreOutlined';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import ArrowUpwardOutlinedIcon from '@mui/icons-material/ArrowUpwardOutlined';
-import StarIcon from '@mui/icons-material/Star';
 import { motion } from 'framer-motion';
 import { Link as RouterLink } from 'react-router-dom';
 import dayjs from 'dayjs';
@@ -59,10 +57,10 @@ export const DashboardPage: React.FC = () => {
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
   const firstName = profile?.firstName || user?.firstName || user?.username || 'there';
 
-  const { stats, learningProgress, upcomingSessions, mentorsQuery, reviewsQuery } = dashboard;
+  const { stats, learningProgress, upcomingSessions, mentorsQuery } = dashboard;
 
-  const communityAllowance = useCommunityAllowanceQuery().allowance;
-  const communityQuery = useUpcomingCommunitySessionsQuery(0, 3);
+  const communityAllowance = useCommunityAllowanceQuery({ silent: true }).allowance;
+  const communityQuery = useUpcomingCommunitySessionsQuery(0, 3, { silent: true });
   const communitySessions = communityQuery.data.content;
   const joinCommunity = useJoinCommunitySessionMutation();
 
@@ -565,7 +563,7 @@ export const DashboardPage: React.FC = () => {
         </Grid>
       </Grid>
 
-      {/* ================= Activity + reviews + mentors ================= */}
+      {/* ================= Activity + mentors ================= */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid size={{ xs: 12, md: 4 }}>
           <motion.div initial="hidden" animate="visible" variants={fadeUp} style={{ height: '100%' }}>
@@ -581,46 +579,7 @@ export const DashboardPage: React.FC = () => {
             </Card>
           </motion.div>
         </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
-          <motion.div initial="hidden" animate="visible" variants={fadeUp} style={{ height: '100%' }}>
-            <Card sx={{ p: { xs: 2.5, md: 3.5 }, height: '100%' }}>
-              <SectionHeader icon={<StarOutlineOutlinedIcon />} iconColor="#F59E0B" title="Top Reviews" subtitle="Highest rated feedback" />
-              <Stack spacing={2}>
-                {reviewsQuery.data?.length ? (
-                  reviewsQuery.data.map((review) => (
-                    <Box key={review.id} sx={{ p: 1.5, borderRadius: 2.5, bgcolor: 'action.hover' }}>
-                      <Stack direction="row" alignItems="center" gap={1.5} sx={{ mb: 0.75 }}>
-                        <Avatar name={review.learnerName ?? 'Learner'} size={34} />
-                        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                          <Typography variant="subtitle2" fontWeight={700} noWrap>
-                            {review.learnerName ?? 'Anonymous learner'}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary" noWrap>
-                            {review.publishedAt ? dayjs(review.publishedAt).fromNow() : 'Verified review'}
-                          </Typography>
-                        </Box>
-                        <Stack direction="row" alignItems="center" gap={0.25} sx={{ color: '#F59E0B' }}>
-                          <StarIcon sx={{ fontSize: 16 }} />
-                          <Typography variant="caption" fontWeight={700}>
-                            {review.rating.toFixed(1)}
-                          </Typography>
-                        </Stack>
-                      </Stack>
-                      <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
-                        “{review.content ?? review.title ?? 'No content'}”
-                      </Typography>
-                    </Box>
-                  ))
-                ) : (
-                  <Typography variant="body2" color="text.secondary" sx={{ py: 3, textAlign: 'center' }}>
-                    No reviews yet.
-                  </Typography>
-                )}
-              </Stack>
-            </Card>
-          </motion.div>
-        </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid size={{ xs: 12, md: 8 }}>
           <motion.div initial="hidden" animate="visible" variants={fadeUp} style={{ height: '100%' }}>
             <Card sx={{ p: { xs: 2.5, md: 3.5 }, height: '100%' }}>
               <SectionHeader

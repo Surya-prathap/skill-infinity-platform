@@ -37,6 +37,8 @@ export const CURRENCIES: SelectOption[] = [
 /* ---------------- Session durations ---------------- */
 
 export const SESSION_DURATIONS: SelectOption[] = [
+  { label: '10 minutes', value: 10 },
+  { label: '20 minutes', value: 20 },
   { label: '30 minutes', value: 30 },
   { label: '45 minutes', value: 45 },
   { label: '60 minutes (1 hour)', value: 60 },
@@ -47,6 +49,8 @@ export const SESSION_DURATIONS: SelectOption[] = [
 /* ---------------- Slot durations ---------------- */
 
 export const SLOT_DURATIONS: SelectOption[] = [
+  { label: '10 min slots', value: 10 },
+  { label: '20 min slots', value: 20 },
   { label: '30 min slots', value: 30 },
   { label: '45 min slots', value: 45 },
   { label: '60 min slots', value: 60 },
@@ -137,15 +141,12 @@ export const TIMEZONES: SelectOption[] = [
 
 export const WIZARD_STEPS = [
   { id: 'personal', label: 'Personal', icon: 'person' },
-  { id: 'experience', label: 'Experience', icon: 'work' },
   { id: 'skills', label: 'Skills', icon: 'bolt' },
   { id: 'expertise', label: 'Expertise', icon: 'lightbulb' },
   { id: 'categories', label: 'Categories', icon: 'category' },
   { id: 'pricing', label: 'Pricing', icon: 'price' },
   { id: 'availability', label: 'Availability', icon: 'calendar' },
-  { id: 'certificates', label: 'Certificates', icon: 'award' },
-  { id: 'verification', label: 'Verification', icon: 'shield' },
-  { id: 'preview', label: 'Preview', icon: 'preview' },
+  { id: 'review', label: 'Review & Submit', icon: 'shield' },
 ] as const;
 
 export type WizardStepId = (typeof WIZARD_STEPS)[number]['id'];

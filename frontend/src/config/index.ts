@@ -7,7 +7,9 @@ export const APP_CONFIG = {
   name: import.meta.env.VITE_APP_NAME ?? 'Skill Infinity',
   version: import.meta.env.VITE_APP_VERSION ?? '0.1.0',
   apiBaseUrl: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1',
-  apiTimeout: Number(import.meta.env.VITE_API_TIMEOUT ?? 30000),
+  // 15s is plenty for the microservice chain and keeps a hung backend from
+  // pinning the global loading bar (and the user) for half a minute.
+  apiTimeout: Number(import.meta.env.VITE_API_TIMEOUT ?? 15000),
   isProduction: import.meta.env.PROD,
   isDevelopment: import.meta.env.DEV,
 } as const;

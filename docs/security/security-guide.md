@@ -87,23 +87,11 @@ This document outlines the security architecture and practices implemented in th
 - Database credentials stored as environment variables
 - Per-service database isolation
 
-### Redis
-
-- Redis connections authenticated with password
-- Data encrypted with application-level encryption
-- Cache TTL prevents stale data exposure
-
 ### RabbitMQ
 
 - TLS encryption for message transport
 - Vhost per service for isolation
 - Queue access restricted by service
-
-### MinIO
-
-- SSL/TLS for API access
-- Bucket policies restrict access
-- Pre-signed URLs for temporary access
 
 ## Logging Security
 

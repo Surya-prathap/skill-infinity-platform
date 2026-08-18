@@ -34,7 +34,7 @@ import {
   useWithdrawalsQuery,
 } from '@/features/wallet';
 import type { Withdrawal } from '@/types';
-import { formatCompactNumber, formatCurrency } from '@/utils';
+import { formatCompactNumber, formatCurrency, formatDate } from '@/utils';
 
 const CREDIT_VALUE_INR = 10;
 const PLATFORM_FEE_PERCENT = 10;
@@ -189,7 +189,7 @@ const WithdrawalPanel: React.FC = () => {
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
                       Gross {formatCurrency(w.grossAmountInr)} · fee {formatCurrency(w.platformFeeInr)} ·{' '}
-                      {w.createdAt ? new Date(w.createdAt).toLocaleDateString('en-IN') : ''}
+                      {formatDate(w.createdAt)}
                     </Typography>
                   </Box>
                   <Chip

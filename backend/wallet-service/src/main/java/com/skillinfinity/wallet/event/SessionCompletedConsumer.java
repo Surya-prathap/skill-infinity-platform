@@ -44,10 +44,13 @@ public class SessionCompletedConsumer {
             BigDecimal credits = event.get("credits") != null
                     ? new BigDecimal(event.get("credits").toString())
                     : BigDecimal.ZERO;
+            boolean community = event.get("community") != null
+                    && Boolean.parseBoolean(event.get("community").toString());
 
-            walletService.settleSessionCredits(sessionId, learnerId, mentorId, credits);
-            log.info("Settled completed session credits: sessionId={}, learnerId={}, mentorId={}, credits={}",
-                    sessionId, learnerId, mentorId, credits);
+            walletService.settleSessionCredits(sessionId, learnerId, mentorId, credits, community);
+            log.info("Settled completed session credits: sessionId={}, learnerId={}, mentorId={}, "
+                            + "credits={}, community={}",
+                    sessionId, learnerId, mentorId, credits, community);
         } catch (Exception e) {
             log.error("Failed to settle session completed event: {}", event, e);
         }

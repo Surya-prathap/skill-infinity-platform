@@ -7,13 +7,15 @@ spring:
   config:
     import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
   datasource:
-    url: jdbc:mysql://${USER_DB_HOST:localhost}:${USER_DB_PORT:3306}/${USER_DB_NAME:skill_infinity_user}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    url: jdbc:mysql://${USER_DB_HOST:localhost}:${USER_DB_PORT:3306}/${USER_DB_NAME:skill_infinity_user}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Kolkata
     username: ${USER_DB_USERNAME:root}
     password: ${USER_DB_PASSWORD:root123}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: 10
       minimum-idle: 5
+  jackson:
+    time-zone: Asia/Kolkata
   jpa:
     hibernate:
       ddl-auto: update

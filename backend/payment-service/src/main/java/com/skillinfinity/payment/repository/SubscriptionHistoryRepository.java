@@ -18,6 +18,13 @@ public interface SubscriptionHistoryRepository extends JpaRepository<Subscriptio
     Optional<SubscriptionHistory> findTopByUserIdAndStatusOrderByCreatedAtDesc(
             UUID userId, SubscriptionStatus status);
 
+    Optional<SubscriptionHistory> findByRazorpaySubscriptionId(String razorpaySubscriptionId);
+
+    Optional<SubscriptionHistory> findByPaymentId(UUID paymentId);
+
+    Optional<SubscriptionHistory> findTopByUserIdAndPlanIdAndStatusOrderByCreatedAtDesc(
+            UUID userId, UUID planId, SubscriptionStatus status);
+
     Page<SubscriptionHistory> findByUserIdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
 
     List<SubscriptionHistory> findByStatusAndExpiresAtBefore(SubscriptionStatus status, LocalDateTime dateTime);

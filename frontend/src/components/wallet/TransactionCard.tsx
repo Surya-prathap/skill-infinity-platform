@@ -10,8 +10,27 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { formatCurrency, formatDateTime } from '@/utils';
 import type { WalletTransaction } from '@/types';
 
-const isCredit = (type: string): boolean =>
-  ['CREDIT', 'REWARD', 'REFUND'].includes(type.toUpperCase());
+type TransactionDirection = 'CREDIT' | 'DEBIT' | 'HOLD';
+
+/**
+ * Direction of a transaction. The backend provides a reliable `direction`
+ * field on every wallet transaction; the fallback below only covers legacy
+ * rows from before that field existed (never guess for current data).
+ */
+const getDirection = (transaction: WalletTransaction): TransactionDirection => {
+  const explicit = transaction.direction?.toUpperCase();
+  if (explicit === 'CREDIT' || explicit === 'DEBIT' || explicit === 'HOLD') {
+    return explicit;
+  }
+  const type = transaction.transactionType.toUpperCase();
+  if (['CREDIT_PURCHASE', 'CREDIT_REFUND', 'PROMOTIONAL_CREDIT', 'REWARD_CREDIT', 'BONUS_CREDIT', 'SESSION_PAYMENT', 'REFERRAL_REWARD', 'COUPON_REDEMPTION', 'CREDIT', 'REWARD', 'REFUND'].includes(type)) {
+    return 'CREDIT';
+  }
+  if (['CREDIT_CONSUMPTION', 'CREDIT_TRANSFER', 'CREDIT_EXPIRATION', 'WITHDRAWAL', 'DEBIT'].includes(type)) {
+    return 'DEBIT';
+  }
+  return 'HOLD';
+};
 
 const TYPE_ICON: Record<string, React.ReactNode> = {
   CREDIT: <AddOutlinedIcon sx={{ fontSize: 18 }} />,
@@ -33,8 +52,15 @@ interface TransactionCardProps {
 }
 
 export const TransactionCard: React.FC<TransactionCardProps> = ({ transaction, index = 0 }) => {
-  const credit = isCredit(transaction.transactionType);
-  const color = credit ? '#10B981' : '#EF4444';
+  const direction = getDirection(transaction);
+  // CREDIT = gained (green +), DEBIT = spent (red −), HOLD = frozen/released (neutral).
+  const color = direction === 'CREDIT' ? '#10B981' : direction === 'DEBIT' ? '#EF4444' : '#64748B';
+  const icon =
+    direction === 'CREDIT'
+      ? <AddOutlinedIcon sx={{ fontSize: 18 }} />
+      : direction === 'DEBIT'
+        ? <RemoveOutlinedIcon sx={{ fontSize: 18 }} />
+        : <LockOutlinedIcon sx={{ fontSize: 18 }} />;
   // Wallet-service transactions are denominated in credits; payment-service
   // transactions carry a real currency code (INR).
   const creditDenominated =
@@ -77,7 +103,7 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({ transaction, i
             flexShrink: 0,
           }}
         >
-          {TYPE_ICON[transaction.transactionType] ?? <AddOutlinedIcon sx={{ fontSize: 18 }} />}
+          {TYPE_ICON[transaction.transactionType] ?? icon}
         </Box>
         <Box sx={{ flexGrow: 1, minWidth: 0 }}>
           <Typography variant="subtitle2" fontWeight={700} noWrap>
@@ -96,7 +122,7 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({ transaction, i
         </Box>
         <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
           <Typography variant="subtitle1" fontWeight={800} sx={{ color }}>
-            {credit ? '+' : '−'}
+            {direction === 'HOLD' ? '' : direction === 'CREDIT' ? '+' : '−'}
             {amountLabel}
           </Typography>
           <StatusBadge

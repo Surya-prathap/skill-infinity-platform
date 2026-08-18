@@ -78,23 +78,11 @@ public class Mentor {
 
     @OneToMany(mappedBy = "mentor", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @Builder.Default
-    private List<Certification> certifications = new ArrayList<>();
-
-    @OneToMany(mappedBy = "mentor", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
-    @Builder.Default
-    private List<Achievement> achievements = new ArrayList<>();
-
-    @OneToMany(mappedBy = "mentor", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
-    @Builder.Default
     private List<Experience> experiences = new ArrayList<>();
 
     @OneToMany(mappedBy = "mentor", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @Builder.Default
     private List<Education> educationList = new ArrayList<>();
-
-    @OneToMany(mappedBy = "mentor", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
-    @Builder.Default
-    private List<VerificationDocument> verificationDocuments = new ArrayList<>();
 
     @OneToMany(mappedBy = "mentor", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @Builder.Default

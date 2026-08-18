@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "meeting_links")
+@Table(name = "meeting_links", uniqueConstraints = @UniqueConstraint(name = "uk_meeting_links_session", columnNames = "session_id"))
 @Getter
 @Setter
 @NoArgsConstructor

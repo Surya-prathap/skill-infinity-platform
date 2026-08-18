@@ -14,6 +14,15 @@ spring:
         locator:
           enabled: true
           lower-case-service-id: true
+
+      # Evict idle pooled connections before upstream keep-alive close (~60s)
+      # so the first request after idle never waits on a stale socket (10-20s).
+      httpclient:
+        pool:
+          max-idle-time: 30s
+          max-life-time: 10m
+          evict-in-background: 60s
+        response-timeout: ${GATEWAY_RESPONSE_TIMEOUT:60s}
       routes:
         - id: identity-service
           uri: lb://identity-service

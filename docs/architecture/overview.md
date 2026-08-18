@@ -32,7 +32,5 @@ Skill Infinity follows a **Microservices Architecture** with the following key c
 - **Frontend**: React + TypeScript + Material UI
 - **Backend**: Java 21, Spring Boot 3.x, Spring Cloud
 - **Database**: MySQL (per-service schemas)
-- **Cache**: Redis
 - **Message Broker**: RabbitMQ
-- **Object Storage**: MinIO
 - **Containerization**: Docker + Docker Compose

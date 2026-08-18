@@ -11,7 +11,13 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "sessions")
+@Table(name = "sessions", indexes = {
+        @Index(name = "idx_sessions_mentor", columnList = "mentor_id"),
+        @Index(name = "idx_sessions_learner", columnList = "learner_id"),
+        @Index(name = "idx_sessions_mentor_start", columnList = "mentor_id, start_time"),
+        @Index(name = "idx_sessions_learner_start", columnList = "learner_id, start_time"),
+        @Index(name = "idx_sessions_community_status_start", columnList = "is_community, status, start_time")
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -80,6 +86,14 @@ public class Session {
     @Column(name = "is_community", nullable = false)
     @Builder.Default
     private boolean community = false;
+
+    /**
+     * Learner capacity for group/community sessions (1–20). Null for
+     * one-to-one professional sessions. The backend enforces the 20-learner
+     * maximum — a session at capacity rejects further joins.
+     */
+    @Column(name = "max_participants")
+    private Integer maxParticipants;
 
     @Column(name = "recording_url", length = 500)
     private String recordingUrl;

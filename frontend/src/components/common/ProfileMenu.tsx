@@ -7,10 +7,8 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks';
 import { Avatar } from '@/components/ui';
-import { ROUTES } from '@/constants';
-import { ROLE_LABELS } from '@/constants';
+import { getPrimaryRole, ROUTES, ROLE_LABELS } from '@/constants';
 import { showSuccess } from '@/utils';
-import type { Role } from '@/types';
 
 export const ProfileMenu: React.FC = () => {
   const { user, logout } = useAuth();
@@ -28,7 +26,7 @@ export const ProfileMenu: React.FC = () => {
   };
 
   const displayName = user?.firstName || user?.username || user?.email || 'User';
-  const primaryRole: Role | undefined = user?.roles?.[0];
+  const primaryRole = getPrimaryRole(user?.roles);
 
   return (
     <>

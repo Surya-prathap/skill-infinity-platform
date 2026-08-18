@@ -7,8 +7,6 @@ import com.skillinfinity.wallet.dto.request.DebitRequest;
 import com.skillinfinity.wallet.dto.request.FreezeRequest;
 import com.skillinfinity.wallet.dto.request.WalletRequest;
 import com.skillinfinity.wallet.dto.request.WithdrawalRequestDto;
-import com.skillinfinity.wallet.dto.response.LedgerEntryResponse;
-import com.skillinfinity.wallet.dto.response.RewardResponse;
 import com.skillinfinity.wallet.dto.response.TransactionResponse;
 import com.skillinfinity.wallet.dto.response.WalletBalanceResponse;
 import com.skillinfinity.wallet.dto.response.WalletResponse;
@@ -16,7 +14,6 @@ import com.skillinfinity.wallet.dto.response.WalletAuditResponse;
 import com.skillinfinity.wallet.dto.response.WalletStatisticsResponse;
 import com.skillinfinity.wallet.dto.response.WithdrawalResponse;
 import com.skillinfinity.wallet.entity.CreditTransaction;
-import com.skillinfinity.wallet.entity.Reward;
 import com.skillinfinity.wallet.entity.Wallet;
 import com.skillinfinity.wallet.entity.WalletAudit;
 import com.skillinfinity.wallet.entity.WalletBalance;
@@ -36,7 +33,6 @@ import com.skillinfinity.wallet.exception.WalletFrozenException;
 import com.skillinfinity.wallet.exception.WalletNotFoundException;
 import com.skillinfinity.wallet.mapper.WalletMapper;
 import com.skillinfinity.wallet.repository.CreditTransactionRepository;
-import com.skillinfinity.wallet.repository.RewardRepository;
 import com.skillinfinity.wallet.repository.WalletAuditRepository;
 import com.skillinfinity.wallet.repository.WalletBalanceRepository;
 import com.skillinfinity.wallet.repository.WalletLedgerRepository;
@@ -47,8 +43,6 @@ import com.skillinfinity.wallet.service.WalletService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -63,6 +57,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -71,9 +66,6 @@ import java.util.concurrent.ThreadLocalRandom;
 @RequiredArgsConstructor
 public class WalletServiceImpl implements WalletService {
 
-    private static final String CACHE_BALANCE = "walletBalance";
-    private static final String CACHE_DETAILS = "walletDetails";
-    private static final String CACHE_STATISTICS = "walletStatistics";
     private static final String CURRENCY_CREDITS = "CREDITS";
 
     /** One-time promotional grant every new learner receives. */
@@ -83,8 +75,8 @@ public class WalletServiceImpl implements WalletService {
     /**
      * Business rules (admin-configurable via env/application.yml):
      * 1 withdrawable credit = ₹10; 10% platform commission on withdrawals;
-     * minimum withdrawal 10 credits; mentor earnings split 50% learning /
-     * 50% withdrawable by default.
+     * minimum withdrawal 10 credits. Mentor earnings follow the credit origin
+     * (welcome/learning → learning credits, purchased → withdrawable).
      */
     @Value("${app.withdrawal.credit-value-inr:10}")
     private BigDecimal creditValueInr = BigDecimal.TEN;
@@ -95,14 +87,11 @@ public class WalletServiceImpl implements WalletService {
     @Value("${app.withdrawal.min-credits:10}")
     private BigDecimal minWithdrawalCredits = BigDecimal.TEN;
 
-    @Value("${app.earning.learning-credit-percent:50.0}")
-    private BigDecimal learningCreditPercent = BigDecimal.valueOf(50);
 
     private final WalletRepository walletRepository;
     private final WalletBalanceRepository walletBalanceRepository;
     private final CreditTransactionRepository creditTransactionRepository;
     private final WalletLedgerRepository walletLedgerRepository;
-    private final RewardRepository rewardRepository;
     private final WalletAuditRepository walletAuditRepository;
     private final WalletStatisticsRepository walletStatisticsRepository;
     private final WithdrawalRequestRepository withdrawalRequestRepository;
@@ -111,7 +100,6 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     @Transactional
-    @CacheEvict(value = CACHE_BALANCE, allEntries = true)
     public WalletResponse createWallet(WalletRequest request) {
         if (walletRepository.existsByUserId(request.getUserId())) {
             throw new BadRequestException("Wallet already exists for userId: " + request.getUserId());
@@ -133,7 +121,6 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(value = CACHE_DETAILS, key = "#walletId", unless = "#result == null")
     public WalletResponse getWalletById(UUID walletId) {
         Wallet wallet = walletRepository.findById(walletId)
                 .orElseThrow(() -> new WalletNotFoundException(walletId.toString()));
@@ -142,7 +129,6 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     @Transactional
-    @Cacheable(value = CACHE_BALANCE, key = "#userId", unless = "#result == null")
     public WalletBalanceResponse getWalletBalance(UUID userId) {
         Wallet wallet = getOrCreateWallet(userId);
         WalletBalance balance = walletBalanceRepository.findByWalletId(wallet.getId())
@@ -152,7 +138,6 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     @Transactional
-    @CacheEvict(value = {CACHE_BALANCE, CACHE_DETAILS, CACHE_STATISTICS}, key = "#userId", allEntries = true)
     public TransactionResponse creditWallet(UUID userId, CreditRequest request) {
         Wallet wallet = getOrCreateWallet(userId);
         validateWalletActive(wallet);
@@ -190,7 +175,6 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     @Transactional
-    @CacheEvict(value = {CACHE_BALANCE, CACHE_DETAILS, CACHE_STATISTICS}, key = "#userId", allEntries = true)
     public TransactionResponse debitWallet(UUID userId, DebitRequest request) {
         Wallet wallet = getOrCreateWallet(userId);
         validateWalletActive(wallet);
@@ -222,7 +206,6 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     @Transactional
-    @CacheEvict(value = {CACHE_BALANCE, CACHE_DETAILS, CACHE_STATISTICS}, allEntries = true)
     public TransactionResponse freezeCredits(UUID userId, UUID walletId, FreezeRequest request) {
         Wallet wallet = walletRepository.findById(walletId)
                 .orElseThrow(() -> new WalletNotFoundException(walletId.toString()));
@@ -244,11 +227,13 @@ public class WalletServiceImpl implements WalletService {
         balance.setFrozenBalance(balance.getFrozenBalance().add(request.getAmount()));
         walletBalanceRepository.save(balance);
 
-        wallet.setFrozenAmount(wallet.getFrozenAmount().add(request.getAmount()));
+        // Legacy rows can carry NULL frozen_amount (column added later / raw inserts).
+        wallet.setFrozenAmount(Optional.ofNullable(wallet.getFrozenAmount()).orElse(BigDecimal.ZERO).add(request.getAmount()));
         walletRepository.save(wallet);
 
         CreditTransaction transaction = CreditTransaction.builder()
                 .wallet(wallet)
+                .transactionNumber(generateTransactionNumber())
                 .transactionType(TransactionType.FREEZE)
                 .status(TransactionStatus.COMPLETED)
                 .amount(request.getAmount())
@@ -267,13 +252,31 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     @Transactional
-    @CacheEvict(value = {CACHE_BALANCE, CACHE_DETAILS, CACHE_STATISTICS}, allEntries = true)
     public TransactionResponse releaseCredits(UUID userId, UUID walletId, FreezeRequest request) {
         Wallet wallet = walletRepository.findById(walletId)
                 .orElseThrow(() -> new WalletNotFoundException(walletId.toString()));
 
         if (!wallet.getUserId().equals(userId)) {
             throw new BadRequestException("Wallet does not belong to this user");
+        }
+
+        // Idempotency: a release may be retried after a network timeout where
+        // the wallet actually committed (or the session auto-complete job re-
+        // processes a session). Releasing the same reference twice would fail
+        // on the frozen-balance check below and leave the caller unable to
+        // complete its own state transition. If this reference was already
+        // released, treat the retry as a no-op success.
+        // NOTE: the same reference may appear on BOTH a FREEZE and a RELEASE
+        // transaction, so the lookup must filter by type — findByReferenceId
+        // alone throws when two rows share the reference.
+        String referenceId = request.getReferenceId();
+        if (referenceId != null && !referenceId.isBlank()) {
+            List<CreditTransaction> existingReleases = creditTransactionRepository
+                    .findByReferenceIdAndTransactionType(referenceId, TransactionType.RELEASE);
+            if (!existingReleases.isEmpty()) {
+                log.info("Release already recorded for reference {} — idempotent skip", referenceId);
+                return walletMapper.toTransactionResponse(existingReleases.get(0));
+            }
         }
 
         WalletBalance balance = findBalanceByWalletId(wallet.getId());
@@ -287,11 +290,13 @@ public class WalletServiceImpl implements WalletService {
         balance.setAvailableBalance(balance.getAvailableBalance().add(request.getAmount()));
         walletBalanceRepository.save(balance);
 
-        wallet.setFrozenAmount(wallet.getFrozenAmount().subtract(request.getAmount()));
+        BigDecimal frozen = Optional.ofNullable(wallet.getFrozenAmount()).orElse(BigDecimal.ZERO);
+        wallet.setFrozenAmount(frozen.subtract(request.getAmount()));
         walletRepository.save(wallet);
 
         CreditTransaction transaction = CreditTransaction.builder()
                 .wallet(wallet)
+                .transactionNumber(generateTransactionNumber())
                 .transactionType(TransactionType.RELEASE)
                 .status(TransactionStatus.COMPLETED)
                 .amount(request.getAmount())
@@ -310,7 +315,6 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     @Transactional
-    @CacheEvict(value = {CACHE_BALANCE, CACHE_DETAILS, CACHE_STATISTICS}, key = "#userId", allEntries = true)
     public TransactionResponse freezeByUser(UUID userId, FreezeRequest request) {
         Wallet wallet = getOrCreateWallet(userId);
         validateWalletActive(wallet);
@@ -319,7 +323,6 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     @Transactional
-    @CacheEvict(value = {CACHE_BALANCE, CACHE_DETAILS, CACHE_STATISTICS}, key = "#userId", allEntries = true)
     public TransactionResponse releaseByUser(UUID userId, FreezeRequest request) {
         Wallet wallet = getOrCreateWallet(userId);
         return releaseCredits(userId, wallet.getId(), request);
@@ -327,16 +330,22 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     @Transactional
-    @CacheEvict(value = {CACHE_BALANCE, CACHE_DETAILS, CACHE_STATISTICS}, allEntries = true)
-    public void settleSessionCredits(UUID sessionId, UUID learnerId, UUID mentorId, BigDecimal credits) {
+    public void settleSessionCredits(UUID sessionId, UUID learnerId, UUID mentorId, BigDecimal credits,
+                                     boolean community) {
         if (credits == null || credits.compareTo(BigDecimal.ZERO) <= 0) {
             log.info("No credit settlement for session {} (free/community)", sessionId);
             return;
         }
 
+        // Per-(session, learner) reference so a paid community session with
+        // several learners settles each learner's hold independently, while a
+        // redelivered RabbitMQ message never settles the same learner twice.
+        String reference = "SESSION-" + sessionId + "-" + learnerId;
+
         // Idempotency guard — a redelivered RabbitMQ message must not settle twice.
-        if (creditTransactionRepository.existsByReferenceId("SESSION-" + sessionId)) {
-            log.info("Session {} already settled — skipping duplicate settlement", sessionId);
+        if (creditTransactionRepository.existsByReferenceId(reference)) {
+            log.info("Session {} learner {} already settled — skipping duplicate settlement",
+                    sessionId, learnerId);
             return;
         }
 
@@ -346,7 +355,7 @@ public class WalletServiceImpl implements WalletService {
         boolean fromFrozen = learnerBalance.getFrozenBalance().compareTo(credits) >= 0;
         BigDecimal before = learnerBalance.getCurrentBalance();
 
-        applyPriorityDebit(learnerBalance, credits, fromFrozen);
+        CreditConsumption consumption = applyPriorityDebit(learnerBalance, credits, fromFrozen);
 
         CreditTransaction debit = CreditTransaction.builder()
                 .wallet(learnerWallet)
@@ -357,11 +366,15 @@ public class WalletServiceImpl implements WalletService {
                 .balanceBefore(before)
                 .balanceAfter(learnerBalance.getCurrentBalance())
                 .currency(CURRENCY_CREDITS)
-                .description("Session completed — credits consumed (session " + sessionId + ")")
-                .referenceId("SESSION-" + sessionId)
+                .description("Session completed — credits consumed (session " + sessionId
+                        + ", source: " + describeConsumption(consumption) + ")")
+                .referenceId(reference)
                 .referenceType("SESSION_CONSUMPTION")
                 .sessionId(sessionId)
                 .mentorId(mentorId)
+                .metadataJson("{\"welcome\":" + consumption.welcome().toPlainString()
+                        + ",\"purchased\":" + consumption.purchased().toPlainString()
+                        + ",\"learning\":" + consumption.learning().toPlainString() + "}")
                 .build();
         creditTransactionRepository.save(debit);
         updateWalletTotals(learnerWallet, credits, false, true);
@@ -371,20 +384,45 @@ public class WalletServiceImpl implements WalletService {
         auditWallet(learnerWallet, "SESSION_SETTLED",
                 "Session " + sessionId + " completed — " + credits + " credits consumed", learnerId);
 
-        // ---- Mentor: split earnings into learning + withdrawable buckets ----
-        BigDecimal learningShare = credits.multiply(learningCreditPercent)
-                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-        BigDecimal withdrawableShare = credits.subtract(learningShare);
-        creditMentorEarnings(mentorId, sessionId, learnerId, learningShare, withdrawableShare);
+        // ---- Mentor: source-based allocation (same rule for professional
+        // and community sessions) ----
+        //
+        // The origin of the credits is preserved throughout the transaction:
+        //   WELCOME credits     → LEARNING/EARNED credits for the mentor
+        //   LEARNING credits    → LEARNING/EARNED credits for the mentor
+        //   PURCHASED credits   → WITHDRAWABLE credits for the mentor
+        // Welcome/earned credits are never converted into withdrawable money.
+        BigDecimal learningShare = consumption.welcome().add(consumption.learning());
+        BigDecimal withdrawableShare = consumption.purchased();
+        creditMentorEarnings(mentorId, sessionId, learnerId, learningShare, withdrawableShare, reference);
 
-        log.info("Session {} settled: learner {} debited {} credits, mentor {} earned "
-                        + "{} learning + {} withdrawable",
-                sessionId, learnerId, credits, mentorId, learningShare, withdrawableShare);
+        log.info("Session {} settled (community={}): learner {} debited {} credits "
+                        + "({}), mentor {} earned ({} learning, {} withdrawable)",
+                sessionId, community, learnerId, credits, describeConsumption(consumption), mentorId,
+                learningShare.stripTrailingZeros().toPlainString(),
+                withdrawableShare.stripTrailingZeros().toPlainString());
+    }
+
+    private String describeConsumption(CreditConsumption consumption) {
+        StringBuilder sb = new StringBuilder();
+        if (consumption.welcome().signum() > 0) {
+            sb.append(consumption.welcome().stripTrailingZeros().toPlainString()).append(" welcome");
+        }
+        if (consumption.purchased().signum() > 0) {
+            if (!sb.isEmpty()) sb.append(", ");
+            sb.append(consumption.purchased().stripTrailingZeros().toPlainString()).append(" purchased");
+        }
+        if (consumption.learning().signum() > 0) {
+            if (!sb.isEmpty()) sb.append(", ");
+            sb.append(consumption.learning().stripTrailingZeros().toPlainString()).append(" learning");
+        }
+        return sb.isEmpty() ? "none" : sb.toString();
     }
 
     /** Credits a mentor's learning and withdrawable buckets after a completed session. */
     private void creditMentorEarnings(UUID mentorId, UUID sessionId, UUID learnerId,
-                                      BigDecimal learningShare, BigDecimal withdrawableShare) {
+                                      BigDecimal learningShare, BigDecimal withdrawableShare,
+                                      String referenceId) {
         Wallet wallet = getOrCreateWallet(mentorId);
         validateWalletActive(wallet);
         WalletBalance balance = findBalanceByWalletId(wallet.getId());
@@ -396,7 +434,7 @@ public class WalletServiceImpl implements WalletService {
             balance.setAvailableBalance(balance.getAvailableBalance().add(learningShare));
             walletBalanceRepository.save(balance);
             recordEarningTransaction(wallet, sessionId, learnerId, learningShare, before,
-                    "Learning credits earned from session " + sessionId, "LEARNING");
+                    "Learning credits earned from session " + sessionId, "LEARNING", referenceId);
         }
 
         if (withdrawableShare.compareTo(BigDecimal.ZERO) > 0) {
@@ -406,7 +444,7 @@ public class WalletServiceImpl implements WalletService {
             balance.setAvailableBalance(balance.getAvailableBalance().add(withdrawableShare));
             walletBalanceRepository.save(balance);
             recordEarningTransaction(wallet, sessionId, learnerId, withdrawableShare, before,
-                    "Withdrawable credits earned from session " + sessionId, "WITHDRAWABLE");
+                    "Withdrawable credits earned from session " + sessionId, "WITHDRAWABLE", referenceId);
         }
 
         wallet.setTotalCreditsEarned(wallet.getTotalCreditsEarned()
@@ -416,7 +454,8 @@ public class WalletServiceImpl implements WalletService {
     }
 
     private void recordEarningTransaction(Wallet wallet, UUID sessionId, UUID learnerId,
-                                          BigDecimal amount, BigDecimal balanceBefore, String description, String referenceType) {
+                                          BigDecimal amount, BigDecimal balanceBefore, String description,
+                                          String referenceType, String referenceId) {
         BigDecimal balanceAfter = balanceBefore.add(amount);
         CreditTransaction tx = CreditTransaction.builder()
                 .wallet(wallet)
@@ -428,7 +467,7 @@ public class WalletServiceImpl implements WalletService {
                 .balanceAfter(balanceAfter)
                 .currency(CURRENCY_CREDITS)
                 .description(description)
-                .referenceId("SESSION-" + sessionId)
+                .referenceId(referenceId)
                 .referenceType(referenceType)
                 .sessionId(sessionId)
                 .mentorId(learnerId)
@@ -439,7 +478,7 @@ public class WalletServiceImpl implements WalletService {
         auditWallet(wallet, "SESSION_EARNING", description, wallet.getUserId());
         eventPublisher.publishWalletCredited(
                 wallet.getId(), wallet.getUserId(), tx.getId(), tx.getTransactionNumber(),
-                amount, balanceAfter, description, "SESSION-" + sessionId, referenceType);
+                amount, balanceAfter, description, referenceId, referenceType);
     }
 
     // ============================================================
@@ -448,7 +487,6 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     @Transactional
-    @CacheEvict(value = {CACHE_BALANCE, CACHE_DETAILS, CACHE_STATISTICS}, key = "#userId", allEntries = true)
     public WithdrawalResponse requestWithdrawal(UUID userId, WithdrawalRequestDto request) {
         Wallet wallet = getOrCreateWallet(userId);
         validateWalletActive(wallet);
@@ -527,7 +565,6 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     @Transactional
-    @CacheEvict(value = {CACHE_BALANCE, CACHE_DETAILS, CACHE_STATISTICS}, allEntries = true)
     public WithdrawalResponse approveWithdrawal(UUID withdrawalId, UUID adminId) {
         WithdrawalRequest withdrawal = findWithdrawal(withdrawalId);
         if (!WithdrawalStatus.PENDING.equals(withdrawal.getStatus())) {
@@ -556,7 +593,6 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     @Transactional
-    @CacheEvict(value = {CACHE_BALANCE, CACHE_DETAILS, CACHE_STATISTICS}, allEntries = true)
     public WithdrawalResponse rejectWithdrawal(UUID withdrawalId, UUID adminId, String reason) {
         WithdrawalRequest withdrawal = findWithdrawal(withdrawalId);
         if (!WithdrawalStatus.PENDING.equals(withdrawal.getStatus())) {
@@ -608,7 +644,9 @@ public class WalletServiceImpl implements WalletService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    // Not read-only: a first-time user has no wallet yet, and getOrCreateWallet
+    // creates one (with the one-time welcome grant) inside this method.
+    @Transactional
     public PageResponse<TransactionResponse> getWalletHistory(UUID userId, int page, int size) {
         Wallet wallet = getOrCreateWallet(userId);
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
@@ -645,35 +683,6 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     @Transactional(readOnly = true)
-    public PageResponse<LedgerEntryResponse> getWalletLedger(UUID userId, int page, int size) {
-        Wallet wallet = findWalletByUserId(userId);
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<WalletLedger> ledgerPage = walletLedgerRepository
-                .findByWalletIdOrderByCreatedAtDesc(wallet.getId(), pageable);
-
-        List<LedgerEntryResponse> content = ledgerPage.getContent().stream()
-                .map(walletMapper::toLedgerEntryResponse)
-                .toList();
-
-        return PageResponse.of(content, page, size, ledgerPage.getTotalElements());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public PageResponse<RewardResponse> getRewards(UUID userId, int page, int size) {
-        Wallet wallet = findWalletByUserId(userId);
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<Reward> rewardPage = rewardRepository.findByWalletIdOrderByCreatedAtDesc(wallet.getId(), pageable);
-
-        List<RewardResponse> content = rewardPage.getContent().stream()
-                .map(walletMapper::toRewardResponse)
-                .toList();
-
-        return PageResponse.of(content, page, size, rewardPage.getTotalElements());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
     public PageResponse<WalletAuditResponse> getWalletAuditLog(UUID userId, int page, int size) {
         Wallet wallet = findWalletByUserId(userId);
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
@@ -688,7 +697,8 @@ public class WalletServiceImpl implements WalletService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    // Not read-only: getOrCreateWallet creates the wallet on first access.
+    @Transactional
     public WalletStatisticsResponse getWalletStatistics(UUID userId) {
         Wallet wallet = getOrCreateWallet(userId);
         WalletStatistics statistics = walletStatisticsRepository.findByWalletId(wallet.getId())
@@ -891,14 +901,21 @@ public class WalletServiceImpl implements WalletService {
         }
     }
 
+    /** How a debit was sourced across the learning-usable buckets. */
+    public record CreditConsumption(BigDecimal welcome, BigDecimal purchased, BigDecimal learning) {
+    }
+
     /**
      * Deducts from the learning-usable buckets in spec priority order
      * WELCOME → PURCHASED → LEARNING. When {@code consumedFromFrozen} is true
      * the amount was previously frozen (session booking hold) so only the
      * frozen balance and current balance decrease — the available balance has
      * already excluded it.
+     *
+     * @return the per-bucket consumption so the ledger can identify the
+     *         credit type that funded the debit
      */
-    private void applyPriorityDebit(WalletBalance balance, BigDecimal amount, boolean consumedFromFrozen) {
+    private CreditConsumption applyPriorityDebit(WalletBalance balance, BigDecimal amount, boolean consumedFromFrozen) {
         // Lazy migration: wallets created before the bucket columns existed have
         // zero bucket balances but a non-zero currentBalance. Treat the whole
         // legacy balance as purchased credits so old wallets stay spendable.
@@ -937,6 +954,7 @@ public class WalletServiceImpl implements WalletService {
             balance.setFrozenBalance(balance.getFrozenBalance().subtract(amount));
         }
         walletBalanceRepository.save(balance);
+        return new CreditConsumption(welcomeTake, purchasedTake, learningTake);
     }
 
     private BigDecimal min(BigDecimal a, BigDecimal b) {

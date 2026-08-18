@@ -26,6 +26,7 @@ ENV JAVA_OPTS="-XX:+UseG1GC \
     -XX:HeapDumpPath=/tmp/heapdump.hprof \
     -Djava.security.egd=file:/dev/./urandom \
     -Dfile.encoding=UTF-8 \
+    -Duser.timezone=Asia/Kolkata \
     -Dnetworkaddress.cache.ttl=60 \
     -Dnetworkaddress.cache.negative.ttl=10"
 

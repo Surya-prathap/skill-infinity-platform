@@ -10,7 +10,6 @@ import com.skillinfinity.mentor.repository.SubCategoryRepository;
 import com.skillinfinity.mentor.service.CategoryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,15 +29,9 @@ public class CategoryServiceImpl implements CategoryService {
     /**
      * Returns all active categories as plain DTOs. The result is mapped inside the
      * transaction so the lazy {@code subCategories} collections are fully initialized
-     * before the value is handed to the Redis cache (which serializes the value AFTER
-     * the transaction closes — caching raw entities caused a LazyInitializationException).
-     * <p>
-     * NOTE: collections must be mutable {@link ArrayList}s — {@code Stream.toList()}
-     * returns {@code ImmutableCollections$ListN}, a final package-private class the
-     * generic JSON serializer cannot instantiate when reading values back from Redis.
+     * before the entity is serialized (avoids LazyInitializationException).
      */
     @Override
-    @Cacheable(value = "categories", unless = "#result.isEmpty()")
     @Transactional(readOnly = true)
     public List<CategoryResponse> getAllCategories() {
         return categoryRepository.findByActiveTrueOrderByDisplayOrderAsc().stream()

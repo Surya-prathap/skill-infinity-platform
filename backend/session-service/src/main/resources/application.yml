@@ -7,7 +7,7 @@ spring:
   config:
     import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
   datasource:
-    url: jdbc:mysql://${SESSION_DB_HOST:localhost}:${SESSION_DB_PORT:3306}/${SESSION_DB_NAME:skill_infinity_session}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    url: jdbc:mysql://${SESSION_DB_HOST:localhost}:${SESSION_DB_PORT:3306}/${SESSION_DB_NAME:skill_infinity_session}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Kolkata
     username: ${SESSION_DB_USERNAME:root}
     password: ${SESSION_DB_PASSWORD:root123}
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -16,6 +16,8 @@ spring:
       minimum-idle: 5
       idle-timeout: 30000
       connection-timeout: 30000
+  jackson:
+    time-zone: Asia/Kolkata
   jpa:
     hibernate:
       ddl-auto: update
@@ -26,15 +28,6 @@ spring:
         format_sql: true
     open-in-view: false
   data:
-    redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
-      timeout: 2000ms
-      lettuce:
-        pool:
-          max-active: 8
-          max-idle: 4
-          min-idle: 2
   rabbitmq:
     host: ${RABBITMQ_HOST:localhost}
     port: ${RABBITMQ_PORT:5672}
@@ -53,11 +46,31 @@ spring:
 app:
   services:
     # Resolved by Docker DNS on the shared compose network; override for local runs.
+    mentor-service-url: ${MENTOR_SERVICE_URL:http://mentor-service:8083}
     wallet-service-url: ${WALLET_SERVICE_URL:http://wallet-service:8085}
+  meeting:
+    # How many minutes before the session start the Join button becomes active.
+    join-window-minutes: ${JOIN_WINDOW_MINUTES:10}
+    discord:
+      # The REAL Discord meeting invite (full URL, e.g.
+      # https://discord.gg/AbCdEfGh) — a permanent invite to the actual
+      # Skill Infinity Discord server. Every session returns this SAME invite
+      # to both mentor and learner. The service NEVER fabricates a discord.gg
+      # code. Leave blank to store no meeting link — the UI shows
+      # "Meeting link is not available yet." instead of a fake URL.
+      url: ${DISCORD_MEETING_URL:}
+      # Legacy alias: a REAL invite code (the part after https://discord.gg/).
+      # Used only when url above is blank.
+      invite-code: ${DISCORD_INVITE_CODE:}
 
 community:
   allowance:
-    per-month: 3
+    per-month: ${COMMUNITY_ALLOWANCE_PER_MONTH:5}
+  # TRUE FREE sessions are community sessions costing 0 credits. Only those
+  # count toward the mentor's free-session benefits milestone.
+  session:
+    max-cost-credits: 3
+    max-learners: 20
   recognition:
     thresholds: 5,15,30,50
     labels: Community Mentor,Active Contributor,Community Champion,Community Leader
@@ -107,10 +120,6 @@ logging:
       max-history: 7
 
 session:
-  cache:
-    upcoming-ttl: 300
-    session-detail-ttl: 600
-    mentor-schedule-ttl: 300
   booking:
     expiration-minutes: 30
     max-sessions-per-day: 5

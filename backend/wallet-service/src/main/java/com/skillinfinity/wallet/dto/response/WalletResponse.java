@@ -24,7 +24,6 @@ public class WalletResponse {
     private BigDecimal totalCreditsPurchased;
     private BigDecimal totalCreditsSpent;
     private BigDecimal totalCreditsEarned;
-    private BigDecimal totalRewards;
     private BigDecimal totalBonus;
     private BigDecimal totalRefunds;
     private BigDecimal frozenAmount;

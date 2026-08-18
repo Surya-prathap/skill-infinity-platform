@@ -31,9 +31,6 @@ public class RatingStatistics {
     @Column(name = "average_rating")
     private double averageRating;
 
-    @Column(name = "median_rating")
-    private double medianRating;
-
     @Column(name = "total_reviews")
     private int totalReviews;
 
@@ -51,21 +48,6 @@ public class RatingStatistics {
 
     @Column(name = "rating_5_count")
     private int rating5Count;
-
-    @Column(name = "total_replies")
-    private int totalReplies;
-
-    @Column(name = "total_helpful_votes")
-    private int totalHelpfulVotes;
-
-    @Column(name = "total_reports")
-    private int totalReports;
-
-    @Column(name = "review_growth_rate")
-    private double reviewGrowthRate;
-
-    @Column(name = "engagement_score")
-    private double engagementScore;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Box, Divider, Link } from '@mui/material';
@@ -18,6 +19,12 @@ export const LoginForm: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Hard re-entry guard: even though the button is disabled while submitting,
+  // a second click (or Enter+click) can land before React re-renders. Two
+  // concurrent login POSTs for the same account used to deadlock on the MySQL
+  // row lock and stall login for 20s+ — never fire a second request.
+  const submittingRef = useRef(false);
+
   const {
     control,
     handleSubmit,
@@ -28,6 +35,8 @@ export const LoginForm: React.FC = () => {
   });
 
   const onSubmit = async (values: LoginFormValues) => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     dispatch(setRememberMe(values.rememberMe));
     try {
       const auth = await login({ email: values.email, password: values.password });
@@ -44,6 +53,8 @@ export const LoginForm: React.FC = () => {
       // (not an Error instance), so use getErrorMessage to surface the real
       // backend/network message instead of a generic fallback.
       showError(getErrorMessage(error));
+    } finally {
+      submittingRef.current = false;
     }
   };
 

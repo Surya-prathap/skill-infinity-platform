@@ -6,7 +6,10 @@ import com.skillinfinity.identity.dto.request.RefreshTokenRequest;
 import com.skillinfinity.identity.dto.request.RegisterRequest;
 import com.skillinfinity.identity.dto.response.AuthResponse;
 import com.skillinfinity.identity.dto.response.TokenValidationResponse;
+import com.skillinfinity.identity.dto.response.UserAdminResponse;
 import com.skillinfinity.identity.dto.response.UserInfoResponse;
+
+import java.util.List;
 
 public interface AuthService {
 
@@ -21,6 +24,9 @@ public interface AuthService {
     TokenValidationResponse validateToken(String token);
 
     UserInfoResponse getCurrentUser(String userId);
+
+    /** All accounts — consumed by the admin-service to backfill its user index. */
+    List<UserAdminResponse> getAdminUsers();
 
     void changePassword(String userId, ChangePasswordRequest request);
 

@@ -8,28 +8,21 @@ export { ForgotPasswordPage } from './ForgotPasswordPage';
 export { ResetPasswordPage } from './ResetPasswordPage';
 export { EmailVerificationPage } from './EmailVerificationPage';
 export { DashboardPage } from './DashboardPage';
-export { MentorDashboardPage } from './MentorDashboardPage';
 export { WalletPage } from './WalletPage';
 export { SessionsPage } from './SessionsPage';
 export { SessionDetailsPage } from './SessionDetailsPage';
-export { MeetingPage } from './MeetingPage';
 export { SettingsPage } from './SettingsPage';
 export { NotFoundPage } from './NotFoundPage';
 export { UnauthorizedPage } from './UnauthorizedPage';
 
-/* Mentor reviews (backed by review-service) */
+/* Mentor reviews (backed by session-service review API) */
 export { MentorReviewsPage } from './reviews';
 
-/* Enterprise Admin Portal (aliased to avoid collisions with user-facing pages). */
+/* Admin Portal (aliased to avoid collisions with user-facing pages). */
 export {
   AdminDashboardPage,
-  AnalyticsPage as AdminAnalyticsPage,
   UsersPage as AdminUsersPage,
   MentorsPage as AdminMentorsPage,
-  SessionsPage as AdminSessionsPage,
-  PaymentsPage as AdminPaymentsPage,
-  WalletPage as AdminWalletPage,
-  ReviewsModerationPage as AdminReviewsPage,
   SettingsPage as AdminSettingsPage,
 } from './admin';
 
@@ -38,7 +31,4 @@ export { BecomeMentorPage } from './mentor/BecomeMentorPage';
 export { MentorRegistrationPage } from './mentor/MentorRegistrationPage';
 export { MentorAvailabilityPage } from './mentor/MentorAvailabilityPage';
 export { MentorPricingPage } from './mentor/MentorPricingPage';
-export { MentorAnalyticsPage } from './mentor/MentorAnalyticsPage';
-export { MentorCertificatesPage } from './mentor/MentorCertificatesPage';
-export { MentorAchievementsPage } from './mentor/MentorAchievementsPage';
 export { MentorSettingsPage } from './mentor/MentorSettingsPage';

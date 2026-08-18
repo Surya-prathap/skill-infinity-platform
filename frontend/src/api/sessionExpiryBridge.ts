@@ -1,4 +1,5 @@
 export type SessionExpiryHandler = () => void;
+export type TokensRefreshedHandler = (accessToken: string, refreshToken: string) => void;
 
 /**
  * Bridge between the axios client and the store for session expiry.
@@ -6,6 +7,7 @@ export type SessionExpiryHandler = () => void;
  * from the api layer.
  */
 let handler: SessionExpiryHandler | null = null;
+let tokensHandler: TokensRefreshedHandler | null = null;
 
 export const registerSessionExpiryHandler = (fn: SessionExpiryHandler): void => {
   handler = fn;
@@ -13,4 +15,13 @@ export const registerSessionExpiryHandler = (fn: SessionExpiryHandler): void => 
 
 export const onSessionExpired = (): void => {
   handler?.();
+};
+
+/** Registered once by the store — keeps Redux tokens in sync after a silent refresh. */
+export const registerTokensRefreshedHandler = (fn: TokensRefreshedHandler): void => {
+  tokensHandler = fn;
+};
+
+export const onTokensRefreshed = (accessToken: string, refreshToken: string): void => {
+  tokensHandler?.(accessToken, refreshToken);
 };

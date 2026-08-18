@@ -59,6 +59,18 @@ public class SubscriptionPlan {
     @Column(name = "max_sessions_per_month")
     private Integer maxSessionsPerMonth;
 
+    /**
+     * Discount applied to credit purchases while this plan is the user's
+     * active subscription (Learner Plus = 5, Learner Pro = 10).
+     */
+    @Column(name = "credit_discount_percent", precision = 5, scale = 2)
+    @Builder.Default
+    private java.math.BigDecimal creditDiscountPercent = java.math.BigDecimal.ZERO;
+
+    /** Razorpay plan ID created for this plan (recurring subscription). */
+    @Column(name = "razorpay_plan_id", length = 100)
+    private String razorpayPlanId;
+
     @Column(name = "features", columnDefinition = "TEXT")
     private String features;
 

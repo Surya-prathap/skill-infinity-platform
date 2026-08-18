@@ -21,11 +21,7 @@ networks:
 volumes:
   mysql-data:
     driver: local
-  redis-data:
-    driver: local
   rabbitmq-data:
-    driver: local
-  minio-data:
     driver: local
 
 services:
@@ -44,6 +40,7 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?err}
       MYSQL_ROOT_HOST: '%'
+      TZ: Asia/Kolkata
     ports:
       - "${MYSQL_PORT:-3306}:3306"
     volumes:
@@ -63,29 +60,6 @@ services:
       - skill-infinity-network
 
   # ============================================================
-  # Redis Cache
-  # ============================================================
-  redis:
-    image: redis:7-alpine
-    container_name: skill-infinity-redis
-    restart: unless-stopped
-    mem_limit: 64m
-    cpus: 0.25
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
-    volumes:
-      - redis-data:/data
-    command: redis-server --appendonly yes
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    networks:
-      - skill-infinity-network
-
-  # ============================================================
   # RabbitMQ Message Broker
   # ============================================================
   rabbitmq:
@@ -97,6 +71,7 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+      TZ: Asia/Kolkata
     ports:
       - "${RABBITMQ_AMQP_PORT:-5672}:5672"
       - "${RABBITMQ_MGMT_PORT:-15672}:15672"
@@ -116,33 +91,6 @@ services:
       - skill-infinity-network
 
   # ============================================================
-  # MinIO Object Storage
-  # ============================================================
-  minio:
-    image: minio/minio:latest
-    container_name: skill-infinity-minio
-    restart: unless-stopped
-    mem_limit: 128m
-    cpus: 0.25
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
-    ports:
-      - "${MINIO_API_PORT:-9000}:9000"
-      - "${MINIO_CONSOLE_PORT:-9001}:9001"
-    volumes:
-      - minio-data:/data
-    command: server /data --console-address ":9001"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 15s
-      timeout: 10s
-      retries: 5
-      start_period: 20s
-    networks:
-      - skill-infinity-network
-
-  # ============================================================
   # Config Server
   # ============================================================
   config-server:
@@ -156,7 +104,7 @@ services:
     ports:
       - "${CONFIG_SERVER_PORT:-8888}:8888"
     environment:
-      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=40.0 -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
+      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=40.0 -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Kolkata -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
       - CONFIG_SERVER_PORT=8888
       - CONFIG_REPO_URI=${CONFIG_REPO_URI:-}
       - CONFIG_REPO_DEFAULT_BRANCH=main
@@ -164,6 +112,10 @@ services:
       # Shared JWT secret: config-server resolves ${JWT_SECRET} in api-gateway.yml,
       # so the gateway verifies tokens with the SAME key identity-service signs with.
       - JWT_SECRET=${JWT_SECRET:?err}
+      # Real Discord invite: resolved here so session-service.yml serves the
+      # configured meeting URL to the session service (never a fabricated one).
+      - DISCORD_MEETING_URL=${DISCORD_MEETING_URL:-}
+      - DISCORD_INVITE_CODE=${DISCORD_INVITE_CODE:-}
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8888/actuator/health/readiness"]
       interval: 10s
@@ -188,7 +140,7 @@ services:
       - "${DISCOVERY_SERVER_PORT:-8761}:8761"
     environment:
       - CONFIG_SERVER_URL=http://config-server:8888
-      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=40.0 -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
+      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=40.0 -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Kolkata -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
       - DISCOVERY_SERVER_PORT=8761
       - EUREKA_HOSTNAME=discovery-server
       - EUREKA_DEFAULT_ZONE=http://discovery-server:8761/eureka/
@@ -219,7 +171,7 @@ services:
       - "${API_GATEWAY_PORT:-8080}:8080"
     environment:
       - CONFIG_SERVER_URL=http://config-server:8888
-      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=40.0 -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
+      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=40.0 -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Kolkata -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
       - API_GATEWAY_PORT=8080
       # Same signing key as identity-service — the gateway resolves ${JWT_SECRET}
       # from api-gateway.yml (served raw by config-server) against its OWN env,
@@ -230,8 +182,6 @@ services:
       # must live here (not on config-server, which serves the file raw). Defaults
       # cover the dockerized frontend (http://localhost) plus local dev servers.
       - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://localhost,http://127.0.0.1,http://localhost:5173,http://localhost:3000}
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
       - EUREKA_DEFAULT_ZONE=http://discovery-server:8761/eureka/
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health/readiness"]
@@ -239,16 +189,14 @@ services:
       timeout: 10s
       retries: 30
       start_period: 180s
-    # The gateway only needs config-server, discovery-server and redis.
-    # RabbitMQ is NOT a dependency anymore: the `common` module (which pulled
-    # in spring-boot-starter-amqp) was removed from the gateway, so waiting on
+    # The gateway only needs config-server and discovery-server. RabbitMQ is
+    # NOT a dependency: the `common` module (which pulled in
+    # spring-boot-starter-amqp) was removed from the gateway, so waiting on
     # rabbitmq's (slow) health here just adds minutes of dead time to startup.
     depends_on:
       config-server:
         condition: service_healthy
       discovery-server:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     networks:
       - skill-infinity-network
@@ -268,15 +216,13 @@ services:
       - "${IDENTITY_SERVICE_PORT:-8081}:8081"
     environment:
       - CONFIG_SERVER_URL=http://config-server:8888
-      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=40.0 -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
+      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=40.0 -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Kolkata -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
       - IDENTITY_SERVICE_PORT=8081
       - IDENTITY_DB_HOST=mysql
       - IDENTITY_DB_NAME=skill_infinity_identity
       - IDENTITY_DB_USERNAME=root
       - IDENTITY_DB_PASSWORD=${MYSQL_ROOT_PASSWORD:?err}
       - JWT_SECRET=${JWT_SECRET:?err}
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_AMQP_PORT=5672
       - RABBITMQ_USER=guest
@@ -313,14 +259,12 @@ services:
       - "${USER_SERVICE_PORT:-8082}:8082"
     environment:
       - CONFIG_SERVER_URL=http://config-server:8888
-      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=40.0 -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
+      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=40.0 -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Kolkata -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
       - USER_SERVICE_PORT=8082
       - USER_DB_HOST=mysql
       - USER_DB_NAME=skill_infinity_user
       - USER_DB_USERNAME=root
       - USER_DB_PASSWORD=${MYSQL_ROOT_PASSWORD:?err}
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_AMQP_PORT=5672
       - RABBITMQ_USER=guest
@@ -338,8 +282,6 @@ services:
       discovery-server:
         condition: service_healthy
       mysql:
-        condition: service_healthy
-      redis:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
@@ -361,14 +303,12 @@ services:
       - "${MENTOR_SERVICE_PORT:-8083}:8083"
     environment:
       - CONFIG_SERVER_URL=http://config-server:8888
-      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=40.0 -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
+      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=40.0 -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Kolkata -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
       - MENTOR_SERVICE_PORT=8083
       - MENTOR_DB_HOST=mysql
       - MENTOR_DB_NAME=skill_infinity_mentor
       - MENTOR_DB_USERNAME=root
       - MENTOR_DB_PASSWORD=${MYSQL_ROOT_PASSWORD:?err}
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_AMQP_PORT=5672
       - RABBITMQ_USER=guest
@@ -386,8 +326,6 @@ services:
       discovery-server:
         condition: service_healthy
       mysql:
-        condition: service_healthy
-      redis:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
@@ -409,19 +347,26 @@ services:
       - "${SESSION_SERVICE_PORT:-8084}:8084"
     environment:
       - CONFIG_SERVER_URL=http://config-server:8888
-      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=40.0 -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
+      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=40.0 -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Kolkata -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
       - SESSION_SERVICE_PORT=8084
       - SESSION_DB_HOST=mysql
       - SESSION_DB_NAME=skill_infinity_session
       - SESSION_DB_USERNAME=root
       - SESSION_DB_PASSWORD=${MYSQL_ROOT_PASSWORD:?err}
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_PORT=5672
       - RABBITMQ_USER=guest
       - RABBITMQ_PASSWORD=guest
       - EUREKA_DEFAULT_ZONE=http://discovery-server:8761/eureka/
+      # Free/community sessions per learner per month + real Discord invite.
+      # DISCORD_MEETING_URL: the full URL of a REAL Discord server invite
+      # (https://discord.gg/<code>). Blank (default) stores no meeting link —
+      # the UI shows "Meeting link is not available yet." instead of ever
+      # fabricating a discord.gg URL.
+      - COMMUNITY_ALLOWANCE_PER_MONTH=${COMMUNITY_ALLOWANCE_PER_MONTH:-5}
+      - DISCORD_MEETING_URL=${DISCORD_MEETING_URL:-}
+      - DISCORD_INVITE_CODE=${DISCORD_INVITE_CODE:-}
+      - JOIN_WINDOW_MINUTES=${JOIN_WINDOW_MINUTES:-10}
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8084/actuator/health/readiness"]
       interval: 15s
@@ -434,8 +379,6 @@ services:
       discovery-server:
         condition: service_healthy
       mysql:
-        condition: service_healthy
-      redis:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
@@ -461,14 +404,12 @@ services:
       - "${WALLET_SERVICE_PORT:-8085}:8085"
     environment:
       - CONFIG_SERVER_URL=http://config-server:8888
-      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=40.0 -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
+      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=40.0 -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Kolkata -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
       - WALLET_SERVICE_PORT=8085
       - WALLET_DB_HOST=mysql
       - WALLET_DB_NAME=skill_infinity_wallet
       - WALLET_DB_USERNAME=root
       - WALLET_DB_PASSWORD=${MYSQL_ROOT_PASSWORD:?err}
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_PORT=5672
       - RABBITMQ_USER=guest
@@ -486,8 +427,6 @@ services:
       discovery-server:
         condition: service_healthy
       mysql:
-        condition: service_healthy
-      redis:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
@@ -513,19 +452,22 @@ services:
       - "${PAYMENT_SERVICE_PORT:-8086}:8086"
     environment:
       - CONFIG_SERVER_URL=http://config-server:8888
-      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=40.0 -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
+      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=40.0 -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Kolkata -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
       - PAYMENT_SERVICE_PORT=8086
       - PAYMENT_DB_HOST=mysql
       - PAYMENT_DB_NAME=skill_infinity_payment
       - PAYMENT_DB_USERNAME=root
       - PAYMENT_DB_PASSWORD=${MYSQL_ROOT_PASSWORD:?err}
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_PORT=5672
       - RABBITMQ_USER=guest
       - RABBITMQ_PASSWORD=guest
       - EUREKA_DEFAULT_ZONE=http://discovery-server:8761/eureka/
+      # Razorpay TEST MODE — secrets stay server-side only (docker/.env,
+      # gitignored). The frontend only ever receives the Key ID.
+      - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID:-}
+      - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET:-}
+      - RAZORPAY_WEBHOOK_SECRET=${RAZORPAY_WEBHOOK_SECRET:-}
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8086/actuator/health/readiness"]
       interval: 15s
@@ -538,8 +480,6 @@ services:
       discovery-server:
         condition: service_healthy
       mysql:
-        condition: service_healthy
-      redis:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
@@ -565,14 +505,12 @@ services:
       - "${ADMIN_SERVICE_PORT:-8090}:8090"
     environment:
       - CONFIG_SERVER_URL=http://config-server:8888
-      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=40.0 -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
+      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=40.0 -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Kolkata -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
       - ADMIN_SERVICE_PORT=8090
       - ADMIN_DB_HOST=mysql
       - ADMIN_DB_NAME=skill_infinity_admin
       - ADMIN_DB_USERNAME=root
       - ADMIN_DB_PASSWORD=${MYSQL_ROOT_PASSWORD:?err}
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_PORT=5672
       - RABBITMQ_USER=guest
@@ -590,8 +528,6 @@ services:
       discovery-server:
         condition: service_healthy
       mysql:
-        condition: service_healthy
-      redis:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy

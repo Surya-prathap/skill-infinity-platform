@@ -1,6 +1,4 @@
 import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { reviewService } from '@/services';
 import { useUpcomingSessionsQuery, useSessionHistoryQuery } from '@/features/sessions';
 import { useWalletBalanceQuery } from '@/features/wallet';
 import { useMentorSearch } from '@/features/marketplace';
@@ -18,26 +16,20 @@ export interface ChartPoint {
  * balance, top-rated mentors and top reviews.
  */
 export const useDashboardData = () => {
-  const upcoming = useUpcomingSessionsQuery(0, 10);
+  // Every dashboard widget renders instantly with placeholder data (emptyPage
+  // / ?? 0) and fills in as responses arrive — so all of these background
+  // fetches are marked `silent` and never drive the global loading bar. The
+  // bar is reserved for user-initiated work (login, mutations, navigations).
+  const upcoming = useUpcomingSessionsQuery(0, 10, { silent: true });
   // 50 recent sessions is plenty for the stats + 8-week progress chart and
   // keeps the dashboard payload small.
-  const history = useSessionHistoryQuery(0, 50);
-  const wallet = useWalletBalanceQuery();
+  const history = useSessionHistoryQuery(0, 50, { silent: true });
+  const wallet = useWalletBalanceQuery({ silent: true });
   const mentors = useMentorSearch({
     page: 0,
     size: 4,
     sortBy: 'RATING',
     sortDirection: 'DESC',
-  });
-
-  const reviewsQuery = useQuery({
-    queryKey: ['dashboard', 'top-reviews'],
-    queryFn: async () => {
-      const response = await reviewService.getTopRated(3);
-      return response.data.data;
-    },
-    retry: 1,
-    staleTime: 5 * 60 * 1000,
   });
 
   const sessions = history.data.content;
@@ -115,6 +107,5 @@ export const useDashboardData = () => {
     historyQuery: history,
     walletQuery: wallet,
     mentorsQuery: mentors,
-    reviewsQuery,
   };
 };

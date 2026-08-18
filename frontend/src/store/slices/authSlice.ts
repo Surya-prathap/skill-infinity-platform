@@ -116,6 +116,17 @@ const authSlice = createSlice({
     setUser(state, action: PayloadAction<AuthUser>) {
       state.user = action.payload;
     },
+    /**
+     * Silent refresh-token rotation (see api/client.ts): the axios layer
+     * already stored the NEW tokens — this keeps the Redux session (and what
+     * gets persisted next) in sync without touching the user/status.
+     */
+    tokensRefreshed(state, action: PayloadAction<{ accessToken: string; refreshToken: string }>) {
+      state.accessToken = action.payload.accessToken;
+      state.refreshToken = action.payload.refreshToken;
+      state.status = 'authenticated';
+      state.error = null;
+    },
     setRememberMe(state, action: PayloadAction<boolean>) {
       state.rememberMe = action.payload;
     },
@@ -175,7 +186,7 @@ const authSlice = createSlice({
   },
 });
 
-export const { setCredentials, clearCredentials, setUser, setRememberMe, setAuthError } =
+export const { setCredentials, clearCredentials, setUser, setRememberMe, setAuthError, tokensRefreshed } =
   authSlice.actions;
 
 export default authSlice.reducer;

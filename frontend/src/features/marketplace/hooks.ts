@@ -30,7 +30,9 @@ export const useMentorSearch = (query: DiscoveryQuery) => {
   const result = useQuery({
     queryKey: marketplaceKeys.search(query),
     queryFn: async () => {
-      const response = await mentorService.searchMentors(query);
+      // silent: the directory renders its own skeletons; this fetch must not
+      // pin the global loading bar (especially when embedded on the dashboard).
+      const response = await mentorService.searchMentors(query, { silent: true });
       return response.data.data;
     },
     staleTime: 2 * 60 * 1000,

@@ -14,7 +14,8 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { Avatar } from '@/components/ui/Avatar';
 import { Typography } from '@/components/ui/Typography';
 import { Stack } from '@/components/ui/Stack';
-import type { BookingRequest, Mentor, MentorPricing } from '@/types';
+import { nowInAppZone, APP_TIMEZONE } from '@/utils';
+import type { BookingRequest, Mentor, MentorAvailability, MentorPricing } from '@/types';
 
 const STEPS = [
   { label: 'Mentor', icon: <PersonOutlinedIcon /> },
@@ -38,23 +39,44 @@ const SESSION_TYPE_LABEL: Record<string, string> = {
 
 const DAYS_AHEAD = 14;
 
-/** Deterministic slot generation from the selected pricing plan. */
-const generateSlots = (pricing: MentorPricing | undefined): string[] => {
-  const slots: string[] = [];
-  if (!pricing) return ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00'];
-  const duration = pricing.durationMinutes || 60;
-  for (let hour = 9; hour <= 17; hour += duration / 60) {
-    if (hour < 17) slots.push(`${String(hour).padStart(2, '0')}:00`);
-  }
-  return slots;
+/** Converts "09:00" to minutes since midnight. */
+const toMinutes = (value?: string): number | null => {
+  if (!value) return null;
+  const [h, m] = value.split(':').map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return null;
+  return h * 60 + m;
 };
+
+const formatMinutes = (minutes: number): string =>
+  `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+
+/**
+ * Availability windows that apply to a given date — recurring windows match by
+ * day of week, one-off windows match their specificDate.
+ */
+const windowsForDate = (availability: MentorAvailability[], date: Dayjs): MentorAvailability[] =>
+  availability.filter(
+    (window) =>
+      window.active !== false &&
+      (window.recurring
+        ? window.dayOfWeek.toUpperCase() === date.format('dddd').toUpperCase()
+        : window.specificDate === date.format('YYYY-MM-DD')),
+  );
 
 interface BookingWizardProps {
   mentor: Mentor;
   name?: string;
   pricing: MentorPricing[];
+  /**
+   * The mentor's availability, preloaded from the public profile — the booking
+   * flow makes no extra API call for it (only the selected mentor's slots are
+   * ever shown).
+   */
+  availability?: MentorAvailability[];
   learnerId?: string;
   learnerName?: string;
+  /** Learner email — stored with the booking so status emails can reach them. */
+  learnerEmail?: string;
   onSubmit: (request: BookingRequest) => Promise<void> | void;
 }
 
@@ -62,10 +84,13 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
   mentor,
   name,
   pricing,
+  availability = [],
   learnerId,
   learnerName,
+  learnerEmail,
   onSubmit,
 }) => {
+
   const [step, setStep] = useState(0);
   const [pricingId, setPricingId] = useState<string | undefined>(pricing[0]?.id);
   const [date, setDate] = useState<Dayjs | null>(null);
@@ -75,16 +100,80 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
   const selectedPricing = pricing.find((plan) => plan.id === pricingId) ?? pricing[0];
   const price = selectedPricing?.price ?? 0;
 
-  const availableDates = useMemo(
-    () => Array.from({ length: DAYS_AHEAD }).map((_, index) => dayjs().add(index + 1, 'day')),
-    [],
-  );
+  /**
+   * True when the mentor still has a bookable slot on the given day: the day
+   * matches a configured window AND (for today) at least one slot has not
+   * started yet. Today is never blanket-excluded — only its expired slots are.
+   * E.g. a Sunday 6:00–6:30 PM window stays visible before 6 PM on Sunday.
+   */
+  const hasBookableSlots = (day: Dayjs, durationMinutes: number): boolean => {
+    const windows = windowsForDate(availability, day);
+    if (windows.length === 0) return false;
+    if (!day.isSame(nowInAppZone(), 'day')) return true;
+    const now = nowInAppZone();
+    for (const window of windows) {
+      const start = toMinutes(window.startTime);
+      const end = toMinutes(window.endTime);
+      if (start === null || end === null || durationMinutes <= 0) continue;
+      const breakStart = toMinutes(window.breakStartTime);
+      const breakEnd = toMinutes(window.breakEndTime);
+      for (let t = start; t + durationMinutes <= end; t += durationMinutes) {
+        if (breakStart !== null && breakEnd !== null && t < breakEnd && t + durationMinutes > breakStart) continue;
+        const slotStart = day.hour(Math.floor(t / 60)).minute(t % 60).second(0);
+        if (slotStart.isAfter(now)) return true;
+      }
+    }
+    return false;
+  };
 
-  const slots = useMemo(
-    () => (date ? generateSlots(selectedPricing) : []),
-    [date, selectedPricing],
-  );
+  /**
+   * Only dates on which the mentor actually has availability are offered —
+   * starting from TODAY (a valid same-day slot must be bookable). No
+   * generated/default dates, no other mentors' schedules, no expired slots.
+   */
+  const availableDates = useMemo(() => {
+    if (!availability.length) return [];
+    const duration = selectedPricing?.durationMinutes ?? 60;
+    return Array.from({ length: DAYS_AHEAD })
+      .map((_, index) => nowInAppZone().add(index, 'day'))
+      .filter((day) => hasBookableSlots(day, duration));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [availability, selectedPricing]);
 
+  /**
+   * Only the mentor's real time slots for the selected date. Slots that would
+   * straddle a configured break or fall in the past (today) are excluded.
+   */
+  const slots = useMemo(() => {
+    if (!date || !selectedPricing) return [];
+    const duration = selectedPricing.durationMinutes ?? 60;
+    const result: string[] = [];
+
+    for (const window of windowsForDate(availability, date)) {
+      const start = toMinutes(window.startTime);
+      const end = toMinutes(window.endTime);
+      if (start === null || end === null || duration <= 0) continue;
+      const breakStart = toMinutes(window.breakStartTime);
+      const breakEnd = toMinutes(window.breakEndTime);
+
+      for (let t = start; t + duration <= end; t += duration) {
+        const slotEnd = t + duration;
+        if (breakStart !== null && breakEnd !== null && t < breakEnd && slotEnd > breakStart) continue;
+        // Skip slots already in the past when the selected date is today.
+        // "Now" is evaluated in the application timezone (Asia/Kolkata) so
+        // same-day slots stay visible until their actual start time passes.
+        if (date.isSame(nowInAppZone(), 'day')) {
+          const slotDateTime = date.hour(Math.floor(t / 60)).minute(t % 60).second(0);
+          if (slotDateTime.isBefore(nowInAppZone())) continue;
+        }
+        result.push(formatMinutes(t));
+      }
+    }
+    return [...new Set(result)].sort();
+  }, [availability, date, selectedPricing]);
+
+  const hasAvailability = availability.length > 0;
+  const noPricing = pricing.length === 0;
   const [first, last] = (name ?? 'Mentor').split(' ');
 
   const canNext =
@@ -93,6 +182,14 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
     (step === 2 && Boolean(date)) ||
     (step === 3 && Boolean(slot)) ||
     step === 4;
+
+  const handleSelectPricing = (plan: MentorPricing) => {
+    setPricingId(plan.id);
+    // A different session type may have a different duration — the generated
+    // slots change, so previously selected date/time must be re-picked.
+    setDate(null);
+    setSlot(null);
+  };
 
   const handleNext = async () => {
     if (step === 4) {
@@ -103,6 +200,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
           learnerId,
           mentorName: name,
           learnerName,
+          learnerEmail,
           topic: `${SESSION_TYPE_LABEL[selectedPricing?.sessionType ?? 'ONE_ON_ONE']} with ${name ?? 'Mentor'}`,
           description: selectedPricing?.description || undefined,
           preferredDate: date?.format('YYYY-MM-DDTHH:mm:ss') ?? undefined,
@@ -113,10 +211,20 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
                 .format('HH:mm')}:00`
             : '',
           durationMinutes: selectedPricing?.durationMinutes ?? 60,
+          // The backend recomputes the cost from the mentor's pricing plan —
+          // the amount below is informational only.
+          pricingId: selectedPricing?.id,
           credits: selectedPricing?.isFree ? 0 : price,
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          timezone: APP_TIMEZONE,
         });
         setStep(5);
+      } catch {
+        // The mutation's onError already surfaced the real reason (e.g.
+        // "Insufficient credits" or "This time slot is already booked").
+        // Stay on the review step so the learner can correct and retry — and
+        // swallow the rejection so it never becomes an unhandled promise
+        // rejection in the console. The backend is idempotent: a retry of the
+        // same slot returns the existing booking instead of duplicating it.
       } finally {
         setSubmitting(false);
       }
@@ -223,6 +331,11 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
                 <Chip label={`${mentor.statistics?.totalSessions ?? 0} sessions`} variant="outlined" size="small" />
                 {mentor.verified && <Chip label="Verified" color="success" size="small" variant="outlined" />}
               </Box>
+              {!hasAvailability && (
+                <Typography variant="body2" color="warning.main" fontWeight={600} sx={{ textAlign: 'center' }}>
+                  This mentor hasn&apos;t set their availability yet — you can&apos;t book a slot until they do.
+                </Typography>
+              )}
             </Stack>
           )}
 
@@ -231,123 +344,136 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
               <Typography variant="h6" fontWeight={800} sx={{ mb: 2, textAlign: 'center' }}>
                 Choose a session type
               </Typography>
-              <Stack spacing={1.5}>
-                {pricing.map((plan) => {
-                  const selected = plan.id === pricingId;
-                  return (
-                    <Box
-                      key={plan.id}
-                      role="radio"
-                      aria-checked={selected}
-                      tabIndex={0}
-                      onClick={() => setPricingId(plan.id)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') setPricingId(plan.id);
-                      }}
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 2,
-                        p: 2.25,
-                        borderRadius: 3,
-                        border: 2,
-                        borderColor: selected ? 'primary.main' : 'divider',
-                        bgcolor: selected ? 'action.selected' : 'background.paper',
-                        cursor: 'pointer',
-                        transition: 'border-color 0.2s ease, background-color 0.2s ease',
-                        '&:hover': { borderColor: 'primary.main' },
-                      }}
-                    >
+              {noPricing ? (
+                <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
+                  This mentor hasn&apos;t configured any session types yet.
+                </Typography>
+              ) : (
+                <Stack spacing={1.5}>
+                  {pricing.map((plan) => {
+                    const selected = plan.id === pricingId;
+                    return (
                       <Box
+                        key={plan.id}
+                        role="radio"
+                        aria-checked={selected}
+                        tabIndex={0}
+                        onClick={() => handleSelectPricing(plan)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleSelectPricing(plan);
+                        }}
                         sx={{
-                          width: 44,
-                          height: 44,
-                          borderRadius: 2.5,
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center',
-                          color: '#fff',
-                          background: 'linear-gradient(135deg, #6D5DF6, #5443D4)',
-                          flexShrink: 0,
+                          gap: 2,
+                          p: 2.25,
+                          borderRadius: 3,
+                          border: 2,
+                          borderColor: selected ? 'primary.main' : 'divider',
+                          bgcolor: selected ? 'action.selected' : 'background.paper',
+                          cursor: 'pointer',
+                          transition: 'border-color 0.2s ease, background-color 0.2s ease',
+                          '&:hover': { borderColor: 'primary.main' },
                         }}
                       >
-                        <CategoryOutlinedIcon />
-                      </Box>
-                      <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                        <Typography variant="subtitle1" fontWeight={800}>
-                          {SESSION_TYPE_LABEL[plan.sessionType] ?? plan.sessionType}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {plan.durationMinutes} min · {plan.description ?? 'Personalized mentoring session'}
-                        </Typography>
-                      </Box>
-                      <Box sx={{ textAlign: 'right' }}>
-                        <Typography variant="h6" fontWeight={800} sx={{ color: 'primary.main' }}>
-                          {plan.isFree ? 'Free' : `${plan.price} credits`}
-                        </Typography>
-                        {plan.originalPrice && !plan.isFree && (
-                          <Typography variant="caption" color="text.secondary" sx={{ textDecoration: 'line-through' }}>
-                            {plan.originalPrice} credits
+                        <Box
+                          sx={{
+                            width: 44,
+                            height: 44,
+                            borderRadius: 2.5,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#fff',
+                            background: 'linear-gradient(135deg, #6D5DF6, #5443D4)',
+                            flexShrink: 0,
+                          }}
+                        >
+                          <CategoryOutlinedIcon />
+                        </Box>
+                        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                          <Typography variant="subtitle1" fontWeight={800}>
+                            {SESSION_TYPE_LABEL[plan.sessionType] ?? plan.sessionType}
                           </Typography>
-                        )}
+                          <Typography variant="caption" color="text.secondary">
+                            {plan.durationMinutes} min · {plan.description ?? 'Personalized mentoring session'}
+                          </Typography>
+                        </Box>
+                        <Box sx={{ textAlign: 'right' }}>
+                          <Typography variant="h6" fontWeight={800} sx={{ color: 'primary.main' }}>
+                            {plan.isFree ? 'Free' : `${plan.price} credits`}
+                          </Typography>
+                          {plan.originalPrice && !plan.isFree && (
+                            <Typography variant="caption" color="text.secondary" sx={{ textDecoration: 'line-through' }}>
+                              {plan.originalPrice} credits
+                            </Typography>
+                          )}
+                        </Box>
                       </Box>
-                    </Box>
-                  );
-                })}
-              </Stack>
+                    );
+                  })}
+                </Stack>
+              )}
             </Box>
           )}
 
           {step === 2 && (
             <Box sx={{ maxWidth: 640, mx: 'auto' }}>
-              <Typography variant="h6" fontWeight={800} sx={{ mb: 2, textAlign: 'center' }}>
+              <Typography variant="h6" fontWeight={800} sx={{ mb: 0.5, textAlign: 'center' }}>
                 Pick a date
               </Typography>
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)', md: 'repeat(4, 1fr)' }, gap: 1 }}>
-                {availableDates.map((day) => {
-                  const selected = date?.isSame(day, 'day');
-                  const isWeekend = [0, 6].includes(day.day());
-                  return (
-                    <Box
-                      key={day.format('YYYY-MM-DD')}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => {
-                        setDate(day);
-                        setSlot(null);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2, textAlign: 'center' }}>
+                Only dates {name?.split(' ')[0] ?? 'the mentor'} is available are shown.
+              </Typography>
+              {availableDates.length === 0 ? (
+                <Typography variant="body2" color="warning.main" sx={{ textAlign: 'center', py: 3 }} fontWeight={600}>
+                  No upcoming availability in the next {DAYS_AHEAD} days.
+                </Typography>
+              ) : (
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)', md: 'repeat(4, 1fr)' }, gap: 1 }}>
+                  {availableDates.map((day) => {
+                    const selected = date?.isSame(day, 'day');
+                    return (
+                      <Box
+                        key={day.format('YYYY-MM-DD')}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => {
                           setDate(day);
                           setSlot(null);
-                        }
-                      }}
-                      sx={{
-                        p: 1.5,
-                        borderRadius: 2.5,
-                        border: 2,
-                        borderColor: selected ? 'primary.main' : 'divider',
-                        bgcolor: selected ? 'action.selected' : 'background.paper',
-                        textAlign: 'center',
-                        cursor: 'pointer',
-                        opacity: isWeekend ? 0.55 : 1,
-                        transition: 'border-color 0.15s ease',
-                        '&:hover': { borderColor: 'primary.main' },
-                      }}
-                    >
-                      <Typography variant="caption" color="text.secondary" fontWeight={700}>
-                        {day.format('ddd')}
-                      </Typography>
-                      <Typography variant="h6" fontWeight={800}>
-                        {day.format('D')}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {day.format('MMM')}
-                      </Typography>
-                    </Box>
-                  );
-                })}
-              </Box>
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            setDate(day);
+                            setSlot(null);
+                          }
+                        }}
+                        sx={{
+                          p: 1.5,
+                          borderRadius: 2.5,
+                          border: 2,
+                          borderColor: selected ? 'primary.main' : 'divider',
+                          bgcolor: selected ? 'action.selected' : 'background.paper',
+                          textAlign: 'center',
+                          cursor: 'pointer',
+                          transition: 'border-color 0.15s ease',
+                          '&:hover': { borderColor: 'primary.main' },
+                        }}
+                      >
+                        <Typography variant="caption" color="text.secondary" fontWeight={700}>
+                          {day.format('ddd')}
+                        </Typography>
+                        <Typography variant="h6" fontWeight={800}>
+                          {day.format('D')}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {day.format('MMM')}
+                        </Typography>
+                      </Box>
+                    );
+                  })}
+                </Box>
+              )}
             </Box>
           )}
 
@@ -359,37 +485,43 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5, textAlign: 'center' }}>
                 {date?.format('dddd, MMMM D')} · {selectedPricing?.durationMinutes ?? 60} min session
               </Typography>
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(3, 1fr)', sm: 'repeat(4, 1fr)' }, gap: 1 }}>
-                {slots.map((time) => {
-                  const selected = slot === time;
-                  return (
-                    <Box
-                      key={time}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => setSlot(time)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') setSlot(time);
-                      }}
-                      sx={{
-                        py: 1.5,
-                        borderRadius: 2.5,
-                        border: 2,
-                        borderColor: selected ? 'primary.main' : 'divider',
-                        bgcolor: selected ? 'action.selected' : 'background.paper',
-                        textAlign: 'center',
-                        cursor: 'pointer',
-                        transition: 'border-color 0.15s ease',
-                        '&:hover': { borderColor: 'primary.main' },
-                      }}
-                    >
-                      <Typography variant="subtitle2" fontWeight={700} color={selected ? 'primary.main' : 'text.primary'}>
-                        {dayjs(`2000-01-01T${time}`).format('h:mm A')}
-                      </Typography>
-                    </Box>
-                  );
-                })}
-              </Box>
+              {slots.length === 0 ? (
+                <Typography variant="body2" color="warning.main" sx={{ textAlign: 'center', py: 3 }} fontWeight={600}>
+                  No available times for this date. Pick another date.
+                </Typography>
+              ) : (
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(3, 1fr)', sm: 'repeat(4, 1fr)' }, gap: 1 }}>
+                  {slots.map((time) => {
+                    const selected = slot === time;
+                    return (
+                      <Box
+                        key={time}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setSlot(time)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') setSlot(time);
+                        }}
+                        sx={{
+                          py: 1.5,
+                          borderRadius: 2.5,
+                          border: 2,
+                          borderColor: selected ? 'primary.main' : 'divider',
+                          bgcolor: selected ? 'action.selected' : 'background.paper',
+                          textAlign: 'center',
+                          cursor: 'pointer',
+                          transition: 'border-color 0.15s ease',
+                          '&:hover': { borderColor: 'primary.main' },
+                        }}
+                      >
+                        <Typography variant="subtitle2" fontWeight={700} color={selected ? 'primary.main' : 'text.primary'}>
+                          {dayjs(`2000-01-01T${time}`).format('h:mm A')}
+                        </Typography>
+                      </Box>
+                    );
+                  })}
+                </Box>
+              )}
             </Box>
           )}
 
@@ -484,7 +616,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
           <Button
             variant="contained"
             endIcon={<ArrowForwardIcon />}
-            disabled={!canNext || submitting}
+            disabled={!canNext || submitting || noPricing}
             onClick={() => void handleNext()}
           >
             {submitting ? 'Submitting…' : step === 4 ? 'Confirm & Book' : 'Continue'}

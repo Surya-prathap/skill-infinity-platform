@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   Alert,
   Box,
@@ -20,13 +19,9 @@ import PaletteOutlinedIcon from '@mui/icons-material/PaletteOutlined';
 import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
 import PrivacyTipOutlinedIcon from '@mui/icons-material/PrivacyTipOutlined';
 import LanguageOutlinedIcon from '@mui/icons-material/LanguageOutlined';
-import LinkOutlinedIcon from '@mui/icons-material/LinkOutlined';
 import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined';
 import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
 import BrightnessAutoOutlinedIcon from '@mui/icons-material/BrightnessAutoOutlined';
-import GoogleIcon from '@mui/icons-material/Google';
-import GitHubIcon from '@mui/icons-material/GitHub';
-import LinkedInIcon from '@mui/icons-material/LinkedIn';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Typography } from '@/components/ui/Typography';
@@ -77,12 +72,6 @@ const THEME_OPTIONS: { mode: ThemeMode; label: string; icon: React.ReactNode }[]
   { mode: 'system', label: 'System', icon: <BrightnessAutoOutlinedIcon /> },
 ];
 
-const CONNECTED_ACCOUNTS = [
-  { id: 'google', label: 'Google', icon: <GoogleIcon />, connected: true },
-  { id: 'github', label: 'GitHub', icon: <GitHubIcon />, connected: true },
-  { id: 'linkedin', label: 'LinkedIn', icon: <LinkedInIcon />, connected: false },
-];
-
 export const MentorSettingsPage: React.FC = () => {
   useDocumentTitle('Mentor Settings');
   const dispatch = useAppDispatch();
@@ -96,8 +85,6 @@ export const MentorSettingsPage: React.FC = () => {
   const updatePreference = useUpdatePreferenceMutation();
 
   const profile = mentor?.profile;
-  const [twoFactor, setTwoFactor] = useState(false);
-  const [accounts, setAccounts] = useState(CONNECTED_ACCOUNTS);
 
   /* ---------------- Profile form ---------------- */
   const profileForm = useForm<PersonalFormValues>({
@@ -442,21 +429,6 @@ export const MentorSettingsPage: React.FC = () => {
                   </Stack>
                 </Stack>
               </Box>
-              <Divider sx={{ my: 2.5 }} />
-              <Stack direction="row" alignItems="center" justifyContent="space-between">
-                <Box>
-                  <Typography variant="body2" fontWeight={600}>
-                    Two-factor authentication
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Add an extra layer of security to your account
-                  </Typography>
-                </Box>
-                <Switch
-                  checked={twoFactor}
-                  onChange={(event) => setTwoFactor(event.target.checked)}
-                />
-              </Stack>
             </SettingsSection>
           </motion.div>
 
@@ -669,57 +641,6 @@ export const MentorSettingsPage: React.FC = () => {
                   </FormControl>
                 </Grid>
               </Grid>
-            </SettingsSection>
-          </motion.div>
-
-          {/* Connected accounts */}
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={fadeUp}
-            style={{ height: '100%' }}
-          >
-            <SettingsSection
-              title="Connected Accounts"
-              subtitle="Link accounts for seamless sign-in"
-              icon={<LinkOutlinedIcon />}
-              iconColor="#14B8A6"
-            >
-              <Stack spacing={1.5}>
-                {accounts.map((account) => (
-                  <Stack
-                    key={account.id}
-                    direction="row"
-                    alignItems="center"
-                    justifyContent="space-between"
-                    sx={{ p: 1.5, borderRadius: 2.5, border: 1, borderColor: 'divider' }}
-                  >
-                    <Stack direction="row" alignItems="center" gap={1.5}>
-                      <Box sx={{ color: 'text.secondary' }}>{account.icon}</Box>
-                      <Typography variant="body2" fontWeight={600}>
-                        {account.label}
-                      </Typography>
-                    </Stack>
-                    <Switch
-                      checked={account.connected}
-                      onChange={(event) => {
-                        setAccounts((current) =>
-                          current.map((item) =>
-                            item.id === account.id
-                              ? { ...item, connected: event.target.checked }
-                              : item,
-                          ),
-                        );
-                        showSuccess(
-                          event.target.checked
-                            ? `${account.label} connected`
-                            : `${account.label} disconnected`,
-                        );
-                      }}
-                    />
-                  </Stack>
-                ))}
-              </Stack>
             </SettingsSection>
           </motion.div>
 

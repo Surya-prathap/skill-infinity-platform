@@ -50,6 +50,7 @@ public class SubscriptionPlanSeeder implements CommandLineRunner {
                 existing.setCreditsPerMonth(plan.getCreditsPerMonth());
                 existing.setDurationDays(plan.getDurationDays());
                 existing.setMaxSessionsPerMonth(plan.getMaxSessionsPerMonth());
+                existing.setCreditDiscountPercent(plan.getCreditDiscountPercent());
                 existing.setFeatures(plan.getFeatures());
                 existing.setIsActive(true);
                 subscriptionPlanRepository.save(existing);
@@ -85,33 +86,40 @@ public class SubscriptionPlanSeeder implements CommandLineRunner {
                 plan("Learner Free", SubscriptionPlanType.LEARNER,
                         "The default plan for every learner — explore mentors and learn with credits.",
                         "0",
+                        "0",
                         "3 one-time welcome credits\nBrowse mentors\nSearch mentors\nView mentor profiles\nView availability\nAttend Community sessions\nBook Professional sessions using available credits\nBasic learner profile\nBasic wallet\nBasic dashboard"),
                 plan("Learner Plus", SubscriptionPlanType.LEARNER,
                         "Everything in Free, plus discounts and priority discovery for active learners.",
                         "99",
+                        "5",
                         "Everything in Free\n5% discount when purchasing credits\nPriority mentor search & discovery\nAdvanced availability filters\nBetter learning dashboard\nSubscription badge/status\nBasic learning statistics"),
                 plan("Learner Pro", SubscriptionPlanType.LEARNER,
                         "Maximum convenience and insights for career-focused learners.",
                         "199",
+                        "10",
                         "Everything in Learner Plus\n10% discount when purchasing credits\nPriority booking\nPremium mentor discovery\nEnhanced mentor filtering\nAdvanced learning analytics\nImproved learning progress dashboard\nPro learner badge/status"),
 
                 // ---------------- Mentor plans ----------------
                 plan("Mentor Free", SubscriptionPlanType.MENTOR,
                         "The default plan for approved mentors — start teaching and earn credits.",
                         "0",
+                        "0",
                         "Mentor profile\nSet availability\nOffer Professional sessions\nOffer Community sessions\nChoose session type (Professional / Community / Both)\nEarn learning credits through Professional mentoring\nNormal mentor visibility\nBasic mentor dashboard\nBasic earnings information"),
                 plan("Mentor Pro", SubscriptionPlanType.MENTOR,
                         "Better visibility and analytics to grow your mentor practice.",
                         "149",
+                        "0",
                         "Everything in Mentor Free\nFeatured mentor visibility\nHigher ranking in mentor search\nMentor analytics\nProfile badge\nBetter mentor discovery\nAdvanced earnings analytics\nPriority support\nReduced platform commission"),
                 plan("Mentor Premium", SubscriptionPlanType.MENTOR,
                         "Top placement and premium tools for the platform's best mentors.",
                         "299",
+                        "0",
                         "Everything in Mentor Pro\nPremium Mentor badge\nTop/priority mentor placement\nEligible for the landing page Featured/Premium Mentors section\nAdvanced mentor analytics\nAdvanced availability controls\nEnhanced profile customization\nPriority support\nBest available platform commission rate")
         );
     }
 
-    private SubscriptionPlan plan(String name, SubscriptionPlanType type, String description, String price, String features) {
+    private SubscriptionPlan plan(String name, SubscriptionPlanType type, String description,
+                                  String price, String creditDiscountPercent, String features) {
         return SubscriptionPlan.builder()
                 .name(name)
                 .type(type)
@@ -121,6 +129,7 @@ public class SubscriptionPlanSeeder implements CommandLineRunner {
                 .creditsPerMonth(BigDecimal.ZERO)
                 .durationDays(30)
                 .maxSessionsPerMonth(null)
+                .creditDiscountPercent(new BigDecimal(creditDiscountPercent))
                 .features(features)
                 .isActive(true)
                 .build();

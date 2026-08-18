@@ -73,12 +73,46 @@ public class WalletClient {
                     new HttpEntity<>(body, headers), String.class);
             log.info("Wallet {} {} credits for user {} (reference {})",
                     path.contains("freeze") ? "froze" : "released", credits, userId, referenceId);
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            // A 4xx from the wallet is a business rejection (insufficient
+            // balance, frozen wallet, duplicate reference, …). Pass its message
+            // through so the user sees the real reason instead of a generic
+            // "insufficient credits" that fires even when the wallet is fine.
+            String reason = "Insufficient credits. Please purchase credits or use an available community session.";
+            if (e.getResponseBodyAsString() != null && !e.getResponseBodyAsString().isBlank()) {
+                reason = e.getResponseBodyAsString();
+            }
+            log.warn("Wallet {} rejected: userId={}, credits={}, reference={}, status={}",
+                    path, userId, credits, referenceId, e.getStatusCode().value());
+            throw new ServiceException(sanitize(reason), HttpStatus.BAD_REQUEST);
         } catch (RestClientException e) {
-            log.error("Wallet {} failed: userId={}, credits={}, reference={}",
+            // Transport-level failure (wallet down, timeout) — the hold was NOT
+            // placed, so this is an infrastructure error, not an insufficient
+            // balance. Never report "insufficient credits" for a network issue.
+            log.error("Wallet {} unreachable: userId={}, credits={}, reference={}",
                     path, userId, credits, referenceId, e);
             throw new ServiceException(
-                    "Insufficient credits. Please purchase credits or use an available community session.",
-                    HttpStatus.BAD_REQUEST);
+                    "Booking could not be completed right now. Please try again.",
+                    HttpStatus.SERVICE_UNAVAILABLE);
         }
+    }
+
+    /** Keeps only the user-facing part of a wallet error payload. */
+    private String sanitize(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return "Insufficient credits. Please purchase credits or use an available community session.";
+        }
+        // Strip JSON envelope if present — take the message field when available.
+        String trimmed = raw.trim();
+        int idx = trimmed.indexOf("\"message\"");
+        if (idx >= 0) {
+            int colon = trimmed.indexOf(':', idx);
+            int start = trimmed.indexOf('"', colon + 1);
+            int end = trimmed.indexOf('"', start + 1);
+            if (start >= 0 && end > start) {
+                return trimmed.substring(start + 1, end);
+            }
+        }
+        return trimmed.length() > 200 ? trimmed.substring(0, 200) : trimmed;
     }
 }

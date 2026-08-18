@@ -26,10 +26,15 @@ export type WalletTransactionType =
   | 'REFUND'
   | 'REWARD';
 
+/** Reliable credit direction provided by the backend — the UI renders from this. */
+export type TransactionDirection = 'CREDIT' | 'DEBIT' | 'HOLD';
+
 export interface WalletTransaction {
   id: string;
   transactionNumber?: string;
   transactionType: WalletTransactionType | string;
+  /** 'CREDIT' = gained, 'DEBIT' = spent, 'HOLD' = frozen/released. */
+  direction?: TransactionDirection | string;
   status: string;
   amount: number;
   balanceBefore?: number;
@@ -55,7 +60,6 @@ export interface WalletStatistics {
   averageTransactionAmount: number;
   largestCredit: number;
   largestDebit: number;
-  totalRewardsClaimed: number;
   activeDays: number;
   lastActivityDate?: string;
 }

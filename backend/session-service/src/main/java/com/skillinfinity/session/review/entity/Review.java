@@ -1,13 +1,11 @@
 package com.skillinfinity.session.review.entity;
 
 import com.skillinfinity.common.enums.ReviewStatus;
-import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
-import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -17,10 +15,13 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
+/**
+ * A learner's rating (1–5) + comment for a completed mentoring session.
+ * Reviews are created by learners who completed the session and are approved
+ * immediately — there is no moderation pipeline.
+ */
 @Entity
 @Table(name = "reviews")
 @Data
@@ -57,30 +58,6 @@ public class Review {
     @Column(name = "is_active")
     private boolean active;
 
-    @Column(name = "is_verified")
-    private boolean verified;
-
-    @Column(name = "helpful_count")
-    private int helpfulCount;
-
-    @Column(name = "not_helpful_count")
-    private int notHelpfulCount;
-
-    @Column(name = "reply_count")
-    private int replyCount;
-
-    @Column(name = "report_count")
-    private int reportCount;
-
-    @Column(name = "moderation_reason", columnDefinition = "TEXT")
-    private String moderationReason;
-
-    @Column(name = "moderated_by")
-    private UUID moderatedBy;
-
-    @Column(name = "moderated_at")
-    private LocalDateTime moderatedAt;
-
     @Column(name = "published_at")
     private LocalDateTime publishedAt;
 
@@ -96,28 +73,15 @@ public class Review {
     @Column(name = "updated_by")
     private String updatedBy;
 
-    @OneToMany(mappedBy = "review", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<ReviewReply> replies = new ArrayList<>();
-
-    @OneToMany(mappedBy = "review", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<ReviewVote> votes = new ArrayList<>();
-
-    @OneToMany(mappedBy = "review", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<ReviewReport> reports = new ArrayList<>();
-
     @PrePersist
     protected void onCreate() {
         this.id = UUID.randomUUID();
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
         this.active = true;
-        this.verified = false;
-        this.helpfulCount = 0;
-        this.notHelpfulCount = 0;
-        this.replyCount = 0;
-        this.reportCount = 0;
+        this.publishedAt = LocalDateTime.now();
         if (this.status == null) {
-            this.status = ReviewStatus.PENDING;
+            this.status = ReviewStatus.APPROVED;
         }
     }
 

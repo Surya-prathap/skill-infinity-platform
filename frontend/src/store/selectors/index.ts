@@ -13,6 +13,20 @@ export const selectRememberMe = (state: RootState) => state.auth.rememberMe;
 export const selectIsAuthenticated = (state: RootState) =>
   state.auth.status === 'authenticated' && Boolean(state.auth.accessToken);
 
+/**
+ * True once redux-persist finished rehydrating the persisted session. Route
+ * guards must wait for this before deciding to redirect: on a browser refresh
+ * the auth slice starts empty (status 'idle') and only becomes authoritative
+ * after the persisted tokens are restored. Redirecting earlier is what sent
+ * users to /login on every refresh.
+ */
+export const selectAuthInitialized = (state: RootState) =>
+  // `?? true`: setups without a redux-persist layer (e.g. unit tests) are
+  // treated as already initialized. In the real app `_persist` is always
+  // present — redux-persist sets `rehydrated: false` on boot and flips it to
+  // true once the persisted session is restored.
+  (state as RootState & { _persist?: { rehydrated?: boolean } })._persist?.rehydrated ?? true;
+
 export const selectUserRoles = createSelector(
   [(state: RootState) => state.auth.user],
   (user) => user?.roles ?? ([] as Role[]),
@@ -59,40 +73,3 @@ export const selectPageLoading = (state: RootState) => state.loading.pageLoading
 
 /* ---------------- Admin ---------------- */
 export const selectAdminSidebarCollapsed = (state: RootState) => state.admin.sidebarCollapsed;
-export const selectAdminEnvironment = (state: RootState) => state.admin.environment;
-
-/* ---------------- Meeting ---------------- */
-export const selectMeeting = (state: RootState) => state.meeting.meeting;
-export const selectMeetingId = (state: RootState) => state.meeting.meetingId;
-export const selectMeetingStatus = (state: RootState) => state.meeting.status;
-export const selectMeetingParticipants = (state: RootState) => state.meeting.participants;
-export const selectMeetingLayout = (state: RootState) => state.meeting.layout;
-export const selectMeetingFullscreen = (state: RootState) => state.meeting.fullscreen;
-export const selectMeetingControls = (state: RootState) => state.meeting.controls;
-export const selectMeetingDevices = (state: RootState) => state.meeting.devices;
-export const selectMeetingDevicesList = (state: RootState) => state.meeting.devicesList;
-export const selectMeetingConnection = (state: RootState) => state.meeting.connection;
-export const selectMeetingStats = (state: RootState) => state.meeting.stats;
-export const selectMeetingMessages = (state: RootState) => state.meeting.messages;
-export const selectMeetingReactions = (state: RootState) => state.meeting.reactions;
-export const selectMeetingPinnedId = (state: RootState) => state.meeting.pinnedId;
-export const selectMeetingSpotlightId = (state: RootState) => state.meeting.spotlightId;
-export const selectMeetingStartedAt = (state: RootState) => state.meeting.startedAt;
-export const selectMeetingUnreadChat = (state: RootState) => state.meeting.unreadChat;
-export const selectMeetingError = (state: RootState) => state.meeting.error;
-
-export const selectLocalParticipant = createSelector(
-  [selectMeetingParticipants],
-  (participants) => participants.find((participant) => participant.isLocal) ?? null,
-);
-
-export const selectSpeakingParticipants = createSelector(
-  [selectMeetingParticipants],
-  (participants) => participants.filter((participant) => participant.isSpeaking),
-);
-
-export const selectScreenSharingParticipant = createSelector(
-  [selectMeetingParticipants],
-  (participants) =>
-    participants.find((participant) => participant.screenSharing) ?? null,
-);

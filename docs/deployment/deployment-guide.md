@@ -20,9 +20,7 @@ This guide covers production deployment of the Skill Infinity Platform across al
 | Service | CPU | Memory | Storage |
 |---------|-----|--------|---------|
 | MySQL 8.0 | 4 cores | 8GB RAM | 100GB SSD |
-| Redis 7 | 2 cores | 4GB RAM | 20GB SSD |
 | RabbitMQ 3 | 2 cores | 4GB RAM | 20GB SSD |
-| MinIO | 2 cores | 4GB RAM | 500GB SSD |
 | Each Microservice | 1-2 cores | 2-4GB RAM | 10GB SSD |
 | API Gateway | 2 cores | 4GB RAM | 10GB SSD |
 | Config Server | 1 core | 2GB RAM | 10GB SSD |
@@ -37,11 +35,8 @@ This guide covers production deployment of the Skill Infinity Platform across al
 | 8761 | Discovery Server | HTTP |
 | 8888 | Config Server | HTTP |
 | 3306 | MySQL | TCP |
-| 6379 | Redis | TCP |
 | 5672 | RabbitMQ AMQP | TCP |
 | 15672 | RabbitMQ Management | HTTP |
-| 9000 | MinIO API | HTTP |
-| 9001 | MinIO Console | HTTP |
 
 ## Docker Deployment
 
@@ -54,11 +49,8 @@ export JWT_SECRET=<256-bit-hex-secret>
 export CONFIG_REPO_URI=<git-repo-url>  # optional, for Git backend
 
 # Optional with defaults
-export REDIS_PORT=6379
 export RABBITMQ_USER=guest
 export RABBITMQ_PASSWORD=<rabbitmq-password>
-export MINIO_ACCESS_KEY=<minio-access-key>
-export MINIO_SECRET_KEY=<minio-secret-key>
 ```
 
 ### Deploy with Docker Compose
@@ -131,7 +123,6 @@ Import pre-built dashboards:
 - [ ] Security headers enabled
 - [ ] CORS restricted to known origins
 - [ ] RabbitMQ admin interface secured
-- [ ] MinIO access policies configured
 - [ ] Regular security updates applied
 
 ## Troubleshooting
@@ -140,7 +131,6 @@ Import pre-built dashboards:
 
 1. **Service fails to start**: Check Config Server is healthy first
 2. **Database connection refused**: Verify MySQL is running and credentials are correct
-3. **Redis connection failed**: Ensure Redis is accessible on configured host/port
 4. **RabbitMQ connection failed**: Verify RabbitMQ credentials and virtual host
 5. **Eureka registration failed**: Check Discovery Server URL and network connectivity
 

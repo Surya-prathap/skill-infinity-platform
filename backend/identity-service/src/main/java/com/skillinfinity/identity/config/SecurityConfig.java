@@ -1,5 +1,6 @@
 package com.skillinfinity.identity.config;
 
+import com.skillinfinity.common.filter.GatewayHeaderAuthenticationFilter;
 import com.skillinfinity.identity.security.AccessDeniedHandlerImpl;
 import com.skillinfinity.identity.security.JwtAuthFilter;
 import com.skillinfinity.identity.security.RestAuthenticationEntryPoint;
@@ -60,9 +61,25 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                // Trust the identity headers injected by the API gateway (same
+                // contract as every other backend service). This lets the
+                // admin-service backfill the admin user index by calling
+                // /api/v1/auth/admin/users with the gateway-style headers.
+                // Ordered BEFORE the JWT filter so header-only requests
+                // (service-to-service) authenticate, while JWT-only requests
+                // still work: the gateway filter clears an empty context and
+                // the JWT filter populates it afterwards. jwtAuthFilter must be
+                // registered first so the JwtAuthFilter.class reference below
+                // resolves to a known position in the filter chain.
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(gatewayHeaderAuthenticationFilter(), JwtAuthFilter.class);
 
         return http.build();
+    }
+
+    @Bean
+    public GatewayHeaderAuthenticationFilter gatewayHeaderAuthenticationFilter() {
+        return new GatewayHeaderAuthenticationFilter();
     }
 
     @Bean

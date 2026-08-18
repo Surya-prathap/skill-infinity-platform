@@ -7,8 +7,6 @@ import com.skillinfinity.payment.repository.CouponRepository;
 import com.skillinfinity.payment.service.CouponService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,13 +19,11 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class CouponServiceImpl implements CouponService {
 
-    private static final String CACHE_COUPON = "coupon";
 
     private final CouponRepository couponRepository;
 
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(value = CACHE_COUPON, key = "#couponCode", unless = "#result == null")
     public Coupon validateAndApplyCoupon(String couponCode, BigDecimal amount, String userId) {
         Coupon coupon = couponRepository.findByCode(couponCode)
                 .orElseThrow(() -> new InvalidCouponException("Coupon not found: " + couponCode));
@@ -65,7 +61,6 @@ public class CouponServiceImpl implements CouponService {
 
     @Override
     @Transactional
-    @CacheEvict(value = CACHE_COUPON, key = "#request.couponCode")
     public Coupon validateCoupon(com.skillinfinity.payment.dto.request.CouponRequest request) {
         Coupon coupon = validateAndApplyCoupon(request.getCouponCode(), request.getAmount(), request.getUserId());
         incrementCouponUsage(coupon);

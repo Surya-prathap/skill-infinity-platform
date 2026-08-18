@@ -42,14 +42,14 @@ describe('DashboardPage', () => {
     expect(screen.getByText('Profile Completion')).toBeInTheDocument();
   });
 
-  it('renders sessions, wallet, activity and notifications widgets', async () => {
+  it('renders sessions, wallet, activity and community widgets', async () => {
     const { store } = renderWithProviders(<DashboardPage />);
     store.dispatch(setCredentials(mockAuth));
 
     expect(screen.getAllByText('Upcoming Sessions').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Wallet Balance').length).toBeGreaterThan(0);
     expect(screen.getByText('Recent Activity')).toBeInTheDocument();
-    expect(screen.getByText('Top Reviews')).toBeInTheDocument();
+    expect(screen.getByText('Community Sessions')).toBeInTheDocument();
     expect(screen.getByText('Recommended Mentors')).toBeInTheDocument();
   });
 });

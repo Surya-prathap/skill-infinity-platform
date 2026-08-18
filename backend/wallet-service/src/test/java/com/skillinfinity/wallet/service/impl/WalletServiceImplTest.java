@@ -6,15 +6,12 @@ import com.skillinfinity.wallet.dto.request.CreditRequest;
 import com.skillinfinity.wallet.dto.request.DebitRequest;
 import com.skillinfinity.wallet.dto.request.FreezeRequest;
 import com.skillinfinity.wallet.dto.request.WalletRequest;
-import com.skillinfinity.wallet.dto.response.LedgerEntryResponse;
-import com.skillinfinity.wallet.dto.response.RewardResponse;
 import com.skillinfinity.wallet.dto.response.TransactionResponse;
 import com.skillinfinity.wallet.dto.response.WalletBalanceResponse;
 import com.skillinfinity.wallet.dto.response.WalletResponse;
 import com.skillinfinity.wallet.dto.response.WalletAuditResponse;
 import com.skillinfinity.wallet.dto.response.WalletStatisticsResponse;
 import com.skillinfinity.wallet.entity.CreditTransaction;
-import com.skillinfinity.wallet.entity.Reward;
 import com.skillinfinity.wallet.entity.Wallet;
 import com.skillinfinity.wallet.entity.WalletAudit;
 import com.skillinfinity.wallet.entity.WalletBalance;
@@ -29,11 +26,7 @@ import com.skillinfinity.wallet.exception.InsufficientBalanceException;
 import com.skillinfinity.wallet.exception.WalletFrozenException;
 import com.skillinfinity.wallet.exception.WalletNotFoundException;
 import com.skillinfinity.wallet.mapper.WalletMapper;
-import com.skillinfinity.wallet.repository.BonusCreditRepository;
-import com.skillinfinity.wallet.repository.CouponRedemptionRepository;
 import com.skillinfinity.wallet.repository.CreditTransactionRepository;
-import com.skillinfinity.wallet.repository.ReferralRewardRepository;
-import com.skillinfinity.wallet.repository.RewardRepository;
 import com.skillinfinity.wallet.repository.WalletAuditRepository;
 import com.skillinfinity.wallet.repository.WalletBalanceRepository;
 import com.skillinfinity.wallet.repository.WalletLedgerRepository;
@@ -72,8 +65,6 @@ class WalletServiceImplTest {
     private CreditTransactionRepository creditTransactionRepository;
     @Mock
     private WalletLedgerRepository walletLedgerRepository;
-    @Mock
-    private RewardRepository rewardRepository;
     @Mock
     private WalletAuditRepository walletAuditRepository;
     @Mock
@@ -116,7 +107,7 @@ class WalletServiceImplTest {
     void setUp() {
         walletService = new WalletServiceImpl(
                 walletRepository, walletBalanceRepository, creditTransactionRepository,
-                walletLedgerRepository, rewardRepository,
+                walletLedgerRepository,
                 walletAuditRepository, walletStatisticsRepository,
                 withdrawalRequestRepository,
                 walletMapper, eventPublisher
@@ -624,5 +615,274 @@ class WalletServiceImplTest {
 
         assertThrows(InsufficientBalanceException.class, () ->
                 walletService.freezeCredits(userId, walletId, request));
+    }
+
+    // ============================================================
+    // Session Settlement Tests
+    // ============================================================
+
+    private Wallet walletFor(UUID owner) {
+        return Wallet.builder()
+                .id(UUID.randomUUID())
+                .userId(owner)
+                .walletNumber("WAL-TEST-" + owner.toString().substring(0, 8))
+                .status(WalletStatus.ACTIVE)
+                .totalCreditsPurchased(BigDecimal.ZERO)
+                .totalCreditsSpent(BigDecimal.ZERO)
+                .totalCreditsEarned(BigDecimal.ZERO)
+                .frozenAmount(BigDecimal.ZERO)
+                .build();
+    }
+
+    private WalletBalance balanceWithHold(Wallet owner, BigDecimal purchased, BigDecimal frozen) {
+        return WalletBalance.builder()
+                .id(UUID.randomUUID())
+                .wallet(owner)
+                .currentBalance(purchased)
+                .availableBalance(purchased.subtract(frozen))
+                .frozenBalance(frozen)
+                .welcomeBalance(BigDecimal.ZERO)
+                .purchasedBalance(purchased)
+                .learningBalance(BigDecimal.ZERO)
+                .withdrawableBalance(BigDecimal.ZERO)
+                .currency("CREDITS")
+                .build();
+    }
+
+    private void stubSettlementWallets(Wallet learnerWallet, WalletBalance learnerBalance,
+                                       Wallet mentorWallet, WalletBalance mentorBalance) {
+        // lenient: the multi-learner test calls this helper once per learner,
+        // so later calls re-stub shared (mentor/repo) answers.
+        lenient().when(walletRepository.findByUserId(learnerWallet.getUserId())).thenReturn(Optional.of(learnerWallet));
+        lenient().when(walletRepository.findByUserId(mentorWallet.getUserId())).thenReturn(Optional.of(mentorWallet));
+        lenient().when(walletBalanceRepository.findByWalletId(learnerWallet.getId())).thenReturn(Optional.of(learnerBalance));
+        lenient().when(walletBalanceRepository.findByWalletId(mentorWallet.getId())).thenReturn(Optional.of(mentorBalance));
+        lenient().when(creditTransactionRepository.existsByReferenceId(anyString())).thenReturn(false);
+        lenient().when(creditTransactionRepository.save(any(CreditTransaction.class))).thenAnswer(i -> i.getArgument(0));
+        lenient().when(walletStatisticsRepository.findByWalletId(any())).thenReturn(Optional.of(statistics));
+        lenient().when(walletBalanceRepository.save(any(WalletBalance.class))).thenAnswer(i -> i.getArgument(0));
+        lenient().when(walletRepository.save(any(Wallet.class))).thenAnswer(i -> i.getArgument(0));
+        lenient().when(walletLedgerRepository.save(any(WalletLedger.class))).thenReturn(null);
+        lenient().when(walletAuditRepository.save(any(WalletAudit.class))).thenReturn(null);
+    }
+
+    /**
+     * A paid community session (e.g. 2 credits) has several learners — each
+     * learner's hold must settle independently with its own (session, learner)
+     * reference, and the mentor is credited per learner.
+     */
+    @Test
+    void shouldSettleEachLearnerIndependentlyForCommunitySession() {
+        UUID sessionId = UUID.randomUUID();
+        UUID learnerA = UUID.randomUUID();
+        UUID learnerB = UUID.randomUUID();
+        UUID mentorId = UUID.randomUUID();
+
+        Wallet walletA = walletFor(learnerA);
+        Wallet walletB = walletFor(learnerB);
+        Wallet mentorWallet = walletFor(mentorId);
+        WalletBalance balanceA = balanceWithHold(walletA, BigDecimal.valueOf(100), BigDecimal.valueOf(2));
+        WalletBalance balanceB = balanceWithHold(walletB, BigDecimal.valueOf(100), BigDecimal.valueOf(2));
+        WalletBalance mentorBalance = WalletBalance.builder()
+                .id(UUID.randomUUID())
+                .wallet(mentorWallet)
+                .currentBalance(BigDecimal.ZERO)
+                .availableBalance(BigDecimal.ZERO)
+                .frozenBalance(BigDecimal.ZERO)
+                .welcomeBalance(BigDecimal.ZERO)
+                .purchasedBalance(BigDecimal.ZERO)
+                .learningBalance(BigDecimal.ZERO)
+                .withdrawableBalance(BigDecimal.ZERO)
+                .currency("CREDITS")
+                .build();
+
+        stubSettlementWallets(walletA, balanceA, mentorWallet, mentorBalance);
+        stubSettlementWallets(walletB, balanceB, mentorWallet, mentorBalance);
+
+        // Community settlement: learners paid from purchased credits, so the
+        // mentor's value is withdrawable — learning stays untouched.
+        walletService.settleSessionCredits(sessionId, learnerA, mentorId, BigDecimal.valueOf(2), true);
+        walletService.settleSessionCredits(sessionId, learnerB, mentorId, BigDecimal.valueOf(2), true);
+
+        // Each learner's hold (frozen 2, purchased 100) is consumed once.
+        assertEquals(BigDecimal.valueOf(98), balanceA.getPurchasedBalance());
+        assertEquals(BigDecimal.valueOf(98), balanceB.getPurchasedBalance());
+        assertEquals(BigDecimal.ZERO, balanceA.getFrozenBalance());
+        assertEquals(BigDecimal.ZERO, balanceB.getFrozenBalance());
+
+        // Cash-funded (purchased) credits convert to withdrawable mentor value
+        // (2 per learner); no learning credits are created for purchased source.
+        assertEquals(0, mentorBalance.getLearningBalance().compareTo(BigDecimal.ZERO));
+        assertEquals(0, mentorBalance.getWithdrawableBalance().compareTo(BigDecimal.valueOf(4)));
+
+        // Idempotency guard uses the per-(session, learner) reference.
+        verify(creditTransactionRepository, atLeastOnce())
+                .existsByReferenceId("SESSION-" + sessionId + "-" + learnerA);
+        verify(creditTransactionRepository, atLeastOnce())
+                .existsByReferenceId("SESSION-" + sessionId + "-" + learnerB);
+    }
+
+    /**
+     * Community settlement sourced from LEARNING credits keeps the value as
+     * learning credits on the mentor side — types are never mixed.
+     */
+    @Test
+    void shouldKeepLearningSourceAsLearningForCommunitySession() {
+        UUID sessionId = UUID.randomUUID();
+        UUID learnerId = UUID.randomUUID();
+        UUID mentorId = UUID.randomUUID();
+
+        Wallet learnerWallet = walletFor(learnerId);
+        Wallet mentorWallet = walletFor(mentorId);
+        WalletBalance learnerBalance = WalletBalance.builder()
+                .id(UUID.randomUUID())
+                .wallet(learnerWallet)
+                .currentBalance(BigDecimal.valueOf(3))
+                .availableBalance(BigDecimal.valueOf(1))
+                .frozenBalance(BigDecimal.valueOf(2))
+                .welcomeBalance(BigDecimal.ZERO)
+                .purchasedBalance(BigDecimal.ZERO)
+                .learningBalance(BigDecimal.valueOf(3))
+                .withdrawableBalance(BigDecimal.ZERO)
+                .currency("CREDITS")
+                .build();
+        WalletBalance mentorBalance = WalletBalance.builder()
+                .id(UUID.randomUUID())
+                .wallet(mentorWallet)
+                .currentBalance(BigDecimal.ZERO)
+                .availableBalance(BigDecimal.ZERO)
+                .frozenBalance(BigDecimal.ZERO)
+                .welcomeBalance(BigDecimal.ZERO)
+                .purchasedBalance(BigDecimal.ZERO)
+                .learningBalance(BigDecimal.ZERO)
+                .withdrawableBalance(BigDecimal.ZERO)
+                .currency("CREDITS")
+                .build();
+
+        stubSettlementWallets(learnerWallet, learnerBalance, mentorWallet, mentorBalance);
+
+        walletService.settleSessionCredits(sessionId, learnerId, mentorId, BigDecimal.valueOf(2), true);
+
+        assertEquals(BigDecimal.valueOf(1), learnerBalance.getLearningBalance());
+        assertEquals(BigDecimal.ZERO, learnerBalance.getFrozenBalance());
+        assertEquals(0, mentorBalance.getLearningBalance().compareTo(BigDecimal.valueOf(2)));
+        assertEquals(0, mentorBalance.getWithdrawableBalance().compareTo(BigDecimal.ZERO));
+    }
+
+    /**
+     * Professional sessions preserve the credit SOURCE: a learner paying from
+     * purchased credits makes the mentor's value withdrawable — never learning.
+     */
+    @Test
+    void shouldPreservePurchasedSourceForProfessionalSession() {
+        UUID sessionId = UUID.randomUUID();
+        UUID learnerId = UUID.randomUUID();
+        UUID mentorId = UUID.randomUUID();
+
+        Wallet learnerWallet = walletFor(learnerId);
+        Wallet mentorWallet = walletFor(mentorId);
+        WalletBalance learnerBalance = balanceWithHold(learnerWallet, BigDecimal.valueOf(100), BigDecimal.valueOf(2));
+        WalletBalance mentorBalance = WalletBalance.builder()
+                .id(UUID.randomUUID())
+                .wallet(mentorWallet)
+                .currentBalance(BigDecimal.ZERO)
+                .availableBalance(BigDecimal.ZERO)
+                .frozenBalance(BigDecimal.ZERO)
+                .welcomeBalance(BigDecimal.ZERO)
+                .purchasedBalance(BigDecimal.ZERO)
+                .learningBalance(BigDecimal.ZERO)
+                .withdrawableBalance(BigDecimal.ZERO)
+                .currency("CREDITS")
+                .build();
+
+        stubSettlementWallets(learnerWallet, learnerBalance, mentorWallet, mentorBalance);
+
+        walletService.settleSessionCredits(sessionId, learnerId, mentorId, BigDecimal.valueOf(2), false);
+
+        // 2 purchased credits → 2 withdrawable for the mentor, 0 learning.
+        assertEquals(0, mentorBalance.getLearningBalance().compareTo(BigDecimal.ZERO));
+        assertEquals(0, mentorBalance.getWithdrawableBalance().compareTo(BigDecimal.valueOf(2)));
+    }
+
+    /** A learning-sourced professional session stays learning for the mentor. */
+    @Test
+    void shouldPreserveLearningSourceForProfessionalSession() {
+        UUID sessionId = UUID.randomUUID();
+        UUID learnerId = UUID.randomUUID();
+        UUID mentorId = UUID.randomUUID();
+
+        Wallet learnerWallet = walletFor(learnerId);
+        Wallet mentorWallet = walletFor(mentorId);
+        WalletBalance learnerBalance = WalletBalance.builder()
+                .id(UUID.randomUUID())
+                .wallet(learnerWallet)
+                .currentBalance(BigDecimal.valueOf(2))
+                .availableBalance(BigDecimal.ZERO)
+                .frozenBalance(BigDecimal.valueOf(2))
+                .welcomeBalance(BigDecimal.ZERO)
+                .purchasedBalance(BigDecimal.ZERO)
+                .learningBalance(BigDecimal.valueOf(2))
+                .withdrawableBalance(BigDecimal.ZERO)
+                .currency("CREDITS")
+                .build();
+        WalletBalance mentorBalance = WalletBalance.builder()
+                .id(UUID.randomUUID())
+                .wallet(mentorWallet)
+                .currentBalance(BigDecimal.ZERO)
+                .availableBalance(BigDecimal.ZERO)
+                .frozenBalance(BigDecimal.ZERO)
+                .welcomeBalance(BigDecimal.ZERO)
+                .purchasedBalance(BigDecimal.ZERO)
+                .learningBalance(BigDecimal.ZERO)
+                .withdrawableBalance(BigDecimal.ZERO)
+                .currency("CREDITS")
+                .build();
+
+        stubSettlementWallets(learnerWallet, learnerBalance, mentorWallet, mentorBalance);
+
+        walletService.settleSessionCredits(sessionId, learnerId, mentorId, BigDecimal.valueOf(2), false);
+
+        // Learning-sourced payment → learning credits for the mentor, never withdrawable.
+        assertEquals(0, mentorBalance.getLearningBalance().compareTo(BigDecimal.valueOf(2)));
+        assertEquals(0, mentorBalance.getWithdrawableBalance().compareTo(BigDecimal.ZERO));
+    }
+
+    /** A redelivered completion event must not settle the same learner twice. */
+    @Test
+    void shouldSkipDuplicateSettlementForSameLearner() {
+        UUID sessionId = UUID.randomUUID();
+        UUID learnerId = UUID.randomUUID();
+        UUID mentorId = UUID.randomUUID();
+        String reference = "SESSION-" + sessionId + "-" + learnerId;
+
+        Wallet learnerWallet = walletFor(learnerId);
+        Wallet mentorWallet = walletFor(mentorId);
+        WalletBalance learnerBalance = balanceWithHold(learnerWallet, BigDecimal.valueOf(100), BigDecimal.valueOf(2));
+        WalletBalance mentorBalance = WalletBalance.builder()
+                .id(UUID.randomUUID())
+                .wallet(mentorWallet)
+                .currentBalance(BigDecimal.ZERO)
+                .availableBalance(BigDecimal.ZERO)
+                .frozenBalance(BigDecimal.ZERO)
+                .welcomeBalance(BigDecimal.ZERO)
+                .purchasedBalance(BigDecimal.ZERO)
+                .learningBalance(BigDecimal.ZERO)
+                .withdrawableBalance(BigDecimal.ZERO)
+                .currency("CREDITS")
+                .build();
+
+        // The reference already exists → the settlement returns before any
+        // wallet lookups or transactions, so only the guard needs stubbing.
+        when(creditTransactionRepository.existsByReferenceId(reference)).thenReturn(true);
+
+        walletService.settleSessionCredits(sessionId, learnerId, mentorId, BigDecimal.valueOf(2), true);
+
+        // No debit, no mentor credit, no transactions recorded.
+        assertEquals(BigDecimal.valueOf(100), learnerBalance.getPurchasedBalance());
+        assertEquals(BigDecimal.valueOf(2), learnerBalance.getFrozenBalance());
+        assertEquals(BigDecimal.ZERO, mentorBalance.getLearningBalance());
+        assertEquals(BigDecimal.ZERO, mentorBalance.getWithdrawableBalance());
+        verify(creditTransactionRepository, never()).save(any(CreditTransaction.class));
+        verify(walletLedgerRepository, never()).save(any(WalletLedger.class));
     }
 }

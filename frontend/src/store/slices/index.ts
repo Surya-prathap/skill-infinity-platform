@@ -4,7 +4,6 @@ export { default as themeReducer } from './themeSlice';
 export { default as settingsReducer } from './settingsSlice';
 export { default as loadingReducer } from './loadingSlice';
 export { default as mentorReducer } from './mentorSlice';
-export { default as meetingReducer } from './meetingSlice';
 export { default as adminReducer } from './adminSlice';
 
 export * from './authSlice';
@@ -13,5 +12,4 @@ export * from './themeSlice';
 export * from './settingsSlice';
 export * from './loadingSlice';
 export * from './mentorSlice';
-export * from './meetingSlice';
 export * from './adminSlice';

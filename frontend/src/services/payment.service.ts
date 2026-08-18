@@ -3,6 +3,8 @@ import { API_ENDPOINTS } from '@/constants';
 import type {
   ApiResponse,
   CouponValidationRequest,
+  CreditPackage,
+  CreditPurchaseRequest,
   Invoice,
   MySubscription,
   PageResponse,
@@ -10,6 +12,10 @@ import type {
   PaymentConfirmationRequest,
   PaymentFailureRequest,
   PaymentInitRequest,
+  RazorpayOrder,
+  RazorpaySubscriptionCheckout,
+  RazorpaySubscriptionVerifyRequest,
+  RazorpayVerifyRequest,
   Receipt,
   RefundRequest,
   SubscriptionPlan,
@@ -76,6 +82,29 @@ export const paymentService = {
   cancelSubscription: (subscriptionId: string) =>
     apiClient.post<ApiResponse<null>>(
       resolve(API_ENDPOINTS.PAYMENTS.SUBSCRIPTION_CANCEL, { subscriptionId }),
+    ),
+
+  /* ---------------- Razorpay (INR, test mode) ---------------- */
+
+  getCreditPackages: () =>
+    apiClient.get<ApiResponse<CreditPackage[]>>(API_ENDPOINTS.PAYMENTS.CREDIT_PACKAGES),
+
+  createRazorpayOrder: (payload: CreditPurchaseRequest) =>
+    apiClient.post<ApiResponse<RazorpayOrder>>(API_ENDPOINTS.PAYMENTS.ORDERS, payload),
+
+  verifyRazorpayPayment: (payload: RazorpayVerifyRequest) =>
+    apiClient.post<ApiResponse<Payment>>(API_ENDPOINTS.PAYMENTS.VERIFY, payload),
+
+  createSubscriptionCheckout: (planId: string) =>
+    apiClient.post<ApiResponse<RazorpaySubscriptionCheckout>>(
+      API_ENDPOINTS.PAYMENTS.SUBSCRIPTION_CHECKOUT,
+      { planId },
+    ),
+
+  verifySubscriptionPayment: (payload: RazorpaySubscriptionVerifyRequest) =>
+    apiClient.post<ApiResponse<MySubscription>>(
+      API_ENDPOINTS.PAYMENTS.SUBSCRIPTION_VERIFY,
+      payload,
     ),
 };
 

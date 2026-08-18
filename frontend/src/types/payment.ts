@@ -158,3 +158,62 @@ export interface SubscriptionPurchaseRequest {
   planId: string;
   couponCode?: string;
 }
+
+/* ---------------- Razorpay (INR, test mode) ---------------- */
+
+/** Backend-controlled credit package — the backend decides credits + price. */
+export interface CreditPackage {
+  code: string;
+  name: string;
+  credits: number;
+  price: number;
+  currency?: string;
+  highlighted?: boolean;
+  features?: string[];
+  active?: boolean;
+}
+
+/** Razorpay order details for opening the checkout. */
+export interface RazorpayOrder {
+  paymentId: string;
+  orderId: string;
+  /** Amount in paise (₹109 → 10900). */
+  amount: number;
+  currency: string;
+  /** Razorpay Key ID — safe for the browser. */
+  keyId: string;
+  credits?: number;
+  discountAmount?: number;
+  totalAmount?: number;
+}
+
+export interface RazorpayVerifyRequest {
+  paymentId: string;
+  razorpayPaymentId?: string;
+  razorpayOrderId?: string;
+  razorpaySignature: string;
+}
+
+/** Razorpay subscription checkout details (order-based, same as credit purchase). */
+export interface RazorpaySubscriptionCheckout {
+  paymentId: string;
+  orderId: string;
+  keyId: string;
+  planId?: string;
+  planName?: string;
+  amount: number;
+  currency: string;
+  totalCount?: number;
+}
+
+export interface RazorpaySubscriptionVerifyRequest {
+  paymentId: string;
+  razorpayPaymentId?: string;
+  razorpayOrderId?: string;
+  razorpaySignature: string;
+}
+
+export interface CreditPurchaseRequest {
+  packageCode: string;
+  couponCode?: string;
+}

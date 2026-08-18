@@ -7,7 +7,7 @@ spring:
   config:
     import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
   datasource:
-    url: jdbc:mysql://${ADMIN_DB_HOST:localhost}:${ADMIN_DB_PORT:3306}/${ADMIN_DB_NAME:skill_infinity_admin}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    url: jdbc:mysql://${ADMIN_DB_HOST:localhost}:${ADMIN_DB_PORT:3306}/${ADMIN_DB_NAME:skill_infinity_admin}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Kolkata
     username: ${ADMIN_DB_USERNAME:root}
     password: ${ADMIN_DB_PASSWORD:root123}
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -16,6 +16,8 @@ spring:
       minimum-idle: 5
       idle-timeout: 30000
       connection-timeout: 30000
+  jackson:
+    time-zone: Asia/Kolkata
   jpa:
     hibernate:
       ddl-auto: update
@@ -26,15 +28,6 @@ spring:
         format_sql: true
     open-in-view: false
   data:
-    redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
-      timeout: 2000ms
-      lettuce:
-        pool:
-          max-active: 8
-          max-idle: 4
-          min-idle: 2
   rabbitmq:
     host: ${RABBITMQ_HOST:localhost}
     port: ${RABBITMQ_PORT:5672}
@@ -45,9 +38,9 @@ spring:
       exchange: admin.exchange
     listener:
       simple:
-        auto-startup: false
+        auto-startup: true
       direct:
-        auto-startup: false
+        auto-startup: true
         retry:
           enabled: true
           max-attempts: 3
@@ -97,12 +90,6 @@ logging:
       max-history: 7
 
 admin:
-  cache:
-    dashboard-ttl: 300
-    settings-ttl: 900
-    features-ttl: 600
-    metrics-ttl: 180
-    analytics-ttl: 600
   dashboard:
     max-top-mentors: 10
     max-top-learners: 10

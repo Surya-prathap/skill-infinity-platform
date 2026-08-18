@@ -27,9 +27,13 @@ public interface CreditTransactionRepository extends JpaRepository<CreditTransac
 
     Optional<CreditTransaction> findByReferenceId(String referenceId);
 
+    List<CreditTransaction> findByReferenceIdAndTransactionType(String referenceId, TransactionType transactionType);
+
     Optional<CreditTransaction> findByPaymentGatewayRef(String paymentGatewayRef);
 
     boolean existsByReferenceId(String referenceId);
+
+    boolean existsByReferenceIdAndTransactionType(String referenceId, TransactionType transactionType);
 
     boolean existsByPaymentGatewayRef(String paymentGatewayRef);
 

@@ -30,8 +30,6 @@ set +a
 export CONFIG_SERVER_URL="http://localhost:8888"
 export EUREKA_DEFAULT_ZONE="http://localhost:8761/eureka/"
 export EUREKA_HOSTNAME="localhost"
-export REDIS_HOST="localhost"
-export REDIS_PORT="6379"
 export RABBITMQ_HOST="localhost"
 export RABBITMQ_AMQP_PORT="5672"
 export RABBITMQ_PORT="5672"
@@ -41,13 +39,27 @@ export RABBITMQ_PASSWORD="${RABBITMQ_PASSWORD:-guest}"
 # MySQL credentials come from .env so they match the running container
 export MYSQL_ROOT_PASSWORD="${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD missing in .env}"
 
-# Shared JVM tuning: G1GC, fast startup (C1-only JIT), compact heap
-# -XX:TieredStopAtLevel=1   => ~30% faster Spring Boot startup, ideal for I/O-bound dev services
+# ------------------------------------------------------------------
+# Service-to-service URLs (non-Docker). The application.yml defaults are
+# Docker DNS names (http://mentor-service:8083) that DO NOT resolve on the
+# host. Without these overrides every cross-service call (booking → mentor
+# validation / wallet freeze, admin → identity backfill) fails with
+# "Booking could not be completed right now" or empty dashboards.
+# ------------------------------------------------------------------
+export MENTOR_SERVICE_URL="${MENTOR_SERVICE_URL:-http://localhost:8083}"
+export WALLET_SERVICE_URL="${WALLET_SERVICE_URL:-http://localhost:8085}"
+export IDENTITY_SERVICE_URL="${IDENTITY_SERVICE_URL:-http://localhost:8081}"
+
+# Shared JVM tuning: G1GC, FULL tiered compilation (C1+C2), compact heap.
+# Do NOT use C1-only (-XX:TieredStopAtLevel=1): it speeds up startup ~30% but
+# leaves hot paths (BCrypt, JPA hydration, JSON mapping) 10-20x slower at
+# runtime — the exact "login/register/dashboard take 8-10s" symptom. C1+C2
+# costs a few extra seconds at boot and makes every request fast instead.
 # -XX:MaxMetaspaceSize=192m => caps the (large) metaspace each Spring Boot app allocates so the
 #                              11 JVMs + Docker infra fit in the 8 GB dev machine without swap thrash.
 #                              NOTE: if a service ever dies at startup with OutOfMemoryError: Metaspace,
 #                              raise this cap (it is the first knob to tune).
-COMMON_OPTS="-XX:+UseG1GC -XX:+TieredCompilation -XX:TieredStopAtLevel=1 -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=64m -Xss512k -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10"
+COMMON_OPTS="-XX:+UseG1GC -XX:+TieredCompilation -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=64m -Xss512k -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10"
 
 # service_name|jar_path|heap|-Xms|extra_env
 SERVICES=(

@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { AxiosRequestConfig } from 'axios';
 import { paymentService, walletService } from '@/services';
-import { getErrorMessage, showError, showSuccess } from '@/utils';
+import { getErrorMessage, nowInAppZone, parseApiTime, showError, showSuccess } from '@/utils';
 import type {
   CreditRequest,
   PageResponse,
@@ -28,11 +29,12 @@ const emptyPage = (page: number, size: number): PageResponse<WalletTransaction> 
 });
 
 /** Current wallet balance. */
-export const useWalletBalanceQuery = () => {
+export const useWalletBalanceQuery = (options?: { silent?: boolean }) => {
+  const config: AxiosRequestConfig | undefined = options?.silent ? { silent: true } : undefined;
   const query = useQuery({
     queryKey: walletKeys.balance(),
     queryFn: async () => {
-      const response = await walletService.getBalance();
+      const response = await walletService.getBalance(config);
       return response.data.data;
     },
     retry: 1,
@@ -73,23 +75,24 @@ export const useWalletMonthlySeriesQuery = (months = 7) => {
   });
 
   const series = useMemo(() => {
-    const now = new Date();
+    const now = nowInAppZone();
     const buckets: { label: string; value: number }[] = [];
     for (let i = months - 1; i >= 0; i -= 1) {
-      const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
-      const monthKey = monthStart.toLocaleString('en-US', { month: 'short' });
+      const monthStart = now.startOf('month').subtract(i, 'month');
+      const monthEnd = monthStart.add(1, 'month');
+      const monthKey = monthStart.format('MMM');
       const net = (query.data ?? []).reduce((total, tx) => {
-        const at = tx.createdAt ? new Date(tx.createdAt) : null;
-        if (!at || at < monthStart || at >= monthEnd) return total;
-        if (
-          tx.transactionType === 'CREDIT' ||
-          tx.transactionType === 'REWARD' ||
-          tx.transactionType === 'REFUND'
-        ) {
-          return total + (tx.amount ?? 0);
-        }
-        return total - (tx.amount ?? 0);
+        const at = tx.createdAt ? parseApiTime(tx.createdAt) : null;
+        if (!at || at.isBefore(monthStart) || !at.isBefore(monthEnd)) return total;
+        // Prefer the backend-provided direction; fall back to the known
+        // credit-gaining transaction types for legacy rows.
+        const direction = tx.direction?.toUpperCase();
+        const isCredit =
+          direction === 'CREDIT' ||
+          (!direction &&
+            ['CREDIT_PURCHASE', 'PROMOTIONAL_CREDIT', 'REWARD_CREDIT', 'BONUS_CREDIT', 'SESSION_PAYMENT', 'REFERRAL_REWARD', 'COUPON_REDEMPTION', 'CREDIT_REFUND']
+              .includes((tx.transactionType ?? '').toUpperCase()));
+        return isCredit ? total + (tx.amount ?? 0) : total - (tx.amount ?? 0);
       }, 0);
       buckets.push({ label: monthKey, value: Math.round(net * 100) / 100 });
     }

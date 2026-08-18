@@ -24,6 +24,8 @@ public class SubscriptionPlanResponse {
     private String currency;
     private Integer durationDays;
     private Integer maxSessionsPerMonth;
+    /** % discount on credit purchases while this plan is active. */
+    private java.math.BigDecimal creditDiscountPercent;
     /** Comma/newline separated benefit list. */
     private List<String> features;
     private Boolean active;

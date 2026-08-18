@@ -21,18 +21,9 @@ public class RabbitMQConfig {
     public static final String SESSION_REMINDER_QUEUE = "session.reminder.queue";
     public static final String SESSION_RESCHEDULED_QUEUE = "session.rescheduled.queue";
 
-    // Review event exchange (reviews now live in this service)
-    public static final String REVIEW_EXCHANGE = "review.exchange";
-    public static final String REVIEW_CREATED_QUEUE = "review.created.queue";
-    public static final String REVIEW_UPDATED_QUEUE = "review.updated.queue";
-    public static final String REVIEW_DELETED_QUEUE = "review.deleted.queue";
-    public static final String REVIEW_REPORTED_QUEUE = "review.reported.queue";
+    // Reviews live in this service; only completed-session markers are needed
+    // so learners can review sessions they actually completed.
     public static final String REVIEW_SESSION_COMPLETED_QUEUE = "review.session.completed.queue";
-
-    public static final String REVIEW_CREATED_ROUTING_KEY = "review.created";
-    public static final String REVIEW_UPDATED_ROUTING_KEY = "review.updated";
-    public static final String REVIEW_DELETED_ROUTING_KEY = "review.deleted";
-    public static final String REVIEW_REPORTED_ROUTING_KEY = "review.reported";
 
     public static final String SESSION_BOOKED_ROUTING_KEY = "session.booked";
     public static final String SESSION_APPROVED_ROUTING_KEY = "session.approved";
@@ -131,64 +122,11 @@ public class RabbitMQConfig {
                 .with(SESSION_RESCHEDULED_ROUTING_KEY);
     }
 
-    /* ---------------- Review events ---------------- */
-
-    @Bean
-    public DirectExchange reviewExchange() {
-        return new DirectExchange(REVIEW_EXCHANGE);
-    }
-
-    @Bean
-    public Queue reviewCreatedQueue() {
-        return new Queue(REVIEW_CREATED_QUEUE, true);
-    }
-
-    @Bean
-    public Queue reviewUpdatedQueue() {
-        return new Queue(REVIEW_UPDATED_QUEUE, true);
-    }
-
-    @Bean
-    public Queue reviewDeletedQueue() {
-        return new Queue(REVIEW_DELETED_QUEUE, true);
-    }
-
-    @Bean
-    public Queue reviewReportedQueue() {
-        return new Queue(REVIEW_REPORTED_QUEUE, true);
-    }
+    /* ---------------- Review: completed-session markers ---------------- */
 
     @Bean
     public Queue reviewSessionCompletedQueue() {
         return new Queue(REVIEW_SESSION_COMPLETED_QUEUE, true);
-    }
-
-    @Bean
-    public Binding reviewCreatedBinding() {
-        return BindingBuilder.bind(reviewCreatedQueue())
-                .to(reviewExchange())
-                .with(REVIEW_CREATED_ROUTING_KEY);
-    }
-
-    @Bean
-    public Binding reviewUpdatedBinding() {
-        return BindingBuilder.bind(reviewUpdatedQueue())
-                .to(reviewExchange())
-                .with(REVIEW_UPDATED_ROUTING_KEY);
-    }
-
-    @Bean
-    public Binding reviewDeletedBinding() {
-        return BindingBuilder.bind(reviewDeletedQueue())
-                .to(reviewExchange())
-                .with(REVIEW_DELETED_ROUTING_KEY);
-    }
-
-    @Bean
-    public Binding reviewReportedBinding() {
-        return BindingBuilder.bind(reviewReportedQueue())
-                .to(reviewExchange())
-                .with(REVIEW_REPORTED_ROUTING_KEY);
     }
 
     @Bean

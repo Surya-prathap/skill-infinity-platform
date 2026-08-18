@@ -25,6 +25,19 @@ export const hasRole = (roles: Role[] | undefined, required: Role[]): boolean =>
 };
 
 /**
+ * Role display priority. A user's roles array is unordered — everyone starts
+ * as a learner, so a mentor's roles list typically looks like
+ * ['ROLE_LEARNER', 'ROLE_MENTOR']. Picking roles[0] would label a mentor as
+ * "Learner". Resolve the most privileged role instead.
+ */
+const ROLE_PRIORITY: Role[] = [ROLES.ADMIN, ROLES.MENTOR, ROLES.LEARNER, ROLES.USER];
+
+export const getPrimaryRole = (roles: readonly Role[] | undefined): Role => {
+  if (!roles || roles.length === 0) return ROLES.USER;
+  return ROLE_PRIORITY.find((role) => roles.includes(role)) ?? ROLES.USER;
+};
+
+/**
  * The landing route a signed-in user should be sent to after login, based on
  * their roles: admins go to the admin console, mentors to the mentor studio,
  * everyone else to the learner dashboard.

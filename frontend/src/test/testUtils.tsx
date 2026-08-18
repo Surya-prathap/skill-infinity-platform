@@ -7,7 +7,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   adminReducer,
   authReducer,
-  meetingReducer,
   mentorReducer,
   settingsReducer,
   themeReducer,
@@ -20,7 +19,6 @@ export const createTestStore = () =>
       mentor: mentorReducer,
       settings: settingsReducer,
       theme: themeReducer,
-      meeting: meetingReducer,
       admin: adminReducer,
     },
   });

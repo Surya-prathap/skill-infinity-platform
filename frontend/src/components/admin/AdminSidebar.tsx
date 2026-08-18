@@ -7,7 +7,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import { Avatar, Typography } from '@/components/ui';
 import { Logo } from '@/components/common';
 import { ADMIN_NAV_GROUPS, type AdminNavGroup } from '@/constants/navigation';
-import { ROLE_LABELS, ROUTES } from '@/constants';
+import { getPrimaryRole, ROLE_LABELS, ROUTES } from '@/constants';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { selectAdminSidebarCollapsed } from '@/store/selectors';
 import { setSidebarCollapsed, toggleSidebarCollapsed } from '@/store/slices/adminSlice';
@@ -40,7 +40,8 @@ const SidebarContent: React.FC<{ collapsed: boolean; onNavigate?: () => void }> 
   };
 
   const displayName = user?.firstName || user?.username || user?.email || 'Administrator';
-  const roleLabel = user?.roles?.[0] ? ROLE_LABELS[user.roles[0]] : 'Admin';
+  // Roles are unordered — resolve the most privileged role for the label.
+  const roleLabel = ROLE_LABELS[getPrimaryRole(user?.roles)] ?? 'Admin';
 
   const renderGroup = (group: AdminNavGroup, mini: boolean) => (
     <Box key={group.label} sx={{ mb: 1.5 }}>

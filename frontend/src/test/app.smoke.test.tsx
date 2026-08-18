@@ -4,6 +4,24 @@ import App from '@/App';
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/**
+ * Polls for an element instead of relying on a fixed sleep — the lazy chunk
+ * takes far longer to settle when the whole suite runs in one jsdom process,
+ * so fixed waits flake under load.
+ */
+const waitForText = async (
+  text: string,
+  timeoutMs = 30000,
+): Promise<HTMLElement | null> => {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const el = screen.queryByText(text);
+    if (el) return el;
+    await sleep(150);
+  }
+  return screen.queryByText(text);
+};
+
 // The hero headline is split by an inline gradient <span>, so match by
 // textContent instead of RTL's default node-text matching.
 const byTextContent = (expected: string) => (_content: string, node: Element | null) =>
@@ -36,9 +54,10 @@ describe('App smoke test', () => {
     // Simulate navigation to the login route.
     window.history.pushState({}, '', '/login');
     window.dispatchEvent(new PopStateEvent('popstate'));
-    await sleep(2500);
 
-    expect(screen.getByText('Welcome back')).toBeInTheDocument();
-    expect(screen.getByText('Sign in to continue your learning journey.')).toBeInTheDocument();
+    expect(await waitForText('Welcome back')).toBeInTheDocument();
+    expect(
+      await waitForText('Sign in to continue your learning journey.'),
+    ).toBeInTheDocument();
   }, 30000);
 });

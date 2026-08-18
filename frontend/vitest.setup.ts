@@ -13,7 +13,7 @@ beforeEach(() => {
 
 // Heavy MUI + framer-motion pages render slowly under parallel test load.
 // Give async queries enough headroom so rendering, not timing, decides results.
-configure({ asyncUtilTimeout: 5000 });
+configure({ asyncUtilTimeout: 15000 });
 
 /**
  * Make real network calls fail instantly in tests. Pages that depend on the

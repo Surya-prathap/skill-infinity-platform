@@ -23,7 +23,10 @@ public class SecurityConfig {
             "/swagger-ui/**",
             "/v3/api-docs/**",
             "/swagger-resources/**",
-            "/webjars/**"
+            "/webjars/**",
+            // Razorpay webhooks arrive without a JWT; the service verifies the
+            // X-Razorpay-Signature header (webhook secret) before processing.
+            "/api/v1/payments/webhook/**"
     };
 
     @Bean

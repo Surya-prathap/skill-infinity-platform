@@ -21,18 +21,31 @@ import { CountdownTimer } from '@/components/session';
 import { EmptyState, ErrorState } from '@/components/feedback';
 import { useDocumentTitle } from '@/hooks';
 import { ROUTES } from '@/constants';
-import { useCancelSessionMutation, useRescheduleSessionMutation, useSessionQuery } from '@/features/sessions';
-import { formatDateTime } from '@/utils';
+import {
+  getJoinButtonLabel,
+  getSessionJoinState,
+  getSessionMeetingUrl,
+  joinSessionMeeting,
+  useCancelSessionMutation,
+  useRescheduleSessionMutation,
+  useSessionQuery,
+} from '@/features/sessions';
+import dayjs from 'dayjs';
+import { formatDateTime, parseApiTime, toAppZoneString } from '@/utils';
 
 const STATUS_COLOR: Record<string, 'success' | 'warning' | 'error' | 'info' | 'default'> = {
   CONFIRMED: 'success',
   SCHEDULED: 'info',
+  APPROVED: 'success',
+  PENDING_APPROVAL: 'warning',
   PENDING: 'warning',
   IN_PROGRESS: 'info',
   COMPLETED: 'success',
   CANCELLED: 'error',
+  REJECTED: 'error',
   RESCHEDULED: 'warning',
   NO_SHOW: 'error',
+  EXPIRED: 'error',
 };
 
 export const SessionDetailsPage: React.FC = () => {
@@ -69,16 +82,27 @@ export const SessionDetailsPage: React.FC = () => {
     );
   }
 
-  const isUpcoming = ['CONFIRMED', 'SCHEDULED', 'PENDING', 'IN_PROGRESS'].includes(session.status);
+  // Joinability comes from the backend's start/end timestamps — a session
+  // that has started but not ended stays visible and joinable.
+  const joinState = getSessionJoinState(session);
+  const isUpcoming = [
+    'CONFIRMED',
+    'SCHEDULED',
+    'APPROVED',
+    'PENDING',
+    'PENDING_APPROVAL',
+    'IN_PROGRESS',
+  ].includes(session.status);
   const [mentorFirst, mentorLast] = (session.mentorName ?? 'Mentor').split(' ');
 
   /**
-   * Session meetings always run in the app's meeting room (/meet/{sessionId}) —
-   * the room resolves the session and its meeting link. Legacy external join
-   * URLs in the database are ignored so joining never opens a dead link.
+   * Sessions meet over Discord: the backend validates the join window and
+   * returns the session's stored invite, then we open it in a new tab. If the
+   * invite is missing or the window is closed we show a clear message instead
+   * of opening Discord Home.
    */
   const openJoin = () => {
-    navigate(`/meet/${session.id}`);
+    void joinSessionMeeting(session.id);
   };
 
   const handleCancel = async () => {
@@ -92,12 +116,15 @@ export const SessionDetailsPage: React.FC = () => {
 
   const handleReschedule = async () => {
     if (!rescheduleDate || !rescheduleTime) return;
-    const start = new Date(`${rescheduleDate}T${rescheduleTime}`);
-    const end = new Date(start.getTime() + session.durationMinutes * 60_000);
+    // Send Asia/Kolkata wall-clock (the backend stores LocalDateTime in IST).
+    const start = toAppZoneString(`${rescheduleDate}T${rescheduleTime}`);
+    const end = toAppZoneString(
+      dayjs(`${rescheduleDate}T${rescheduleTime}`).add(session.durationMinutes, 'minute').format('YYYY-MM-DDTHH:mm:ss'),
+    );
     await rescheduleMutation.mutateAsync({
       sessionId: session.id,
-      proposedStartTime: start.toISOString(),
-      proposedEndTime: end.toISOString(),
+      proposedStartTime: start,
+      proposedEndTime: end,
       reason: 'Learner requested reschedule',
     });
     setRescheduleOpen(false);
@@ -132,14 +159,19 @@ export const SessionDetailsPage: React.FC = () => {
                     Mentor
                   </Typography>
                 </Box>
-                {isUpcoming && (
+                {isUpcoming && joinState.eligible && (
                   <Button
                     variant="contained"
                     startIcon={<VideoCallOutlinedIcon />}
                     onClick={openJoin}
                   >
-                    Join session
+                    {getJoinButtonLabel(session)}
                   </Button>
+                )}
+                {isUpcoming && !joinState.eligible && joinState.message && (
+                  <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                    {joinState.message}
+                  </Typography>
                 )}
               </Stack>
 
@@ -170,7 +202,7 @@ export const SessionDetailsPage: React.FC = () => {
                   <Box>
                     <Typography variant="caption" color="text.secondary">Schedule</Typography>
                     <Typography variant="subtitle2" fontWeight={700}>
-                      {formatDateTime(session.startTime)} – {session.endTime ? new Date(session.endTime).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : ''} · {session.durationMinutes} min
+                      {formatDateTime(session.startTime)} – {session.endTime ? parseApiTime(session.endTime)?.format('h:mm A') : ''} · {session.durationMinutes} min
                     </Typography>
                   </Box>
                 </Stack>
@@ -187,18 +219,11 @@ export const SessionDetailsPage: React.FC = () => {
                   <Stack direction="row" alignItems="center" gap={1.5}>
                     <VideoCallOutlinedIcon sx={{ color: 'success.main', fontSize: 20 }} />
                     <Box sx={{ minWidth: 0 }}>
-                      <Typography variant="caption" color="text.secondary">Meeting link</Typography>
+                      <Typography variant="caption" color="text.secondary">Meeting</Typography>
                       <Typography variant="subtitle2" fontWeight={600} noWrap sx={{ color: 'primary.main' }}>
-                        <a
-                          href={`/meet/${session.id}`}
-                          onClick={(event) => {
-                            event.preventDefault();
-                            navigate(`/meet/${session.id}`);
-                          }}
-                          style={{ textDecoration: 'none', color: 'inherit' }}
-                        >
-                          /meet/{session.id}
-                        </a>
+                        {getSessionMeetingUrl(session)
+                          ? 'Discord — join when the session starts'
+                          : 'Meeting link is not available yet'}
                       </Typography>
                     </Box>
                   </Stack>

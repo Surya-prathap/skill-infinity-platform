@@ -7,14 +7,12 @@ import com.skillinfinity.payment.dto.request.PaymentConfirmationRequest;
 import com.skillinfinity.payment.dto.request.PaymentFailureRequest;
 import com.skillinfinity.payment.dto.request.PaymentRequest;
 import com.skillinfinity.payment.dto.request.RefundRequest;
-import com.skillinfinity.payment.dto.request.SubscriptionRequest;
 import com.skillinfinity.payment.dto.response.InvoiceResponse;
 import com.skillinfinity.payment.dto.response.MySubscriptionResponse;
 import com.skillinfinity.payment.dto.response.PaymentResponse;
 import com.skillinfinity.payment.dto.response.ReceiptResponse;
 import com.skillinfinity.payment.dto.response.SubscriptionPlanResponse;
 import com.skillinfinity.payment.enumeration.SubscriptionPlanType;
-import com.skillinfinity.payment.dto.response.TransactionResponse;
 import com.skillinfinity.payment.service.CouponService;
 import com.skillinfinity.payment.service.PaymentService;
 import com.skillinfinity.payment.service.RefundService;
@@ -168,22 +166,6 @@ public class PaymentController {
         log.info("Validate coupon request for user: {}, coupon: {}", userId, request.getCouponCode());
         couponService.validateCoupon(request);
         return ResponseEntity.ok(ApiResponse.success("Coupon is valid", null));
-    }
-
-    @PostMapping("/subscription")
-    @Operation(summary = "Purchase subscription", description = "Purchases a subscription plan for the authenticated user")
-    @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Subscription purchased successfully"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid plan or request"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized")
-    })
-    public ResponseEntity<ApiResponse<PaymentResponse>> purchaseSubscription(
-            @RequestHeader("X-User-ID") UUID userId,
-            @Valid @RequestBody SubscriptionRequest request) {
-        log.info("Purchase subscription for user: {}, planId: {}", userId, request.getPlanId());
-        PaymentResponse response = subscriptionService.purchaseSubscription(userId, request);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Subscription purchased successfully", response));
     }
 
     @GetMapping("/subscription/plans")

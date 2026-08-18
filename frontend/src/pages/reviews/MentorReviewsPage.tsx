@@ -158,7 +158,7 @@ export const MentorReviewsPage: React.FC = () => {
           ) : (
             <Stack spacing={2.5}>
               {reviews.map((review: Review) => (
-                <ReviewCard key={review.id} review={review} mentorId={mentorId!} />
+                <ReviewCard key={review.id} review={review} />
               ))}
             </Stack>
           )}

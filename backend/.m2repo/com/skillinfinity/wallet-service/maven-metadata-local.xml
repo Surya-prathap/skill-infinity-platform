@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+  <groupId>com.skillinfinity</groupId>
+  <artifactId>wallet-service</artifactId>
+  <versioning>
+    <versions>
+      <version>1.0.0-SNAPSHOT</version>
+    </versions>
+    <lastUpdated>20260814191302</lastUpdated>
+  </versioning>
+</metadata>

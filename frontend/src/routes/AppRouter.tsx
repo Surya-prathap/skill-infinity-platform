@@ -89,18 +89,6 @@ const MentorPricingPage = lazyPage(async () => {
   const module = await import('@/pages/mentor/MentorPricingPage');
   return { default: module.MentorPricingPage };
 });
-const MentorAnalyticsPage = lazyPage(async () => {
-  const module = await import('@/pages/mentor/MentorAnalyticsPage');
-  return { default: module.MentorAnalyticsPage };
-});
-const MentorCertificatesPage = lazyPage(async () => {
-  const module = await import('@/pages/mentor/MentorCertificatesPage');
-  return { default: module.MentorCertificatesPage };
-});
-const MentorAchievementsPage = lazyPage(async () => {
-  const module = await import('@/pages/mentor/MentorAchievementsPage');
-  return { default: module.MentorAchievementsPage };
-});
 const MentorSettingsPage = lazyPage(async () => {
   const module = await import('@/pages/mentor/MentorSettingsPage');
   return { default: module.MentorSettingsPage };
@@ -129,10 +117,6 @@ const SessionsPage = lazyPage(async () => {
   const module = await import('@/pages/SessionsPage');
   return { default: module.SessionsPage };
 });
-const MeetingPage = lazyPage(async () => {
-  const module = await import('@/pages/MeetingPage');
-  return { default: module.MeetingPage };
-});
 const SettingsPage = lazyPage(async () => {
   const module = await import('@/pages/SettingsPage');
   return { default: module.SettingsPage };
@@ -140,10 +124,6 @@ const SettingsPage = lazyPage(async () => {
 const AdminDashboardPage = lazyPage(async () => {
   const module = await import('@/pages/admin/AdminDashboardPage');
   return { default: module.AdminDashboardPage };
-});
-const AdminAnalyticsPage = lazyPage(async () => {
-  const module = await import('@/pages/admin/AnalyticsPage');
-  return { default: module.AnalyticsPage };
 });
 const AdminUsersPage = lazyPage(async () => {
   const module = await import('@/pages/admin/UsersPage');
@@ -153,21 +133,9 @@ const AdminMentorsPage = lazyPage(async () => {
   const module = await import('@/pages/admin/MentorsPage');
   return { default: module.MentorsPage };
 });
-const AdminSessionsPage = lazyPage(async () => {
-  const module = await import('@/pages/admin/SessionsPage');
-  return { default: module.SessionsPage };
-});
-const AdminPaymentsPage = lazyPage(async () => {
-  const module = await import('@/pages/admin/PaymentsPage');
-  return { default: module.PaymentsPage };
-});
-const AdminWalletPage = lazyPage(async () => {
-  const module = await import('@/pages/admin/WalletPage');
-  return { default: module.WalletPage };
-});
-const AdminReviewsPage = lazyPage(async () => {
-  const module = await import('@/pages/admin/ReviewsModerationPage');
-  return { default: module.ReviewsModerationPage };
+const AdminWithdrawalsPage = lazyPage(async () => {
+  const module = await import('@/pages/admin/WithdrawalsPage');
+  return { default: module.WithdrawalsPage };
 });
 const AdminSettingsPage = lazyPage(async () => {
   const module = await import('@/pages/admin/SettingsPage');
@@ -466,36 +434,10 @@ export const AppRouter: React.FC = () => {
               </RoleGuard>
             }
           />
-          <Route
-            path={ROUTES.MENTOR_ANALYTICS}
-            element={
-              <RoleGuard roles={[ROLES.MENTOR]}>
-                <Suspense fallback={<RouteFallback />}>
-                  <MentorAnalyticsPage />
-                </Suspense>
-              </RoleGuard>
-            }
-          />
-          <Route
-            path={ROUTES.MENTOR_CERTIFICATES}
-            element={
-              <RoleGuard roles={[ROLES.MENTOR]}>
-                <Suspense fallback={<RouteFallback />}>
-                  <MentorCertificatesPage />
-                </Suspense>
-              </RoleGuard>
-            }
-          />
-          <Route
-            path={ROUTES.MENTOR_ACHIEVEMENTS}
-            element={
-              <RoleGuard roles={[ROLES.MENTOR]}>
-                <Suspense fallback={<RouteFallback />}>
-                  <MentorAchievementsPage />
-                </Suspense>
-              </RoleGuard>
-            }
-          />
+          {/* Removed mentor pages redirect to the studio. */}
+          <Route path={ROUTES.MENTOR_ANALYTICS} element={<Navigate to={ROUTES.MENTOR_DASHBOARD} replace />} />
+          <Route path={ROUTES.MENTOR_CERTIFICATES} element={<Navigate to={ROUTES.MENTOR_DASHBOARD} replace />} />
+          <Route path={ROUTES.MENTOR_ACHIEVEMENTS} element={<Navigate to={ROUTES.MENTOR_DASHBOARD} replace />} />
           <Route
             path={ROUTES.MENTOR_SETTINGS}
             element={
@@ -517,19 +459,6 @@ export const AppRouter: React.FC = () => {
             }
           />
         </Route>
-
-        {/* ---------- Full-screen meeting (outside the dashboard chrome) ---------- */}
-        <Route
-          path={ROUTES.MEETING}
-          element={
-              <AuthGuard>
-              <Suspense fallback={<RouteFallback />}>
-                <MeetingPage />
-              </Suspense>
-              </AuthGuard>
-
-          }
-        />
 
         {/* ---------- Admin ---------- */}
         <Route
@@ -555,14 +484,12 @@ export const AppRouter: React.FC = () => {
               <Navigate to={ROUTES.ADMIN} replace />
             }
           />
-          <Route
-            path={ROUTES.ADMIN_ANALYTICS}
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <AdminAnalyticsPage />
-              </Suspense>
-            }
-          />
+          {/* Removed admin pages redirect to the dashboard. */}
+          <Route path={ROUTES.ADMIN_ANALYTICS} element={<Navigate to={ROUTES.ADMIN} replace />} />
+          <Route path={ROUTES.ADMIN_SESSIONS} element={<Navigate to={ROUTES.ADMIN} replace />} />
+          <Route path={ROUTES.ADMIN_PAYMENTS} element={<Navigate to={ROUTES.ADMIN} replace />} />
+          <Route path={ROUTES.ADMIN_WALLET} element={<Navigate to={ROUTES.ADMIN_WITHDRAWALS} replace />} />
+          <Route path={ROUTES.ADMIN_REVIEWS} element={<Navigate to={ROUTES.ADMIN} replace />} />
           <Route
             path={ROUTES.ADMIN_USERS}
             element={
@@ -580,34 +507,10 @@ export const AppRouter: React.FC = () => {
             }
           />
           <Route
-            path={ROUTES.ADMIN_SESSIONS}
+            path={ROUTES.ADMIN_WITHDRAWALS}
             element={
               <Suspense fallback={<RouteFallback />}>
-                <AdminSessionsPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path={ROUTES.ADMIN_PAYMENTS}
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <AdminPaymentsPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path={ROUTES.ADMIN_WALLET}
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <AdminWalletPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path={ROUTES.ADMIN_REVIEWS}
-            element={
-              <Suspense fallback={<RouteFallback />}>
-                <AdminReviewsPage />
+                <AdminWithdrawalsPage />
               </Suspense>
             }
           />

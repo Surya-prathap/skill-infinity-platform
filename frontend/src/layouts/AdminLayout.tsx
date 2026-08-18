@@ -6,14 +6,11 @@ import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
 import { AdminSidebar, AdminCommandPalette } from '@/components/admin';
 import { Breadcrumbs, PageTransition, ThemeToggle, ProfileMenu } from '@/components/common';
 import { Typography } from '@/components/ui/Typography';
-import { useAppSelector } from '@/store/hooks';
-import { selectAdminEnvironment } from '@/store/selectors';
 
 export const AdminLayout: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const location = useLocation();
-  const environment = useAppSelector(selectAdminEnvironment);
 
   // Ctrl+K (or Cmd+K) opens the admin command palette.
   useEffect(() => {
@@ -118,36 +115,6 @@ export const AdminLayout: React.FC = () => {
             </Tooltip>
 
             <Box sx={{ flexGrow: 1 }} />
-
-            {/* Environment badge */}
-            <Tooltip title="Deployment environment">
-              <Box
-                sx={{
-                  display: { xs: 'none', md: 'flex' },
-                  alignItems: 'center',
-                  gap: 0.75,
-                  px: 1.25,
-                  py: 0.5,
-                  borderRadius: 999,
-                  border: 1,
-                  borderColor: 'divider',
-                  bgcolor: 'background.default',
-                }}
-              >
-                <Box
-                  sx={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    bgcolor: environment === 'production' ? 'success.main' : 'warning.main',
-                    boxShadow: '0 0 0 3px rgba(16,185,129,0.18)',
-                  }}
-                />
-                <Typography variant="caption" fontWeight={800} sx={{ textTransform: 'capitalize' }}>
-                  {environment}
-                </Typography>
-              </Box>
-            </Tooltip>
 
             <ThemeToggle />
             <ProfileMenu />

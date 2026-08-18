@@ -32,7 +32,6 @@ const LEARNER_LOADERS = [
   () => import('@/pages/DashboardPage'),
   () => import('@/pages/SessionsPage'),
   () => import('@/pages/SessionDetailsPage'),
-  () => import('@/pages/MeetingPage'),
   () => import('@/pages/WalletPage'),
   () => import('@/pages/SubscriptionPage'),
   () => import('@/pages/SettingsPage'),
@@ -49,9 +48,6 @@ const MENTOR_LOADERS = [
   () => import('@/pages/mentor/MentorDashboardPage'),
   () => import('@/pages/mentor/MentorAvailabilityPage'),
   () => import('@/pages/mentor/MentorPricingPage'),
-  () => import('@/pages/mentor/MentorAnalyticsPage'),
-  () => import('@/pages/mentor/MentorCertificatesPage'),
-  () => import('@/pages/mentor/MentorAchievementsPage'),
   () => import('@/pages/mentor/MentorSettingsPage'),
   () => import('@/pages/mentor/BecomeMentorPage'),
   () => import('@/pages/mentor/MentorRegistrationPage'),
@@ -61,13 +57,9 @@ const MENTOR_LOADERS = [
 /* ---------- Admin console pages ---------- */
 const ADMIN_LOADERS = [
   () => import('@/pages/admin/AdminDashboardPage'),
-  () => import('@/pages/admin/AnalyticsPage'),
   () => import('@/pages/admin/UsersPage'),
   () => import('@/pages/admin/MentorsPage'),
-  () => import('@/pages/admin/SessionsPage'),
-  () => import('@/pages/admin/PaymentsPage'),
-  () => import('@/pages/admin/WalletPage'),
-  () => import('@/pages/admin/ReviewsModerationPage'),
+  () => import('@/pages/admin/WithdrawalsPage'),
   () => import('@/pages/admin/SettingsPage'),
 ];
 

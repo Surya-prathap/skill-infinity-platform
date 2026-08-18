@@ -1,9 +1,5 @@
 export { AdminDashboardPage } from './AdminDashboardPage';
-export { AnalyticsPage } from './AnalyticsPage';
 export { UsersPage } from './UsersPage';
 export { MentorsPage } from './MentorsPage';
-export { SessionsPage } from './SessionsPage';
-export { PaymentsPage } from './PaymentsPage';
-export { WalletPage } from './WalletPage';
-export { ReviewsModerationPage } from './ReviewsModerationPage';
+export { WithdrawalsPage } from './WithdrawalsPage';
 export { SettingsPage } from './SettingsPage';

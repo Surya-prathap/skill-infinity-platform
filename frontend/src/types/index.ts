@@ -9,4 +9,3 @@ export type * from './wallet';
 export type * from './payment';
 export type * from './review';
 export type * from './admin';
-export type * from './meeting';

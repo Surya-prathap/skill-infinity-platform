@@ -54,7 +54,9 @@ export const useProfileQuery = () => {
     queryKey: profileKeys.detail(),
     queryFn: async () => {
       const local = loadStoredProfile();
-      const response = await userService.getProfile();
+      // silent: the UI already renders the locally persisted profile via
+      // placeholderData — a slow backend must not pin the global loading bar.
+      const response = await userService.getProfile({ silent: true });
       const merged = mergeClientOnlyFields(local, response.data.data);
       persistProfile(merged);
       return merged;

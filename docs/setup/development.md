@@ -23,7 +23,7 @@ cd skill-infinity-platform
 docker compose -f docker/docker-compose.yml up -d
 ```
 
-This starts MySQL, Redis, RabbitMQ, and MinIO.
+This starts MySQL and RabbitMQ.
 
 ### 3. Start Backend Services
 

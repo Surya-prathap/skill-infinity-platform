@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Box,
   Button,
@@ -17,44 +17,69 @@ import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import CheckCircleOutlineRoundedIcon from '@mui/icons-material/CheckCircleOutlineRounded';
 import { Typography } from '@/components/ui/Typography';
 import { Stack } from '@/components/ui/Stack';
-import { CreditPackCard, InvoicePreview, PaymentMethodCard, PAYMENT_METHOD_OPTIONS } from '@/components/wallet';
+import { CreditPackCard, InvoicePreview } from '@/components/wallet';
 import type { CreditPackOption } from '@/components/wallet';
-import { usePurchaseCredits, useValidateCouponMutation } from '@/features/payments';
+import { useCreditPackagesQuery, useRazorpayCreditPurchase, useValidateCouponMutation } from '@/features/payments';
 import { CREDIT_PACKS } from '@/features/wallet/constants';
 import { walletKeys } from '@/features/wallet/queryKeys';
-import { formatCurrency } from '@/utils';
-
-const TAX_RATE = 0.08;
+import { formatCurrency, getErrorMessage } from '@/utils';
+import type { CreditPackage } from '@/types';
 
 interface CreditPurchaseDialogProps {
   open: boolean;
   onClose: () => void;
 }
 
+/** Maps a backend-controlled package onto the pack-card UI shape. */
+const toPackOption = (pkg: CreditPackage): CreditPackOption => ({
+  id: pkg.code,
+  name: pkg.name,
+  credits: pkg.credits,
+  price: pkg.price,
+  features: pkg.features ?? [],
+  highlighted: pkg.highlighted,
+});
+
+/** Static fallback used only when the backend catalog cannot be fetched. */
+const FALLBACK_PACKS: CreditPackOption[] = CREDIT_PACKS.map((pack) => ({
+  id: pack.id === 'starter' ? 'CREDIT_10' : pack.id === 'popular' ? 'CREDIT_30' : 'CREDIT_60',
+  name: pack.name,
+  credits: pack.credits,
+  price: pack.price,
+  features: pack.features,
+  highlighted: pack.highlighted,
+}));
+
 /**
  * Inline credit top-up — replaces the old standalone /wallet/credits page so
- * buying credits never leaves the wallet. Same checkout flow: pick a pack,
- * apply a coupon, pay.
+ * buying credits never leaves the wallet. Pricing comes from the backend
+ * (credit package catalog); payment goes through the Razorpay Checkout (INR,
+ * test mode). The backend decides the final amount — the UI never sends one.
  */
 export const CreditPurchaseDialog: React.FC<CreditPurchaseDialogProps> = ({ open, onClose }) => {
-  const { initiate, confirm } = usePurchaseCredits();
+  const purchase = useRazorpayCreditPurchase();
   const validateCoupon = useValidateCouponMutation();
   const queryClient = useQueryClient();
 
-  const [selectedPack, setSelectedPack] = useState<CreditPackOption>(CREDIT_PACKS[0]!);
+  const packagesQuery = useCreditPackagesQuery();
+  const packages = useMemo<CreditPackOption[]>(() => {
+    if (packagesQuery.data && packagesQuery.data.length > 0) {
+      return packagesQuery.data.map(toPackOption);
+    }
+    return FALLBACK_PACKS;
+  }, [packagesQuery.data]);
+
+  const [selectedPackId, setSelectedPackId] = useState<string>(FALLBACK_PACKS[0]!.id);
+  // The selected pack is always derived from the live (backend) list so prices
+  // can never drift from what the server will actually charge.
+  const selectedPack = packages.find((pack) => pack.id === selectedPackId) ?? packages[0] ?? FALLBACK_PACKS[0]!;
   const [couponCode, setCouponCode] = useState('');
   const [couponApplied, setCouponApplied] = useState<string | null>(null);
   const [couponError, setCouponError] = useState<string | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState(PAYMENT_METHOD_OPTIONS[0].id);
   const [processing, setProcessing] = useState(false);
   const [complete, setComplete] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
-
-  const subtotal = selectedPack.price;
-  const discount = couponApplied ? (selectedPack.savings ?? 0) : 0;
-  const tax = Math.round((subtotal - discount) * TAX_RATE * 100) / 100;
-  const total = Math.round((subtotal - discount + tax) * 100) / 100;
 
   const applyCoupon = async () => {
     const code = couponCode.trim();
@@ -62,7 +87,7 @@ export const CreditPurchaseDialog: React.FC<CreditPurchaseDialogProps> = ({ open
     setCouponLoading(true);
     setCouponError(null);
     try {
-      const valid = await validateCoupon.mutateAsync({ couponCode: code, amount: subtotal });
+      const valid = await validateCoupon.mutateAsync({ couponCode: code, amount: selectedPack.price });
       if (valid) {
         setCouponApplied(code);
       } else {
@@ -79,25 +104,23 @@ export const CreditPurchaseDialog: React.FC<CreditPurchaseDialogProps> = ({ open
     setProcessing(true);
     setPaymentError(null);
     try {
-      const initiated = await initiate.mutateAsync({
-        amount: total,
-        credits: selectedPack.credits,
-        currency: 'INR',
-        description: `${selectedPack.name} credit pack — ${selectedPack.credits} credits`,
-        referenceType: 'CREDIT_PURCHASE',
+      await purchase.mutateAsync({
+        packageCode: selectedPack.id,
         couponCode: couponApplied ?? undefined,
-        gateway: paymentMethod === 'stripe' ? 'STRIPE' : paymentMethod === 'razorpay' ? 'RAZORPAY' : 'INTERNAL',
-      });
-      await confirm.mutateAsync({
-        paymentId: initiated.id,
-        gatewayTransactionId: `gw_${Date.now()}`,
       });
       // Refresh the wallet balance/history behind the dialog so the page
       // shows the updated credits as soon as it closes.
       void queryClient.invalidateQueries({ queryKey: walletKeys.all });
       setComplete(true);
-    } catch {
-      setPaymentError('Payment failed. Please check your payment details and try again.');
+    } catch (error) {
+      // Surface the real reason (e.g. "Razorpay is not configured") instead of
+      // a generic failure so users can act on it; a cancelled checkout is the
+      // one case we translate to a friendly message.
+      const cancelled = error instanceof Error && /cancel/i.test(error.message);
+      const message = cancelled
+        ? 'Payment cancelled. Your credits have not been added.'
+        : getErrorMessage(error);
+      setPaymentError(message);
     } finally {
       setProcessing(false);
     }
@@ -153,7 +176,8 @@ export const CreditPurchaseDialog: React.FC<CreditPurchaseDialogProps> = ({ open
                   Payment successful!
                 </Typography>
                 <Typography variant="body1" color="text.secondary" sx={{ mb: 3, maxWidth: 420, mx: 'auto' }}>
-                  {selectedPack.credits.toLocaleString()} credits were added to your wallet. Happy learning!
+                  {selectedPack.credits.toLocaleString()} purchased credits have been added to your wallet.
+                  Happy learning!
                 </Typography>
                 <Button variant="contained" onClick={handleClose}>
                   Done
@@ -166,7 +190,7 @@ export const CreditPurchaseDialog: React.FC<CreditPurchaseDialogProps> = ({ open
                 Buy credits
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Choose a pack, apply a coupon and top up instantly.
+                Choose a pack and pay securely with Razorpay (UPI, cards, net banking).
               </Typography>
 
               <Grid container spacing={3}>
@@ -176,13 +200,13 @@ export const CreditPurchaseDialog: React.FC<CreditPurchaseDialogProps> = ({ open
                     Choose your pack
                   </Typography>
                   <Grid container spacing={2.5}>
-                    {CREDIT_PACKS.map((pack, index) => (
+                    {packages.map((pack, index) => (
                       <Grid key={pack.id} size={{ xs: 12, sm: 6, md: 4 }}>
                         <CreditPackCard
-                          pack={{ ...pack, highlighted: pack.id === 'popular' }}
+                          pack={pack}
                           selected={selectedPack.id === pack.id}
                           onSelect={() => {
-                            setSelectedPack({ ...pack, highlighted: pack.id === 'popular' });
+                            setSelectedPackId(pack.id);
                             setCouponApplied(null);
                           }}
                           index={index}
@@ -225,7 +249,7 @@ export const CreditPurchaseDialog: React.FC<CreditPurchaseDialogProps> = ({ open
                     {couponApplied && (
                       <Chip
                         size="small"
-                        label={`${couponApplied} applied — save ${formatCurrency(discount)}`}
+                        label={`${couponApplied} applied — discount applied at checkout`}
                         color="success"
                         onDelete={() => setCouponApplied(null)}
                         sx={{ mt: 1.5, fontWeight: 700 }}
@@ -241,26 +265,10 @@ export const CreditPurchaseDialog: React.FC<CreditPurchaseDialogProps> = ({ open
 
                 {/* Checkout */}
                 <Grid size={{ xs: 12, lg: 5 }}>
-                  <Typography variant="subtitle1" fontWeight={800} sx={{ mb: 2 }}>
-                    Payment method
-                  </Typography>
-                  <Stack spacing={1.25} sx={{ mb: 3 }}>
-                    {PAYMENT_METHOD_OPTIONS.map((method) => (
-                      <PaymentMethodCard
-                        key={method.id}
-                        method={method}
-                        selected={paymentMethod === method.id}
-                        onSelect={() => setPaymentMethod(method.id)}
-                      />
-                    ))}
-                  </Stack>
-
                   <InvoicePreview
-                    subtotal={subtotal}
-                    discount={discount}
-                    tax={tax}
-                    total={total}
-                    couponCode={couponApplied ?? undefined}
+                    subtotal={selectedPack.price}
+                    total={selectedPack.price}
+                    currency="INR"
                   />
 
                   {paymentError && (
@@ -291,10 +299,10 @@ export const CreditPurchaseDialog: React.FC<CreditPurchaseDialogProps> = ({ open
                     startIcon={processing ? <CircularProgress size={18} color="inherit" /> : <LockOutlinedIcon />}
                     sx={{ mt: 2.5, fontWeight: 800 }}
                   >
-                    {processing ? 'Processing…' : `Pay ${formatCurrency(total)}`}
+                    {processing ? 'Processing…' : `Pay ${formatCurrency(selectedPack.price)} with Razorpay`}
                   </Button>
                   <Typography variant="caption" color="text.disabled" sx={{ display: 'block', textAlign: 'center', mt: 1.5 }}>
-                    Secured by Stripe · Razorpay · UPI — credits arrive instantly
+                    Secured by Razorpay · UPI, cards & net banking — credits arrive instantly
                   </Typography>
                 </Grid>
               </Grid>

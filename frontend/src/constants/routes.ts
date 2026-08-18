@@ -54,6 +54,7 @@ export const ROUTES = {
   ADMIN_SESSIONS: '/admin/sessions',
   ADMIN_PAYMENTS: '/admin/payments',
   ADMIN_WALLET: '/admin/wallet',
+  ADMIN_WITHDRAWALS: '/admin/withdrawals',
   ADMIN_REVIEWS: '/admin/reviews',
   ADMIN_SUPPORT: '/admin/support',
   ADMIN_ANNOUNCEMENTS: '/admin/announcements',

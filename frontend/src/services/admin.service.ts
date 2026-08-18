@@ -1,13 +1,11 @@
 import { apiClient } from '@/api';
 import { API_ENDPOINTS } from '@/constants';
 import type {
-  AdminAnalytics,
   AdminDashboard,
   AdminUser,
   ApiResponse,
   PageResponse,
   PlatformSetting,
-  RevenueAnalytics,
   UpdateSettingRequest,
 } from '@/types';
 
@@ -15,20 +13,13 @@ const resolve = (template: string, params: Record<string, string>): string =>
   Object.entries(params).reduce((url, [key, value]) => url.replace(`{${key}}`, value), template);
 
 /**
- * admin-service endpoints — platform administration, moderation, analytics,
- * announcements, support, settings and feature flags (ADMIN role only).
+ * admin-service endpoints — dashboard, users, mentor verification and
+ * platform settings (ADMIN role only).
  */
 export const adminService = {
   /* ---------------- Executive dashboard ---------------- */
   getDashboard: () =>
     apiClient.get<ApiResponse<AdminDashboard>>(API_ENDPOINTS.ADMIN.DASHBOARD),
-
-  /* ---------------- Analytics ---------------- */
-  getAnalytics: () =>
-    apiClient.get<ApiResponse<AdminAnalytics>>(API_ENDPOINTS.ADMIN.ANALYTICS),
-
-  getPaymentsAnalytics: () =>
-    apiClient.get<ApiResponse<RevenueAnalytics>>(API_ENDPOINTS.ADMIN.PAYMENTS),
 
   /* ---------------- Users ---------------- */
   getUsers: (page = 0, size = 20) =>
@@ -59,14 +50,6 @@ export const adminService = {
       resolve(API_ENDPOINTS.ADMIN.MENTOR_REJECT, { mentorId }),
       undefined,
       { params: { reason } },
-    ),
-
-  /* ---------------- Payments ---------------- */
-  manageRefund: (refundId: string, action: 'APPROVE' | 'REJECT') =>
-    apiClient.put<ApiResponse<void>>(
-      resolve(API_ENDPOINTS.ADMIN.REFUND, { refundId }),
-      undefined,
-      { params: { action } },
     ),
 
   /* ---------------- Platform settings ---------------- */

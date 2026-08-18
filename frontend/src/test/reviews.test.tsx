@@ -63,7 +63,7 @@ describe('Review primitives', () => {
   };
 
   it('ReviewCard renders dimensions and mentor reply support', () => {
-    renderWithProviders(<ReviewCard review={review} mentorId="m-001" />);
+    renderWithProviders(<ReviewCard review={review} />);
 
     expect(screen.getByText(/Test Learner/i)).toBeInTheDocument();
     expect(screen.getByText('Communication')).toBeInTheDocument();

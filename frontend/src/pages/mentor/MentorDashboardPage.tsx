@@ -14,6 +14,7 @@ import AccessTimeFilledOutlinedIcon from '@mui/icons-material/AccessTimeFilledOu
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import PlayArrowOutlinedIcon from '@mui/icons-material/PlayArrowOutlined';
 import VideocamOutlinedIcon from '@mui/icons-material/VideocamOutlined';
+import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
 import { Typography } from '@/components/ui/Typography';
 import { Stack } from '@/components/ui/Stack';
 import { Avatar } from '@/components/ui/Avatar';
@@ -23,20 +24,26 @@ import { AreaChart, BarChart, DonutChart } from '@/components/charts';
 import { AnalyticsCard, GradientCard, MentorCard, ProgressCard } from '@/components/mentor';
 import { CommunityImpactCard } from '@/components/mentor/CommunityImpactCard';
 import { ScheduleCommunitySessionCard } from '@/components/mentor/ScheduleCommunitySessionCard';
-import { useCommunityImpactQuery } from '@/features/sessions';
+import {
+  getSessionJoinState,
+  joinSessionMeeting,
+  useApproveBookingMutation,
+  useCommunityImpactQuery,
+  useMentorBookingsQuery,
+  useRejectBookingMutation,
+  useUpcomingSessionsQuery,
+} from '@/features/sessions';
+import { useWalletMonthlySeriesQuery } from '@/features/wallet';
 import { useAppSelector } from '@/store/hooks';
 import { selectUser } from '@/store/selectors';
 import { useDocumentTitle } from '@/hooks';
 import { ROUTES } from '@/constants';
-import { formatRelativeTime } from '@/utils';
+import { formatRelativeTime, nowInAppZone, parseApiTime } from '@/utils';
 import { useMentorDashboardQuery, useMentorProfileQuery } from '@/features/mentor/hooks';
 import {
   MENTOR_ACTIVITY,
-  MENTOR_REVENUE_SERIES,
   MENTOR_REVIEWS,
   MENTOR_SESSION_MIX,
-  MENTOR_TODAY_SESSIONS,
-  MENTOR_UPCOMING_SESSIONS,
   MENTOR_WEEKLY_ACTIVITY,
   seedMentor,
 } from '@/features/mentor/data';
@@ -47,9 +54,11 @@ const fadeUp = {
 };
 
 const QUICK_ACTIONS = [
-  { label: 'Add availability', path: ROUTES.MENTOR_AVAILABILITY, icon: <CalendarMonthOutlinedIcon />, color: '#6D5DF6' },
-  { label: 'Manage pricing', path: ROUTES.MENTOR_PRICING, icon: <PriceChangeOutlinedIcon />, color: '#14B8A6' },
-  { label: 'Edit profile', path: ROUTES.PROFILE, icon: <AutoGraphOutlinedIcon />, color: '#F59E0B' },
+  // A mentor is also a learner — they can book other mentors and earn/learn.
+  { label: 'Find mentors to learn from', path: ROUTES.MENTORS, icon: <SearchOutlinedIcon />, color: '#6D5DF6' },
+  { label: 'Add availability', path: ROUTES.MENTOR_AVAILABILITY, icon: <CalendarMonthOutlinedIcon />, color: '#14B8A6' },
+  { label: 'Manage pricing', path: ROUTES.MENTOR_PRICING, icon: <PriceChangeOutlinedIcon />, color: '#F59E0B' },
+  { label: 'Edit profile', path: ROUTES.PROFILE, icon: <AutoGraphOutlinedIcon />, color: '#EC4899' },
 ];
 
 export const MentorDashboardPage: React.FC = () => {
@@ -58,7 +67,40 @@ export const MentorDashboardPage: React.FC = () => {
   const user = useAppSelector(selectUser);
   const { mentor, isOffline } = useMentorProfileQuery();
   const { dashboard } = useMentorDashboardQuery();
-  const { impact: communityImpact, isLoading: impactLoading } = useCommunityImpactQuery(mentor?.id);
+  const { impact: communityImpact, isLoading: impactLoading } = useCommunityImpactQuery(mentor?.userId);
+
+  // Real booking requests for this mentor — never another mentor's requests.
+  const { data: mentorBookings, isFetching: bookingsLoading } = useMentorBookingsQuery('PENDING');
+  const approveBooking = useApproveBookingMutation();
+  const rejectBooking = useRejectBookingMutation();
+  const pendingRequests = mentorBookings.content.length;
+
+  // Real sessions the mentor participates in (as mentor OR as learner) —
+  // no seeded/dummy rows. Discord join links come straight from the API.
+  const { data: upcomingData, isFetching: upcomingLoading } = useUpcomingSessionsQuery(0, 30, { silent: true });
+  const { series: earningsSeries } = useWalletMonthlySeriesQuery(7);
+  const upcomingSessions = upcomingData.content;
+  const todaySessions = upcomingSessions.filter((session) =>
+    session.startTime ? parseApiTime(session.startTime)?.isSame(nowInAppZone(), 'day') : false,
+  );
+
+  /**
+   * True when the session is inside its join window. The Join button must
+   * never be removed: when no real invite is configured, clicking answers
+   * "Meeting link is not available yet." (never Discord Home, never a fake
+   * URL).
+   */
+  const canJoin = (session: (typeof upcomingSessions)[number]): boolean =>
+    getSessionJoinState(session).eligible;
+  const laterSessions = upcomingSessions.filter(
+    (session) => !session.startTime || !parseApiTime(session.startTime)?.isSame(nowInAppZone(), 'day'),
+  );
+
+  /** The other participant in a session the mentor is part of. */
+  const counterpart = (session: (typeof upcomingSessions)[number]): string => {
+    if (session.mentorId === user?.userId) return session.learnerName ?? 'Learner';
+    return session.mentorName ?? 'Mentor';
+  };
 
   const stats = dashboard.statistics;
   const profile = mentor?.profile;
@@ -158,17 +200,99 @@ export const MentorDashboardPage: React.FC = () => {
         ))}
       </Grid>
 
+      {/* ================= Session requests ================= */}
+      <AnalyticsCard
+        title="Session Requests"
+        subtitle={pendingRequests === 0 ? 'No pending requests' : `${pendingRequests} learner${pendingRequests === 1 ? '' : 's'} want${pendingRequests === 1 ? 's' : ''} to book you`}
+        icon={<EventAvailableOutlinedIcon />}
+        iconColor="#6D5DF6"
+        sx={{ mb: 3 }}
+      >
+        {bookingsLoading && mentorBookings.content.length === 0 ? (
+          <Typography variant="body2" color="text.secondary">
+            Loading your requests…
+          </Typography>
+        ) : mentorBookings.content.length === 0 ? (
+          <Box
+            sx={{
+              borderRadius: 2.5,
+              border: 1,
+              borderStyle: 'dashed',
+              borderColor: 'divider',
+              p: 3,
+              textAlign: 'center',
+            }}
+          >
+            <Typography variant="body2" color="text.secondary">
+              No pending requests right now. Learners who book one of your available slots will appear here
+              for you to accept or reject.
+            </Typography>
+          </Box>
+        ) : (
+          <Stack spacing={1.5}>
+            {mentorBookings.content.map((booking) => (
+              <Box
+                key={booking.id}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 2,
+                  p: 2,
+                  borderRadius: 2.5,
+                  border: 1,
+                  borderColor: 'divider',
+                  flexWrap: 'wrap',
+                  transition: 'border-color 0.2s ease',
+                  '&:hover': { borderColor: 'primary.main' },
+                }}
+              >
+                <Avatar name={booking.learnerName ?? 'Learner'} size={40} />
+                <Box sx={{ flexGrow: 1, minWidth: 200 }}>
+                  <Typography variant="subtitle2" fontWeight={800}>
+                    {booking.learnerName ?? 'Learner'} wants {booking.topic ?? 'a session'}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {booking.preferredStartTime ? parseApiTime(booking.preferredStartTime)?.format('ddd, D MMM · h:mm A') : ''}{' '}
+                    · {booking.durationMinutes} min · {(booking.price ?? 0) === 0 ? 'Free' : `${booking.price ?? 0} credits`}
+                  </Typography>
+                </Box>
+                <Stack direction="row" gap={1}>
+                  <MuiButton
+                    size="small"
+                    variant="contained"
+                    color="success"
+                    disabled={approveBooking.isPending || rejectBooking.isPending}
+                    onClick={() => approveBooking.mutate(booking.id)}
+                  >
+                    Accept
+                  </MuiButton>
+                  <MuiButton
+                    size="small"
+                    variant="outlined"
+                    color="error"
+                    disabled={approveBooking.isPending || rejectBooking.isPending}
+                    onClick={() => rejectBooking.mutate({ bookingId: booking.id })}
+                  >
+                    Reject
+                  </MuiButton>
+                </Stack>
+              </Box>
+            ))}
+          </Stack>
+        )}
+      </AnalyticsCard>
+
       {/* ================= Revenue + session mix ================= */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid size={{ xs: 12, lg: 8 }}>
           <motion.div initial="hidden" animate="visible" variants={fadeUp} style={{ height: '100%' }}>
             <AnalyticsCard
               title="Earnings Trend"
-              subtitle="Credits earned over the last 7 months"
+              subtitle="Credits in & out over the last 7 months (real wallet activity)"
               icon={<TrendingUpOutlinedIcon />}
               iconColor="#10B981"
             >
-              <AreaChart data={[...MENTOR_REVENUE_SERIES]} color="#10B981" suffix=" credits" height={240} />
+              <AreaChart data={[...earningsSeries]} color="#10B981" suffix=" credits" height={240} />
             </AnalyticsCard>
           </motion.div>
         </Grid>
@@ -208,7 +332,7 @@ export const MentorDashboardPage: React.FC = () => {
           <motion.div initial="hidden" animate="visible" variants={fadeUp} style={{ height: '100%' }}>
             <AnalyticsCard
               title="Today's Sessions"
-              subtitle={new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+              subtitle={nowInAppZone().format('dddd, MMMM D')}
               icon={<AccessTimeFilledOutlinedIcon />}
               iconColor="#F59E0B"
               action={
@@ -217,54 +341,88 @@ export const MentorDashboardPage: React.FC = () => {
                 </MuiButton>
               }
             >
-              <Stack spacing={1.5}>
-                {MENTOR_TODAY_SESSIONS.map((session) => (
-                  <Box
-                    key={session.id}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 2,
-                      p: 1.5,
-                      borderRadius: 2.5,
-                      border: 1,
-                      borderColor: 'divider',
-                      transition: 'background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease',
-                      '&:hover': { bgcolor: 'action.hover', borderColor: 'primary.main', transform: 'translateY(-1px)' },
-                    }}
-                  >
+              {upcomingLoading && todaySessions.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">
+                  Loading your sessions…
+                </Typography>
+              ) : todaySessions.length === 0 ? (
+                <Box
+                  sx={{
+                    borderRadius: 2.5,
+                    border: 1,
+                    borderStyle: 'dashed',
+                    borderColor: 'divider',
+                    p: 3,
+                    textAlign: 'center',
+                  }}
+                >
+                  <Typography variant="body2" color="text.secondary">
+                    No sessions today. Your upcoming sessions appear here with a working
+                    Discord join link.
+                  </Typography>
+                </Box>
+              ) : (
+                <Stack spacing={1.5}>
+                  {todaySessions.map((session) => (
                     <Box
+                      key={session.id}
                       sx={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: 2,
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#fff',
-                        background: `linear-gradient(135deg, ${session.color}, ${session.color}99)`,
-                        flexShrink: 0,
+                        gap: 2,
+                        p: 1.5,
+                        borderRadius: 2.5,
+                        border: 1,
+                        borderColor: 'divider',
+                        transition: 'background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease',
+                        '&:hover': { bgcolor: 'action.hover', borderColor: 'primary.main', transform: 'translateY(-1px)' },
                       }}
                     >
-                      <VideocamOutlinedIcon fontSize="small" />
+                      <Box
+                        sx={{
+                          width: 44,
+                          height: 44,
+                          borderRadius: 2,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#fff',
+                          background: 'linear-gradient(135deg, #6D5DF6, #43C6C0)',
+                          flexShrink: 0,
+                        }}
+                      >
+                        <VideocamOutlinedIcon fontSize="small" />
+                      </Box>
+                      <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                        <Typography variant="subtitle2" fontWeight={700} noWrap>
+                          {session.topic ?? session.title ?? 'Mentoring session'}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          with {counterpart(session)} ·{' '}
+                          {session.startTime ? parseApiTime(session.startTime)?.format('h:mm A') : ''}
+                        </Typography>
+                      </Box>
+                      <Stack direction="row" alignItems="center" gap={1}>
+                        <StatusBadge
+                          label={session.status === 'IN_PROGRESS' ? 'Live' : session.status}
+                          color={session.status === 'IN_PROGRESS' ? 'success' : session.status === 'SCHEDULED' || session.status === 'APPROVED' ? 'success' : 'warning'}
+                          withDot={false}
+                        />
+                        {canJoin(session) && (
+                          <MuiButton
+                            size="small"
+                            variant="contained"
+                            startIcon={<PlayArrowOutlinedIcon />}
+                            onClick={() => void joinSessionMeeting(session.id)}
+                          >
+                            Join Meeting
+                          </MuiButton>
+                        )}
+                      </Stack>
                     </Box>
-                    <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                      <Typography variant="subtitle2" fontWeight={700} noWrap>
-                        {session.topic}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        with {session.student} · {session.time}
-                      </Typography>
-                    </Box>
-                    <Stack direction="row" alignItems="center" gap={1}>
-                      <StatusBadge label={session.status} color={session.status === 'Confirmed' ? 'success' : 'warning'} withDot={false} />
-                      <MuiButton size="small" variant="contained" startIcon={<PlayArrowOutlinedIcon />}>
-                        Join
-                      </MuiButton>
-                    </Stack>
-                  </Box>
-                ))}
-              </Stack>
+                  ))}
+                </Stack>
+              )}
             </AnalyticsCard>
           </motion.div>
         </Grid>
@@ -272,35 +430,55 @@ export const MentorDashboardPage: React.FC = () => {
           <motion.div initial="hidden" animate="visible" variants={fadeUp} style={{ height: '100%' }}>
             <AnalyticsCard
               title="Upcoming Sessions"
-              subtitle={`${dashboard.pendingRequests ?? 0} pending requests`}
+              subtitle={`${pendingRequests} pending request${pendingRequests === 1 ? '' : 's'}`}
               icon={<EventAvailableOutlinedIcon />}
               iconColor="#14B8A6"
             >
-              <Stack spacing={1.25}>
-                {MENTOR_UPCOMING_SESSIONS.map((session) => (
-                  <Stack key={session.id} direction="row" alignItems="center" gap={1.5}>
-                    <Box
-                      sx={{
-                        width: 10,
-                        height: 10,
-                        borderRadius: '50%',
-                        bgcolor: session.color,
-                        boxShadow: `0 0 0 4px ${session.color}22`,
-                        flexShrink: 0,
-                      }}
-                    />
-                    <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                      <Typography variant="body2" fontWeight={700} noWrap>
-                        {session.topic}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {session.student} · {session.date} · {session.time}
-                      </Typography>
-                    </Box>
-                    <StatusBadge label={session.status} color={session.status === 'Confirmed' ? 'success' : 'warning'} withDot={false} />
-                  </Stack>
-                ))}
-              </Stack>
+              {upcomingLoading && laterSessions.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">
+                  Loading your sessions…
+                </Typography>
+              ) : laterSessions.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">
+                  No upcoming sessions. Book another mentor or wait for new bookings.
+                </Typography>
+              ) : (
+                <Stack spacing={1.25}>
+                  {laterSessions.map((session) => (
+                    <Stack key={session.id} direction="row" alignItems="center" gap={1.5}>
+                      <Box
+                        sx={{
+                          width: 10,
+                          height: 10,
+                          borderRadius: '50%',
+                          bgcolor: '#14B8A6',
+                          boxShadow: '0 0 0 4px rgba(20,184,166,0.15)',
+                          flexShrink: 0,
+                        }}
+                      />
+                      <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                        <Typography variant="body2" fontWeight={700} noWrap>
+                          {session.topic ?? session.title ?? 'Mentoring session'}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {counterpart(session)} ·{' '}
+                          {session.startTime ? parseApiTime(session.startTime)?.format('ddd, D MMM · h:mm A') : ''}
+                        </Typography>
+                      </Box>
+                      {canJoin(session) && (
+                        <MuiButton
+                          size="small"
+                          variant="contained"
+                          onClick={() => void joinSessionMeeting(session.id)}
+                          sx={{ whiteSpace: 'nowrap' }}
+                        >
+                          Join Meeting
+                        </MuiButton>
+                      )}
+                    </Stack>
+                  ))}
+                </Stack>
+              )}
             </AnalyticsCard>
           </motion.div>
         </Grid>
@@ -558,7 +736,7 @@ export const MentorDashboardPage: React.FC = () => {
         <Stack direction="row" alignItems="center" gap={1} sx={{ color: 'text.secondary' }}>
           <EventAvailableOutlinedIcon sx={{ fontSize: 18, color: 'success.main' }} />
           <Typography variant="body2" fontWeight={600}>
-            {dashboard.upcomingSessions ?? 0} upcoming sessions · {dashboard.pendingRequests ?? 0} pending requests
+            {dashboard.upcomingSessions ?? 0} upcoming sessions · {pendingRequests} pending request{pendingRequests === 1 ? '' : 's'}
           </Typography>
         </Stack>
         <Typography variant="caption" color="text.secondary">

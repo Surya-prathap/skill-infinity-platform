@@ -38,6 +38,9 @@ public class BookingResponse {
     @Schema(description = "Learner name")
     private String learnerName;
 
+    @Schema(description = "Learner email — used for booking status notifications")
+    private String learnerEmail;
+
     @Schema(description = "Topic")
     private String topic;
 
@@ -58,6 +61,9 @@ public class BookingResponse {
 
     @Schema(description = "Duration in minutes")
     private int durationMinutes;
+
+    @Schema(description = "Session cost in credits (0 for free/community)")
+    private double price;
 
     @Schema(description = "Timezone")
     private String timezone;

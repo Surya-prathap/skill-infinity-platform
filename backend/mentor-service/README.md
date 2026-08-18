@@ -16,7 +16,6 @@ The Mentor Service is a Spring Boot microservice within the Skill Infinity platf
 │  │  Controller Layer  →  Service Layer  →  Repository  │   │
 │  │                        │                            │   │
 │  │                   ┌────┴────┐                       │   │
-│  │                   │  Redis  │── Cache               │   │
 │  │                   ├─────────┤                       │   │
 │  │                   │RabbitMQ │── Events              │   │
 │  │                   └─────────┘                       │   │
@@ -33,7 +32,7 @@ The Mentor Service is a Spring Boot microservice within the Skill Infinity platf
 - **Spring Security** for authentication (via API Gateway)
 - **Spring Cloud Config Client** for externalized configuration
 - **Eureka Discovery Client** for service registration
-- **Redis** for caching mentor profiles and search results
+- **No caching** — direct DB reads
 - **RabbitMQ** for asynchronous event publishing
 - **MySQL** as the primary database
 - **MapStruct** for entity-to-DTO mapping
@@ -94,8 +93,6 @@ All entities use UUID primary keys with audit fields (`createdAt`, `updatedAt`, 
 | `MENTOR_DB_NAME` | `skill_infinity_mentor` | Database name |
 | `MENTOR_DB_USERNAME` | `root` | Database username |
 | `MENTOR_DB_PASSWORD` | `root` | Database password |
-| `REDIS_HOST` | `localhost` | Redis host |
-| `REDIS_PORT` | `6379` | Redis port |
 | `RABBITMQ_HOST` | `localhost` | RabbitMQ host |
 | `RABBITMQ_PORT` | `5672` | RabbitMQ port |
 | `EUREKA_DEFAULT_ZONE` | `http://localhost:8761/eureka/` | Eureka URL |

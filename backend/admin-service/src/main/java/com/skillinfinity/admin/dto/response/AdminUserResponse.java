@@ -22,6 +22,12 @@ public class AdminUserResponse {
     @Schema(description = "User ID")
     private UUID userId;
 
+    @Schema(description = "Display name (username)")
+    private String name;
+
+    @Schema(description = "Email")
+    private String email;
+
     @Schema(description = "Role")
     private String role;
 
@@ -30,6 +36,9 @@ public class AdminUserResponse {
 
     @Schema(description = "Is active")
     private boolean active;
+
+    @Schema(description = "Derived status: ACTIVE or SUSPENDED")
+    private String status;
 
     @Schema(description = "Last login")
     private LocalDateTime lastLoginAt;

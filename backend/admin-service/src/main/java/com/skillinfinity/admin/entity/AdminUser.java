@@ -28,6 +28,12 @@ public class AdminUser {
     @Column(name = "user_id", nullable = false, unique = true)
     private UUID userId;
 
+    @Column(name = "name", length = 100)
+    private String name;
+
+    @Column(name = "email", length = 255)
+    private String email;
+
     @Column(name = "role", nullable = false, length = 50)
     private String role;
 

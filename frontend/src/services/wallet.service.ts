@@ -1,3 +1,4 @@
+import type { AxiosRequestConfig } from 'axios';
 import { apiClient } from '@/api';
 import { API_ENDPOINTS } from '@/constants';
 import type {
@@ -23,8 +24,8 @@ const resolve = (template: string, params: Record<string, string>): string =>
 export const walletService = {
   getWallet: () => apiClient.get<ApiResponse<Wallet>>(API_ENDPOINTS.WALLET.BASE),
 
-  getBalance: () =>
-    apiClient.get<ApiResponse<WalletBalance>>(API_ENDPOINTS.WALLET.BALANCE),
+  getBalance: (config?: AxiosRequestConfig) =>
+    apiClient.get<ApiResponse<WalletBalance>>(API_ENDPOINTS.WALLET.BALANCE, config),
 
   getHistory: (page = 0, size = 20) =>
     apiClient.get<ApiResponse<PageResponse<WalletTransaction>>>(

@@ -17,6 +17,9 @@ import org.springframework.context.annotation.Configuration;
  * consumer service keeps a private queue bound to the shared exchange, so the
  * identity-service receives every mentor verification event and can grant or
  * revoke {@code ROLE_MENTOR} accordingly.
+ *
+ * <p>It also declares the admin-service's exchange so the identity-service can
+ * announce user registrations / role changes to the admin user index.
  */
 @Configuration
 public class RabbitMQConfig {
@@ -28,9 +31,20 @@ public class RabbitMQConfig {
     /** Identity-service private queue (mirrors the sibling-service naming pattern). */
     public static final String IDENTITY_MENTOR_VERIFIED_QUEUE = "identity.mentor.verified.queue";
 
+    /** Matches the exchange declared by admin-service. */
+    public static final String ADMIN_EXCHANGE = "admin.exchange";
+    /** Routing keys admin-service binds its queues to. */
+    public static final String USER_REGISTERED_ROUTING_KEY = "user.registered";
+    public static final String USER_UPDATED_ROUTING_KEY = "user.updated";
+
     @Bean
     public DirectExchange mentorExchange() {
         return new DirectExchange(MENTOR_EXCHANGE);
+    }
+
+    @Bean
+    public DirectExchange adminExchange() {
+        return new DirectExchange(ADMIN_EXCHANGE);
     }
 
     @Bean

@@ -38,5 +38,5 @@ if [ -f "$ROOT/logs/frontend.pid" ]; then
 fi
 
 echo ""
-echo "Done. Infrastructure containers (MySQL/Redis/RabbitMQ/MinIO) are still running."
+echo "Done. Infrastructure containers (MySQL/RabbitMQ) are still running."
 echo "Stop them with: docker compose -f docker/docker-compose.yml stop"

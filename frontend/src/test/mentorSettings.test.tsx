@@ -20,16 +20,15 @@ describe('MentorSettingsPage', () => {
     expect(await screen.findByText('Notifications')).toBeInTheDocument();
     expect(await screen.findByText('Privacy')).toBeInTheDocument();
     expect(await screen.findByText('Language & Timezone')).toBeInTheDocument();
-    expect(await screen.findByText('Connected Accounts')).toBeInTheDocument();
   });
 
-  it('prefills the profile form from the mentor profile', async () => {
+  it('renders the profile form ready for the mentor to complete', async () => {
     renderWithProviders(<MentorSettingsPage />);
 
+    // No demo data is prefilled — the form starts empty and waits for the
+    // mentor's real profile.
     const headline = await screen.findByLabelText(/Professional headline/);
-    expect((headline as HTMLInputElement).value).toBe(
-      'Senior Staff Engineer · System Design & Cloud',
-    );
+    expect((headline as HTMLInputElement).value).toBe('');
   });
 
   it('switches the appearance theme via the segmented control', async () => {
@@ -43,11 +42,5 @@ describe('MentorSettingsPage', () => {
     expect(screen.getByText('Dark')).toBeInTheDocument();
   });
 
-  it('shows connected accounts', async () => {
-    renderWithProviders(<MentorSettingsPage />);
 
-    expect(await screen.findByText('Google')).toBeInTheDocument();
-    expect(await screen.findByText('GitHub')).toBeInTheDocument();
-    expect(await screen.findByText('LinkedIn')).toBeInTheDocument();
-  });
 });

@@ -6,8 +6,6 @@ import com.skillinfinity.wallet.dto.request.DebitRequest;
 import com.skillinfinity.wallet.dto.request.FreezeRequest;
 import com.skillinfinity.wallet.dto.request.WalletRequest;
 import com.skillinfinity.wallet.dto.request.WithdrawalRequestDto;
-import com.skillinfinity.wallet.dto.response.LedgerEntryResponse;
-import com.skillinfinity.wallet.dto.response.RewardResponse;
 import com.skillinfinity.wallet.dto.response.TransactionResponse;
 import com.skillinfinity.wallet.dto.response.WalletAuditResponse;
 import com.skillinfinity.wallet.dto.response.WalletBalanceResponse;
@@ -48,7 +46,7 @@ public interface WalletService {
      * credits the mentor's learning + withdrawable buckets per the configured
      * split. No-op for community (free) sessions.
      */
-    void settleSessionCredits(UUID sessionId, UUID learnerId, UUID mentorId, BigDecimal credits);
+    void settleSessionCredits(UUID sessionId, UUID learnerId, UUID mentorId, BigDecimal credits, boolean community);
 
     // Withdrawals
     WithdrawalResponse requestWithdrawal(UUID userId, WithdrawalRequestDto request);
@@ -64,10 +62,6 @@ public interface WalletService {
     PageResponse<TransactionResponse> getWalletHistory(UUID userId, int page, int size);
 
     PageResponse<TransactionResponse> getWalletStatement(UUID userId, LocalDate startDate, LocalDate endDate, int page, int size);
-
-    PageResponse<LedgerEntryResponse> getWalletLedger(UUID userId, int page, int size);
-
-    PageResponse<RewardResponse> getRewards(UUID userId, int page, int size);
 
     WalletStatisticsResponse getWalletStatistics(UUID userId);
 

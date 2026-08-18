@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Consumes the {@code mentor.verified} event published by the mentor-service.
@@ -31,6 +32,7 @@ public class MentorEventConsumer {
 
     private final UserCredentialRepository userCredentialRepository;
     private final RoleRepository roleRepository;
+    private final IdentityEventPublisher eventPublisher;
 
     @RabbitListener(queues = "${identity.mentor.verified.queue:identity.mentor.verified.queue}")
     @Transactional
@@ -78,6 +80,8 @@ public class MentorEventConsumer {
         user.getRoles().add(mentorRole);
         userCredentialRepository.save(user);
         log.info("Granted {} role to user {} after admin approval", MENTOR_ROLE, userId);
+
+        publishRoleUpdate(user);
     }
 
     private void revokeMentorRole(UUID userId) {
@@ -89,6 +93,14 @@ public class MentorEventConsumer {
         if (removed) {
             userCredentialRepository.save(user);
             log.info("Removed {} role from user {} (application rejected)", MENTOR_ROLE, userId);
+            publishRoleUpdate(user);
         }
+    }
+
+    /** Keeps the admin-service user index's role column in sync with identity. */
+    private void publishRoleUpdate(UserCredential user) {
+        eventPublisher.publishUserUpdated(
+                user.getId(), user.getEmail(), user.getUsername(),
+                user.getRoles().stream().map(Role::getName).collect(Collectors.toSet()));
     }
 }

@@ -4,14 +4,11 @@ import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalance
 import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import WorkspacePremiumOutlinedIcon from '@mui/icons-material/WorkspacePremiumOutlined';
+import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
 import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
 import PriceChangeOutlinedIcon from '@mui/icons-material/PriceChangeOutlined';
-import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
-import EmojiEventsOutlinedIcon from '@mui/icons-material/EmojiEventsOutlined';
-import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
-import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
-import StarBorderOutlinedIcon from '@mui/icons-material/StarBorderOutlined';
+import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
 import type { NavItem, Role } from '@/types';
 import { ROLES, ROUTES } from '@/constants';
 
@@ -46,13 +43,6 @@ export const MENTOR_NAV: NavItem[] = [
         icon: <DashboardOutlinedIcon />,
         end: true,
       },
-      { label: 'Analytics', path: ROUTES.MENTOR_ANALYTICS, icon: <InsightsOutlinedIcon /> },
-      { label: 'Certificates', path: ROUTES.MENTOR_CERTIFICATES, icon: <BadgeOutlinedIcon /> },
-      {
-        label: 'Achievements',
-        path: ROUTES.MENTOR_ACHIEVEMENTS,
-        icon: <EmojiEventsOutlinedIcon />,
-      },
       {
         label: 'Availability',
         path: ROUTES.MENTOR_AVAILABILITY,
@@ -81,40 +71,48 @@ export interface AdminNavGroup {
 export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
   {
     label: 'Overview',
-    items: [
-      { label: 'Dashboard', path: ROUTES.ADMIN, icon: <DashboardOutlinedIcon />, end: true },
-      { label: 'Analytics', path: ROUTES.ADMIN_ANALYTICS, icon: <InsightsOutlinedIcon /> },
-    ],
+    items: [{ label: 'Dashboard', path: ROUTES.ADMIN, icon: <DashboardOutlinedIcon />, end: true }],
   },
   {
     label: 'Management',
     items: [
       { label: 'Users', path: ROUTES.ADMIN_USERS, icon: <PeopleAltOutlinedIcon /> },
       { label: 'Mentors', path: ROUTES.ADMIN_MENTORS, icon: <WorkspacePremiumOutlinedIcon /> },
-      { label: 'Sessions', path: ROUTES.ADMIN_SESSIONS, icon: <EventAvailableOutlinedIcon /> },
-      { label: 'Payments', path: ROUTES.ADMIN_PAYMENTS, icon: <PaymentsOutlinedIcon /> },
-      { label: 'Wallet', path: ROUTES.ADMIN_WALLET, icon: <AccountBalanceWalletOutlinedIcon /> },
     ],
   },
   {
-    label: 'Engagement',
-    items: [{ label: 'Reviews', path: ROUTES.ADMIN_REVIEWS, icon: <StarBorderOutlinedIcon /> }],
-  },
-  {
     label: 'Platform',
-    items: [{ label: 'Settings', path: ROUTES.ADMIN_SETTINGS, icon: <SettingsOutlinedIcon /> }],
+    items: [
+      {
+        label: 'Withdrawals',
+        path: ROUTES.ADMIN_WITHDRAWALS,
+        icon: <PaymentsOutlinedIcon />,
+      },
+      { label: 'Settings', path: ROUTES.ADMIN_SETTINGS, icon: <SettingsOutlinedIcon /> },
+    ],
   },
 ];
 
 /**
  * Role-aware dashboard navigation.
  *
- * Mentors get ONLY the mentor studio — the learner dashboard and its tools
- * are not shown to them at all. Learners keep the standard core navigation.
+ * A mentor is ALSO a learner (can book other mentors, buy/use credits, attend
+ * sessions), so mentors get the learner tools (Find mentors, Sessions, Wallet)
+ * alongside their studio. Learners keep the standard core navigation.
  */
+export const MENTOR_LEARNER_NAV: NavItem[] = [
+  {
+    label: 'Find Mentors',
+    path: ROUTES.MENTORS,
+    icon: <SearchOutlinedIcon />,
+  },
+  { label: 'Sessions', path: ROUTES.SESSIONS, icon: <EventAvailableOutlinedIcon /> },
+  { label: 'Wallet', path: ROUTES.WALLET, icon: <AccountBalanceWalletOutlinedIcon /> },
+];
+
 export const getDashboardNav = (roles: readonly Role[] | undefined): NavItem[] => {
   if (roles?.includes(ROLES.MENTOR)) {
-    return [...MENTOR_NAV];
+    return [...MENTOR_NAV, ...MENTOR_LEARNER_NAV, ...ACCOUNT_NAV];
   }
   return [...CORE_NAV, ...ACCOUNT_NAV];
 };

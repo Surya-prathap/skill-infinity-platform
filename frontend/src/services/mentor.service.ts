@@ -1,3 +1,4 @@
+import type { AxiosRequestConfig } from 'axios';
 import { apiClient } from '@/api';
 import { API_ENDPOINTS } from '@/constants';
 import type {
@@ -45,9 +46,10 @@ export const mentorService = {
 
   /* ---------------- Marketplace (discovery) ---------------- */
 
-  searchMentors: (query: DiscoveryQuery) =>
+  searchMentors: (query: DiscoveryQuery, config?: AxiosRequestConfig) =>
     apiClient.get<ApiResponse<PageResponse<MentorSummary>>>(API_ENDPOINTS.MENTORS.SEARCH, {
       params: query,
+      ...config,
     }),
 
   getMentorById: (mentorId: string) =>

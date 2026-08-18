@@ -5,10 +5,12 @@ spring:
   application:
     name: user-service
   datasource:
-    url: jdbc:mysql://${USER_DB_HOST:localhost}:${USER_DB_PORT:3306}/${USER_DB_NAME:skill_infinity_user}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    url: jdbc:mysql://${USER_DB_HOST:localhost}:${USER_DB_PORT:3306}/${USER_DB_NAME:skill_infinity_user}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Kolkata
     username: ${USER_DB_USERNAME:root}
     password: ${USER_DB_PASSWORD:root123}
     driver-class-name: com.mysql.cj.jdbc.Driver
+  jackson:
+    time-zone: Asia/Kolkata
   jpa:
     hibernate:
       ddl-auto: update
@@ -20,16 +22,6 @@ spring:
     open-in-view: false
 
   data:
-    redis:
-      host: ${REDIS_HOST:redis}
-      port: ${REDIS_PORT:6379}
-      timeout: 3000ms
-      lettuce:
-        pool:
-          max-active: 16
-          max-idle: 4
-          min-idle: 2
-          max-wait: 1500ms
 
   rabbitmq:
     host: ${RABBITMQ_HOST:rabbitmq}

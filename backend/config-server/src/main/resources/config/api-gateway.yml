@@ -15,6 +15,8 @@ app:
     secret: ${JWT_SECRET:skill-infinity-dev-secret-change-me-in-production-0123456789}
 
 spring:
+  jackson:
+    time-zone: Asia/Kolkata
   cloud:
     gateway:
       discovery:
@@ -22,10 +24,20 @@ spring:
           enabled: true
           lower-case-service-id: true
 
-  data:
-    redis:
-      host: ${REDIS_HOST:redis}
-      port: ${REDIS_PORT:6379}
+      # Fix for the "first request after idle takes 10-20s" stalls: Tomcat
+      # upstreams close keep-alive connections after ~60s idle, but the Netty
+      # pool kept handing out those dead sockets. Evict idle connections before
+      # the upstream closes them (30s < 60s) so a reused connection is never
+      # stale, and cap the lifetime so long-lived connections rotate.
+      httpclient:
+        pool:
+          max-idle-time: 30s
+          max-life-time: 10m
+          evict-in-background: 60s
+        # 60s absorbs JVM/JIT cold-start on the first request after a fresh
+        # boot on constrained hosts; warm requests complete in well under a
+        # second. Override via GATEWAY_RESPONSE_TIMEOUT.
+        response-timeout: ${GATEWAY_RESPONSE_TIMEOUT:60s}
 
 eureka:
   client:
@@ -45,10 +57,8 @@ management:
       group:
         readiness:
           # Skip the slow discoveryComposite/Eureka remote-status fetch — the
-          # gateway only needs its own readiness + redis to be "ready", and the
-          # compose healthcheck polls this endpoint every 10-15s.
+          # gateway only needs its own readiness to be "ready".
           include:
             - readinessState
-            - redis
   tracing:
     enabled: false

@@ -1,10 +1,10 @@
+import type { AxiosRequestConfig } from 'axios';
 import { apiClient } from '@/api';
 import { API_ENDPOINTS } from '@/constants';
 import type {
   ApiResponse,
   BookingRequest,
   BookingResponse,
-  CalendarData,
   CancellationRequest,
   CommunityAllowance,
   CommunityImpact,
@@ -39,16 +39,34 @@ export const sessionService = {
       `${API_ENDPOINTS.SESSIONS.REJECT}?bookingId=${bookingId}${reason ? `&reason=${encodeURIComponent(reason)}` : ''}`,
     ),
 
-  /* ---------------- Queries ---------------- */
+  /* ---------------- Booking queries ---------------- */
 
-  getUpcoming: (page = 0, size = 20) =>
-    apiClient.get<ApiResponse<PageResponse<Session>>>(
-      `${API_ENDPOINTS.SESSIONS.UPCOMING}?page=${page}&size=${size}`,
+  /** Pending/approved bookings where the authenticated user is the mentor. */
+  getMentorBookings: (status?: string, page = 0, size = 50, config?: AxiosRequestConfig) =>
+    apiClient.get<ApiResponse<PageResponse<BookingResponse>>>(
+      `${API_ENDPOINTS.SESSIONS.BOOKINGS_MENTOR}?page=${page}&size=${size}${status ? `&status=${status}` : ''}`,
+      config,
     ),
 
-  getHistory: (page = 0, size = 20) =>
+  /** Bookings where the authenticated user is the learner. */
+  getLearnerBookings: (status?: string, page = 0, size = 50, config?: AxiosRequestConfig) =>
+    apiClient.get<ApiResponse<PageResponse<BookingResponse>>>(
+      `${API_ENDPOINTS.SESSIONS.BOOKINGS_LEARNER}?page=${page}&size=${size}${status ? `&status=${status}` : ''}`,
+      config,
+    ),
+
+  /* ---------------- Queries ---------------- */
+
+  getUpcoming: (page = 0, size = 20, config?: AxiosRequestConfig) =>
+    apiClient.get<ApiResponse<PageResponse<Session>>>(
+      `${API_ENDPOINTS.SESSIONS.UPCOMING}?page=${page}&size=${size}`,
+      config,
+    ),
+
+  getHistory: (page = 0, size = 20, config?: AxiosRequestConfig) =>
     apiClient.get<ApiResponse<PageResponse<Session>>>(
       `${API_ENDPOINTS.SESSIONS.HISTORY}?page=${page}&size=${size}`,
+      config,
     ),
 
   getSession: (sessionId: string) =>
@@ -60,15 +78,6 @@ export const sessionService = {
     apiClient.get<ApiResponse<PageResponse<Session>>>(API_ENDPOINTS.SESSIONS.SEARCH, {
       params: { ...filters, page, size },
     }),
-
-  /* ---------------- Calendar ---------------- */
-
-  getCalendar: (startDate?: string, endDate?: string) =>
-    apiClient.get<ApiResponse<CalendarData>>(API_ENDPOINTS.SESSIONS.CALENDAR, {
-      params: { startDate, endDate },
-    }),
-
-  exportCalendarIcs: () => apiClient.get<string>(API_ENDPOINTS.SESSIONS.CALENDAR_EXPORT),
 
   /* ---------------- Lifecycle ---------------- */
 
@@ -105,9 +114,10 @@ export const sessionService = {
   createCommunitySession: (payload: CommunitySessionRequest) =>
     apiClient.post<ApiResponse<Session>>(API_ENDPOINTS.SESSIONS.COMMUNITY, payload),
 
-  getUpcomingCommunitySessions: (page = 0, size = 20) =>
+  getUpcomingCommunitySessions: (page = 0, size = 20, config?: AxiosRequestConfig) =>
     apiClient.get<ApiResponse<PageResponse<Session>>>(
       `${API_ENDPOINTS.SESSIONS.COMMUNITY_UPCOMING}?page=${page}&size=${size}`,
+      config,
     ),
 
   joinCommunitySession: (sessionId: string) =>
@@ -115,13 +125,15 @@ export const sessionService = {
       resolve(API_ENDPOINTS.SESSIONS.COMMUNITY_JOIN, { sessionId }),
     ),
 
-  getCommunityAllowance: () =>
-    apiClient.get<ApiResponse<CommunityAllowance>>(API_ENDPOINTS.SESSIONS.COMMUNITY_ALLOWANCE),
+  getCommunityAllowance: (config?: AxiosRequestConfig) =>
+    apiClient.get<ApiResponse<CommunityAllowance>>(API_ENDPOINTS.SESSIONS.COMMUNITY_ALLOWANCE, config),
 
   getMentorCommunityImpact: (mentorId: string) =>
     apiClient.get<ApiResponse<CommunityImpact>>(
       resolve(API_ENDPOINTS.SESSIONS.COMMUNITY_IMPACT, { mentorId }),
     ),
+
 };
+
 
 export default sessionService;
