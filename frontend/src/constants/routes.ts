@@ -1,0 +1,72 @@
+export const ROUTES = {
+  // Public
+  HOME: '/',
+  LOGIN: '/login',
+  REGISTER: '/register',
+  FORGOT_PASSWORD: '/forgot-password',
+  RESET_PASSWORD: '/reset-password',
+  EMAIL_VERIFICATION: '/verify-email',
+  MENTORS: '/mentors',
+  MENTOR_DETAILS: '/mentors/:mentorId',
+  BOOK_SESSION: '/book/:mentorId',
+
+  // Authenticated
+  DASHBOARD: '/dashboard',
+  PROFILE: '/profile',
+  PROFILE_EDIT: '/profile/edit',
+  PROFILE_EDUCATION: '/profile/education',
+  PROFILE_EXPERIENCE: '/profile/experience',
+  PROFILE_SKILLS: '/profile/skills',
+  PROFILE_LANGUAGES: '/profile/languages',
+  PROFILE_SOCIAL: '/profile/social',
+  PROFILE_RESUME: '/profile/resume',
+  MENTOR_REVIEWS: '/mentors/:mentorId/reviews',
+  SESSIONS: '/sessions',
+  SESSION_DETAILS: '/sessions/:sessionId',
+  CALENDAR: '/calendar',
+  WALLET: '/wallet',
+  CREDITS: '/wallet/credits',
+  TRANSACTIONS: '/wallet/transactions',
+  SUBSCRIPTION: '/subscription',
+  MEETINGS: '/meetings',
+  MEETING: '/meet/:meetingId',
+  SETTINGS: '/settings',
+
+  // Mentor
+  BECOME_MENTOR: '/become-mentor',
+  MENTOR_REGISTRATION: '/mentor/register',
+  MENTOR_APPLICATION_SUBMITTED: '/mentor/application-submitted',
+  MENTOR_DASHBOARD: '/mentor/dashboard',
+  MENTOR_AVAILABILITY: '/mentor/availability',
+  MENTOR_PRICING: '/mentor/pricing',
+  MENTOR_ANALYTICS: '/mentor/analytics',
+  MENTOR_CERTIFICATES: '/mentor/certificates',
+  MENTOR_ACHIEVEMENTS: '/mentor/achievements',
+  MENTOR_SUBSCRIPTION: '/mentor/subscription',
+  MENTOR_SETTINGS: '/mentor/settings',
+
+  // Admin
+  ADMIN: '/admin',
+  ADMIN_DASHBOARD: '/admin/dashboard',
+  ADMIN_ANALYTICS: '/admin/analytics',
+  ADMIN_USERS: '/admin/users',
+  ADMIN_MENTORS: '/admin/mentors',
+  ADMIN_SESSIONS: '/admin/sessions',
+  ADMIN_PAYMENTS: '/admin/payments',
+  ADMIN_WALLET: '/admin/wallet',
+  ADMIN_WITHDRAWALS: '/admin/withdrawals',
+  ADMIN_REVIEWS: '/admin/reviews',
+  ADMIN_SUPPORT: '/admin/support',
+  ADMIN_ANNOUNCEMENTS: '/admin/announcements',
+  ADMIN_REPORTS: '/admin/reports',
+  ADMIN_SETTINGS: '/admin/settings',
+  ADMIN_FEATURE_FLAGS: '/admin/feature-flags',
+  ADMIN_AUDIT: '/admin/audit-logs',
+  ADMIN_MONITORING: '/admin/monitoring',
+
+  // Errors
+  UNAUTHORIZED: '/unauthorized',
+  NOT_FOUND: '/404',
+} as const;
+
+export type RoutePath = (typeof ROUTES)[keyof typeof ROUTES];

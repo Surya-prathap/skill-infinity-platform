@@ -1,0 +1,551 @@
+import { lazy, Suspense } from 'react';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { Box, LinearProgress } from '@mui/material';
+import { AdminLayout, AuthLayout, DashboardLayout, ErrorLayout, MainLayout } from '@/layouts';
+import { AuthGuard, GuestGuard, RoleGuard } from '@/guards';
+import { ROLES, ROUTES } from '@/constants';
+
+/* Route-level code splitting — each page is its own chunk. */
+const lazyPage = (loader: () => Promise<{ default: React.ComponentType }>) =>
+  lazy(() => loader().then((module) => ({ default: module.default })));
+
+const LandingPage = lazyPage(async () => {
+  const module = await import('@/pages/LandingPage');
+  return { default: module.LandingPage };
+});
+const BecomeMentorPage = lazyPage(async () => {
+  const module = await import('@/pages/mentor/BecomeMentorPage');
+  return { default: module.BecomeMentorPage };
+});
+const MentorsPage = lazyPage(async () => {
+  const module = await import('@/pages/MentorsPage');
+  return { default: module.MentorsPage };
+});
+const MentorProfilePage = lazyPage(async () => {
+  const module = await import('@/pages/MentorProfilePage');
+  return { default: module.MentorProfilePage };
+});
+const BookingPage = lazyPage(async () => {
+  const module = await import('@/pages/BookingPage');
+  return { default: module.BookingPage };
+});
+const LoginPage = lazyPage(async () => {
+  const module = await import('@/pages/LoginPage');
+  return { default: module.LoginPage };
+});
+const RegisterPage = lazyPage(async () => {
+  const module = await import('@/pages/RegisterPage');
+  return { default: module.RegisterPage };
+});
+const ForgotPasswordPage = lazyPage(async () => {
+  const module = await import('@/pages/ForgotPasswordPage');
+  return { default: module.ForgotPasswordPage };
+});
+const ResetPasswordPage = lazyPage(async () => {
+  const module = await import('@/pages/ResetPasswordPage');
+  return { default: module.ResetPasswordPage };
+});
+const EmailVerificationPage = lazyPage(async () => {
+  const module = await import('@/pages/EmailVerificationPage');
+  return { default: module.EmailVerificationPage };
+});
+const DashboardPage = lazyPage(async () => {
+  const module = await import('@/pages/DashboardPage');
+  return { default: module.DashboardPage };
+});
+const ProfileLayout = lazyPage(async () => {
+  const module = await import('@/pages/profile/ProfileLayout');
+  return { default: module.ProfileLayout };
+});
+const ProfileOverviewPage = lazyPage(async () => {
+  const module = await import('@/pages/profile/ProfileOverviewPage');
+  return { default: module.ProfileOverviewPage };
+});
+const EditProfilePage = lazyPage(async () => {
+  const module = await import('@/pages/profile/EditProfilePage');
+  return { default: module.EditProfilePage };
+});
+const SkillsPage = lazyPage(async () => {
+  const module = await import('@/pages/profile/SkillsPage');
+  return { default: module.SkillsPage };
+});
+const MentorDashboardPage = lazyPage(async () => {
+  const module = await import('@/pages/mentor/MentorDashboardPage');
+  return { default: module.MentorDashboardPage };
+});
+const MentorRegistrationPage = lazyPage(async () => {
+  const module = await import('@/pages/mentor/MentorRegistrationPage');
+  return { default: module.MentorRegistrationPage };
+});
+const MentorApplicationSubmittedPage = lazyPage(async () => {
+  const module = await import('@/pages/mentor/MentorApplicationSubmittedPage');
+  return { default: module.MentorApplicationSubmittedPage };
+});
+const MentorAvailabilityPage = lazyPage(async () => {
+  const module = await import('@/pages/mentor/MentorAvailabilityPage');
+  return { default: module.MentorAvailabilityPage };
+});
+const MentorPricingPage = lazyPage(async () => {
+  const module = await import('@/pages/mentor/MentorPricingPage');
+  return { default: module.MentorPricingPage };
+});
+const MentorSettingsPage = lazyPage(async () => {
+  const module = await import('@/pages/mentor/MentorSettingsPage');
+  return { default: module.MentorSettingsPage };
+});
+const MentorReviewsPage = lazyPage(async () => {
+  const module = await import('@/pages/reviews/MentorReviewsPage');
+  return { default: module.MentorReviewsPage };
+});
+const SessionDetailsPage = lazyPage(async () => {
+  const module = await import('@/pages/SessionDetailsPage');
+  return { default: module.SessionDetailsPage };
+});
+const WalletPage = lazyPage(async () => {
+  const module = await import('@/pages/WalletPage');
+  return { default: module.WalletPage };
+});
+const LearnerSubscriptionPage = lazyPage(async () => {
+  const module = await import('@/pages/SubscriptionPage');
+  return { default: module.LearnerSubscriptionPage };
+});
+const MentorSubscriptionPage = lazyPage(async () => {
+  const module = await import('@/pages/SubscriptionPage');
+  return { default: module.MentorSubscriptionPage };
+});
+const SessionsPage = lazyPage(async () => {
+  const module = await import('@/pages/SessionsPage');
+  return { default: module.SessionsPage };
+});
+const SettingsPage = lazyPage(async () => {
+  const module = await import('@/pages/SettingsPage');
+  return { default: module.SettingsPage };
+});
+const AdminDashboardPage = lazyPage(async () => {
+  const module = await import('@/pages/admin/AdminDashboardPage');
+  return { default: module.AdminDashboardPage };
+});
+const AdminUsersPage = lazyPage(async () => {
+  const module = await import('@/pages/admin/UsersPage');
+  return { default: module.UsersPage };
+});
+const AdminMentorsPage = lazyPage(async () => {
+  const module = await import('@/pages/admin/MentorsPage');
+  return { default: module.MentorsPage };
+});
+const AdminWithdrawalsPage = lazyPage(async () => {
+  const module = await import('@/pages/admin/WithdrawalsPage');
+  return { default: module.WithdrawalsPage };
+});
+const AdminSettingsPage = lazyPage(async () => {
+  const module = await import('@/pages/admin/SettingsPage');
+  return { default: module.SettingsPage };
+});
+const NotFoundPage = lazyPage(async () => {
+  const module = await import('@/pages/NotFoundPage');
+  return { default: module.NotFoundPage };
+});
+const UnauthorizedPage = lazyPage(async () => {
+  const module = await import('@/pages/UnauthorizedPage');
+  return { default: module.UnauthorizedPage };
+});
+
+const RouteFallback: React.FC = () => (
+  <Box sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1400 }}>
+    <LinearProgress
+      variant="indeterminate"
+      sx={{
+        height: 3,
+        backgroundColor: 'transparent',
+        '& .MuiLinearProgress-bar': { borderRadius: 999 },
+      }}
+    />
+  </Box>
+);
+
+export const AppRouter: React.FC = () => {
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* ---------- Public ---------- */}
+        <Route element={<MainLayout />}>
+          <Route
+            path={ROUTES.HOME}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <LandingPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.MENTORS}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <MentorsPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.MENTOR_DETAILS}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <MentorProfilePage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.MENTOR_REVIEWS}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <MentorReviewsPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.BECOME_MENTOR}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <BecomeMentorPage />
+              </Suspense>
+            }
+          />
+        </Route>
+
+        {/* ---------- Guest-only (auth) ---------- */}
+        <Route element={<AuthLayout />}>
+          <Route
+            path={ROUTES.LOGIN}
+            element={
+              <GuestGuard>
+                <Suspense fallback={<RouteFallback />}>
+                  <LoginPage />
+                </Suspense>
+              </GuestGuard>
+            }
+          />
+          <Route
+            path={ROUTES.REGISTER}
+            element={
+              <GuestGuard>
+                <Suspense fallback={<RouteFallback />}>
+                  <RegisterPage />
+                </Suspense>
+              </GuestGuard>
+            }
+          />
+          <Route
+            path={ROUTES.FORGOT_PASSWORD}
+            element={
+              <GuestGuard>
+                <Suspense fallback={<RouteFallback />}>
+                  <ForgotPasswordPage />
+                </Suspense>
+              </GuestGuard>
+            }
+          />
+          <Route
+            path={ROUTES.RESET_PASSWORD}
+            element={
+              <GuestGuard>
+                <Suspense fallback={<RouteFallback />}>
+                  <ResetPasswordPage />
+                </Suspense>
+              </GuestGuard>
+            }
+          />
+          <Route
+            path={ROUTES.EMAIL_VERIFICATION}
+            element={
+              <GuestGuard>
+                <Suspense fallback={<RouteFallback />}>
+                  <EmailVerificationPage />
+                </Suspense>
+              </GuestGuard>
+            }
+          />
+        </Route>
+
+        {/* ---------- Authenticated ---------- */}
+        <Route
+          element={
+              <AuthGuard>
+              <DashboardLayout />
+               </AuthGuard>
+          }
+        >
+          <Route
+            path={ROUTES.DASHBOARD}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <DashboardPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.PROFILE}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <ProfileLayout />
+              </Suspense>
+            }
+          >
+            <Route
+              index
+              element={
+                <Suspense fallback={<RouteFallback />}>
+                  <ProfileOverviewPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="edit"
+              element={
+                <Suspense fallback={<RouteFallback />}>
+                  <EditProfilePage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="skills"
+              element={
+                <Suspense fallback={<RouteFallback />}>
+                  <SkillsPage />
+                </Suspense>
+              }
+            />
+            {/* Removed profile sections redirect to the overview. */}
+            <Route
+              path="education"
+              element={<Navigate to={ROUTES.PROFILE} replace />}
+            />
+            <Route
+              path="experience"
+              element={<Navigate to={ROUTES.PROFILE} replace />}
+            />
+            <Route
+              path="languages"
+              element={<Navigate to={ROUTES.PROFILE} replace />}
+            />
+            <Route
+              path="social"
+              element={<Navigate to={ROUTES.PROFILE} replace />}
+            />
+            <Route
+              path="resume"
+              element={<Navigate to={ROUTES.PROFILE} replace />}
+            />
+          </Route>
+          <Route
+            path={ROUTES.SESSIONS}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <SessionsPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.SESSION_DETAILS}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <SessionDetailsPage />
+              </Suspense>
+            }
+          />
+          {/* Removed pages redirect to their closest remaining destination. */}
+          <Route path={ROUTES.CALENDAR} element={<Navigate to={ROUTES.SESSIONS} replace />} />
+          <Route path={ROUTES.CREDITS} element={<Navigate to={ROUTES.WALLET} replace />} />
+          <Route path={ROUTES.TRANSACTIONS} element={<Navigate to={ROUTES.WALLET} replace />} />
+          <Route path={ROUTES.MEETINGS} element={<Navigate to={ROUTES.SESSIONS} replace />} />
+          <Route
+            path={ROUTES.WALLET}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <WalletPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.SUBSCRIPTION}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <LearnerSubscriptionPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.BOOK_SESSION}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <BookingPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.SETTINGS}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <SettingsPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.MENTOR_REGISTRATION}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <MentorRegistrationPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.MENTOR_APPLICATION_SUBMITTED}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <MentorApplicationSubmittedPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.MENTOR_DASHBOARD}
+            element={
+              <RoleGuard roles={[ROLES.MENTOR]}>
+                <Suspense fallback={<RouteFallback />}>
+                  <MentorDashboardPage />
+                </Suspense>
+              </RoleGuard>
+            }
+          />
+          <Route
+            path={ROUTES.MENTOR_AVAILABILITY}
+            element={
+              <RoleGuard roles={[ROLES.MENTOR]}>
+                <Suspense fallback={<RouteFallback />}>
+                  <MentorAvailabilityPage />
+                </Suspense>
+              </RoleGuard>
+            }
+          />
+          <Route
+            path={ROUTES.MENTOR_PRICING}
+            element={
+              <RoleGuard roles={[ROLES.MENTOR]}>
+                <Suspense fallback={<RouteFallback />}>
+                  <MentorPricingPage />
+                </Suspense>
+              </RoleGuard>
+            }
+          />
+          {/* Removed mentor pages redirect to the studio. */}
+          <Route path={ROUTES.MENTOR_ANALYTICS} element={<Navigate to={ROUTES.MENTOR_DASHBOARD} replace />} />
+          <Route path={ROUTES.MENTOR_CERTIFICATES} element={<Navigate to={ROUTES.MENTOR_DASHBOARD} replace />} />
+          <Route path={ROUTES.MENTOR_ACHIEVEMENTS} element={<Navigate to={ROUTES.MENTOR_DASHBOARD} replace />} />
+          <Route
+            path={ROUTES.MENTOR_SETTINGS}
+            element={
+              <RoleGuard roles={[ROLES.MENTOR]}>
+                <Suspense fallback={<RouteFallback />}>
+                  <MentorSettingsPage />
+                </Suspense>
+              </RoleGuard>
+            }
+          />
+          <Route
+            path={ROUTES.MENTOR_SUBSCRIPTION}
+            element={
+              <RoleGuard roles={[ROLES.MENTOR]}>
+                <Suspense fallback={<RouteFallback />}>
+                  <MentorSubscriptionPage />
+                </Suspense>
+              </RoleGuard>
+            }
+          />
+        </Route>
+
+        {/* ---------- Admin ---------- */}
+        <Route
+          element={
+             <AuthGuard>
+               <RoleGuard roles={[ROLES.ADMIN]}>
+                <AdminLayout />
+               </RoleGuard>
+             </AuthGuard>
+          }
+        >
+          <Route
+            path={ROUTES.ADMIN}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <AdminDashboardPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.ADMIN_DASHBOARD}
+            element={
+              <Navigate to={ROUTES.ADMIN} replace />
+            }
+          />
+          {/* Removed admin pages redirect to the dashboard. */}
+          <Route path={ROUTES.ADMIN_ANALYTICS} element={<Navigate to={ROUTES.ADMIN} replace />} />
+          <Route path={ROUTES.ADMIN_SESSIONS} element={<Navigate to={ROUTES.ADMIN} replace />} />
+          <Route path={ROUTES.ADMIN_PAYMENTS} element={<Navigate to={ROUTES.ADMIN} replace />} />
+          <Route path={ROUTES.ADMIN_WALLET} element={<Navigate to={ROUTES.ADMIN_WITHDRAWALS} replace />} />
+          <Route path={ROUTES.ADMIN_REVIEWS} element={<Navigate to={ROUTES.ADMIN} replace />} />
+          <Route
+            path={ROUTES.ADMIN_USERS}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <AdminUsersPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.ADMIN_MENTORS}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <AdminMentorsPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.ADMIN_WITHDRAWALS}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <AdminWithdrawalsPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path={ROUTES.ADMIN_SETTINGS}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <AdminSettingsPage />
+              </Suspense>
+            }
+          />
+        </Route>
+
+        {/* ---------- Errors ---------- */}
+        <Route element={<ErrorLayout />}>
+          <Route
+            path={ROUTES.UNAUTHORIZED}
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <UnauthorizedPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="*"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <NotFoundPage />
+              </Suspense>
+            }
+          />
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  );
+};
+
+export default AppRouter;

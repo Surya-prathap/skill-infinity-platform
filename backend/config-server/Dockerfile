@@ -1,0 +1,39 @@
+FROM maven:3.9.11-eclipse-temurin-21 AS builder
+WORKDIR /workspace
+
+COPY . .
+
+# Shared Maven cache mount: dependencies download once and are reused by every service image
+RUN --mount=type=cache,target=/root/.m2 mvn clean package -pl config-server -am -DskipTests
+
+FROM eclipse-temurin:21-jre-alpine
+RUN apk add --no-cache curl wget && \
+    addgroup -S skillinfinity && adduser -S skillinfinity -G skillinfinity
+
+WORKDIR /app
+COPY --from=builder /workspace/config-server/target/config-server-1.0.0-SNAPSHOT.jar /app/app.jar
+
+# Config Server runs as a non-root user; give it a writable log directory
+RUN mkdir -p /app/logs && chown -R skillinfinity:skillinfinity /app/logs
+
+ENV JAVA_OPTS="-XX:+UseG1GC \
+    -XX:MaxRAMPercentage=40.0 \
+    -XX:MaxMetaspaceSize=192m \
+    -XX:ReservedCodeCacheSize=48m \
+    -XX:MaxDirectMemorySize=32m \
+    -Xss512k \
+    -XX:+HeapDumpOnOutOfMemoryError \
+    -XX:HeapDumpPath=/tmp/heapdump.hprof \
+    -Djava.security.egd=file:/dev/./urandom \
+    -Dfile.encoding=UTF-8 \
+    -Duser.timezone=Asia/Kolkata \
+    -Dnetworkaddress.cache.ttl=60 \
+    -Dnetworkaddress.cache.negative.ttl=10"
+
+EXPOSE 8888
+USER skillinfinity
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD wget -qO- http://localhost:8888/actuator/health || exit 1
+
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

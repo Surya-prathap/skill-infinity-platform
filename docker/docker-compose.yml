@@ -1,0 +1,549 @@
+# ============================================================
+# Skill Infinity Platform — Docker Compose
+# ------------------------------------------------------------
+# Tuned for Docker Desktop / constrained hosts (4 CPUs, ~4.8 GB).
+# Every limit below is a CEILING. JVMs use G1GC + a compact heap
+# (MaxRAMPercentage=40). Full tiered compilation (C1+C2) is enabled so hot
+# paths (BCrypt, JPA hydration, JSON mapping) run at full JIT speed; C1-only
+# mode made startup faster but left every request 10-20x slower at runtime.
+# Native memory is capped too (MaxMetaspaceSize/ReservedCodeCacheSize/
+# MaxDirectMemorySize/-Xss) so no JVM can balloon past its mem_limit and
+# force host swapping. Health checks use /actuator/health/readiness with
+# SHORT intervals (10-15s) so the service_healthy dependency chain detects
+# readiness almost immediately instead of adding a full interval of dead
+# time per layer.
+# ============================================================
+
+networks:
+  skill-infinity-network:
+    driver: bridge
+
+volumes:
+  mysql-data:
+    driver: local
+  rabbitmq-data:
+    driver: local
+
+services:
+  # ============================================================
+  # MySQL Database
+  # ============================================================
+  mysql:
+    image: mysql:8.0
+    container_name: skill-infinity-mysql
+    restart: unless-stopped
+    mem_limit: 512m
+    # Shared database for every service — give it a full core so it is never
+    # the bottleneck when several services burst at once (the .wslconfig bump
+    # to 8 CPUs leaves room for this).
+    cpus: 1.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?err}
+      MYSQL_ROOT_HOST: '%'
+      TZ: Asia/Kolkata
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    command:
+      - "--character-set-server=utf8mb4"
+      - "--collation-server=utf8mb4_unicode_ci"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      # First boot runs init-db.sql (creates 10 databases); give it time
+      start_period: 90s
+    networks:
+      - skill-infinity-network
+
+  # ============================================================
+  # RabbitMQ Message Broker
+  # ============================================================
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: skill-infinity-rabbitmq
+    restart: unless-stopped
+    mem_limit: 256m
+    cpus: 0.5
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+      TZ: Asia/Kolkata
+    ports:
+      - "${RABBITMQ_AMQP_PORT:-5672}:5672"
+      - "${RABBITMQ_MGMT_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+      # Allow guest/guest connections from non-loopback (Docker network) interfaces
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+    healthcheck:
+      # -q ping is much lighter than check_port_connectivity; the heavier probe
+      # times out under memory pressure while the 11 JVMs cold-start on 4 CPUs.
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+      start_period: 90s
+    networks:
+      - skill-infinity-network
+
+  # ============================================================
+  # Config Server
+  # ============================================================
+  config-server:
+    build:
+      context: ../backend
+      dockerfile: config-server/Dockerfile
+    container_name: skill-infinity-config-server
+    restart: unless-stopped
+    mem_limit: 256m
+    cpus: 0.5
+    ports:
+      - "${CONFIG_SERVER_PORT:-8888}:8888"
+    environment:
+      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=40.0 -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Kolkata -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
+      - CONFIG_SERVER_PORT=8888
+      - CONFIG_REPO_URI=${CONFIG_REPO_URI:-}
+      - CONFIG_REPO_DEFAULT_BRANCH=main
+      - SPRING_PROFILES_ACTIVE=native
+      # Shared JWT secret: config-server resolves ${JWT_SECRET} in api-gateway.yml,
+      # so the gateway verifies tokens with the SAME key identity-service signs with.
+      - JWT_SECRET=${JWT_SECRET:?err}
+      # Real Discord invite: resolved here so session-service.yml serves the
+      # configured meeting URL to the session service (never a fabricated one).
+      - DISCORD_MEETING_URL=${DISCORD_MEETING_URL:-}
+      - DISCORD_INVITE_CODE=${DISCORD_INVITE_CODE:-}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8888/actuator/health/readiness"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 180s
+    networks:
+      - skill-infinity-network
+
+  # ============================================================
+  # Discovery Server
+  # ============================================================
+  discovery-server:
+    build:
+      context: ../backend
+      dockerfile: discovery-server/Dockerfile
+    container_name: skill-infinity-discovery-server
+    restart: unless-stopped
+    mem_limit: 256m
+    cpus: 0.5
+    ports:
+      - "${DISCOVERY_SERVER_PORT:-8761}:8761"
+    environment:
+      - CONFIG_SERVER_URL=http://config-server:8888
+      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=40.0 -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Kolkata -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
+      - DISCOVERY_SERVER_PORT=8761
+      - EUREKA_HOSTNAME=discovery-server
+      - EUREKA_DEFAULT_ZONE=http://discovery-server:8761/eureka/
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8761/actuator/health/readiness"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 180s
+    depends_on:
+      config-server:
+        condition: service_healthy
+    networks:
+      - skill-infinity-network
+
+  # ============================================================
+  # API Gateway
+  # ============================================================
+  api-gateway:
+    build:
+      context: ../backend
+      dockerfile: api-gateway/Dockerfile
+    container_name: skill-infinity-api-gateway
+    restart: unless-stopped
+    mem_limit: 416m
+    cpus: 0.5
+    ports:
+      - "${API_GATEWAY_PORT:-8080}:8080"
+    environment:
+      - CONFIG_SERVER_URL=http://config-server:8888
+      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=40.0 -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Kolkata -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
+      - API_GATEWAY_PORT=8080
+      # Same signing key as identity-service — the gateway resolves ${JWT_SECRET}
+      # from api-gateway.yml (served raw by config-server) against its OWN env,
+      # so the gateway must receive the secret directly to verify tokens.
+      - JWT_SECRET=${JWT_SECRET:?err}
+      # Overridable CORS origins. The gateway resolves the ${CORS_ALLOWED_ORIGINS}
+      # placeholder in api-gateway.yml against ITS OWN environment, so the env var
+      # must live here (not on config-server, which serves the file raw). Defaults
+      # cover the dockerized frontend (http://localhost) plus local dev servers.
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://localhost,http://127.0.0.1,http://localhost:5173,http://localhost:3000}
+      - EUREKA_DEFAULT_ZONE=http://discovery-server:8761/eureka/
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health/readiness"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 180s
+    # The gateway only needs config-server and discovery-server. RabbitMQ is
+    # NOT a dependency: the `common` module (which pulled in
+    # spring-boot-starter-amqp) was removed from the gateway, so waiting on
+    # rabbitmq's (slow) health here just adds minutes of dead time to startup.
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+    networks:
+      - skill-infinity-network
+
+  # ============================================================
+  # Identity Service
+  # ============================================================
+  identity-service:
+    build:
+      context: ../backend
+      dockerfile: identity-service/Dockerfile
+    container_name: skill-infinity-identity-service
+    restart: unless-stopped
+    mem_limit: 512m
+    cpus: 0.5
+    ports:
+      - "${IDENTITY_SERVICE_PORT:-8081}:8081"
+    environment:
+      - CONFIG_SERVER_URL=http://config-server:8888
+      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=40.0 -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Kolkata -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
+      - IDENTITY_SERVICE_PORT=8081
+      - IDENTITY_DB_HOST=mysql
+      - IDENTITY_DB_NAME=skill_infinity_identity
+      - IDENTITY_DB_USERNAME=root
+      - IDENTITY_DB_PASSWORD=${MYSQL_ROOT_PASSWORD:?err}
+      - JWT_SECRET=${JWT_SECRET:?err}
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_AMQP_PORT=5672
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
+      - EUREKA_DEFAULT_ZONE=http://discovery-server:8761/eureka/
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8081/actuator/health/readiness"]
+      interval: 15s
+      timeout: 15s
+      retries: 30
+      start_period: 300s
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+    networks:
+      - skill-infinity-network
+
+  # ============================================================
+  # User Service
+  # ============================================================
+  user-service:
+    build:
+      context: ../backend
+      dockerfile: user-service/Dockerfile
+    container_name: skill-infinity-user-service
+    restart: unless-stopped
+    mem_limit: 384m
+    cpus: 0.5
+    ports:
+      - "${USER_SERVICE_PORT:-8082}:8082"
+    environment:
+      - CONFIG_SERVER_URL=http://config-server:8888
+      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=40.0 -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Kolkata -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
+      - USER_SERVICE_PORT=8082
+      - USER_DB_HOST=mysql
+      - USER_DB_NAME=skill_infinity_user
+      - USER_DB_USERNAME=root
+      - USER_DB_PASSWORD=${MYSQL_ROOT_PASSWORD:?err}
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_AMQP_PORT=5672
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
+      - EUREKA_DEFAULT_ZONE=http://discovery-server:8761/eureka/
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8082/actuator/health/readiness"]
+      interval: 15s
+      timeout: 15s
+      retries: 30
+      start_period: 300s
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - skill-infinity-network
+
+  # ============================================================
+  # Mentor Service
+  # ============================================================
+  mentor-service:
+    build:
+      context: ../backend
+      dockerfile: mentor-service/Dockerfile
+    container_name: skill-infinity-mentor-service
+    restart: unless-stopped
+    mem_limit: 512m
+    cpus: 0.5
+    ports:
+      - "${MENTOR_SERVICE_PORT:-8083}:8083"
+    environment:
+      - CONFIG_SERVER_URL=http://config-server:8888
+      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=40.0 -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Kolkata -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
+      - MENTOR_SERVICE_PORT=8083
+      - MENTOR_DB_HOST=mysql
+      - MENTOR_DB_NAME=skill_infinity_mentor
+      - MENTOR_DB_USERNAME=root
+      - MENTOR_DB_PASSWORD=${MYSQL_ROOT_PASSWORD:?err}
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_AMQP_PORT=5672
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
+      - EUREKA_DEFAULT_ZONE=http://discovery-server:8761/eureka/
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8083/actuator/health/readiness"]
+      interval: 15s
+      timeout: 15s
+      retries: 30
+      start_period: 300s
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - skill-infinity-network
+
+  # ============================================================
+  # Session Service
+  # ============================================================
+  session-service:
+    build:
+      context: ../backend
+      dockerfile: session-service/Dockerfile
+    container_name: skill-infinity-session-service
+    restart: unless-stopped
+    mem_limit: 416m
+    cpus: 0.5
+    ports:
+      - "${SESSION_SERVICE_PORT:-8084}:8084"
+    environment:
+      - CONFIG_SERVER_URL=http://config-server:8888
+      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=40.0 -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Kolkata -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
+      - SESSION_SERVICE_PORT=8084
+      - SESSION_DB_HOST=mysql
+      - SESSION_DB_NAME=skill_infinity_session
+      - SESSION_DB_USERNAME=root
+      - SESSION_DB_PASSWORD=${MYSQL_ROOT_PASSWORD:?err}
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
+      - EUREKA_DEFAULT_ZONE=http://discovery-server:8761/eureka/
+      # Free/community sessions per learner per month + real Discord invite.
+      # DISCORD_MEETING_URL: the full URL of a REAL Discord server invite
+      # (https://discord.gg/<code>). Blank (default) stores no meeting link —
+      # the UI shows "Meeting link is not available yet." instead of ever
+      # fabricating a discord.gg URL.
+      - COMMUNITY_ALLOWANCE_PER_MONTH=${COMMUNITY_ALLOWANCE_PER_MONTH:-5}
+      - DISCORD_MEETING_URL=${DISCORD_MEETING_URL:-}
+      - DISCORD_INVITE_CODE=${DISCORD_INVITE_CODE:-}
+      - JOIN_WINDOW_MINUTES=${JOIN_WINDOW_MINUTES:-10}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8084/actuator/health/readiness"]
+      interval: 15s
+      timeout: 15s
+      retries: 30
+      start_period: 300s
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      # STARTUP WAVE 2: wait for wave 1 (mentor) so only a few JVMs cold-start
+      # at once on the 4-CPU/4.8GB Docker VM (avoids CPU starvation + OOM).
+      mentor-service:
+        condition: service_healthy
+    networks:
+      - skill-infinity-network
+
+  # ============================================================
+  # Wallet Service
+  # ============================================================
+  wallet-service:
+    build:
+      context: ../backend
+      dockerfile: wallet-service/Dockerfile
+    container_name: skill-infinity-wallet-service
+    restart: unless-stopped
+    mem_limit: 416m
+    cpus: 0.5
+    ports:
+      - "${WALLET_SERVICE_PORT:-8085}:8085"
+    environment:
+      - CONFIG_SERVER_URL=http://config-server:8888
+      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=40.0 -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Kolkata -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
+      - WALLET_SERVICE_PORT=8085
+      - WALLET_DB_HOST=mysql
+      - WALLET_DB_NAME=skill_infinity_wallet
+      - WALLET_DB_USERNAME=root
+      - WALLET_DB_PASSWORD=${MYSQL_ROOT_PASSWORD:?err}
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
+      - EUREKA_DEFAULT_ZONE=http://discovery-server:8761/eureka/
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8085/actuator/health/readiness"]
+      interval: 15s
+      timeout: 15s
+      retries: 30
+      start_period: 300s
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      # STARTUP WAVE 2: wait for wave 1 (mentor) so only a few JVMs cold-start
+      # at once on the 4-CPU/4.8GB Docker VM (avoids CPU starvation + OOM).
+      mentor-service:
+        condition: service_healthy
+    networks:
+      - skill-infinity-network
+
+  # ============================================================
+  # Payment Service
+  # ============================================================
+  payment-service:
+    build:
+      context: ../backend
+      dockerfile: payment-service/Dockerfile
+    container_name: skill-infinity-payment-service
+    restart: unless-stopped
+    mem_limit: 384m
+    cpus: 0.5
+    ports:
+      - "${PAYMENT_SERVICE_PORT:-8086}:8086"
+    environment:
+      - CONFIG_SERVER_URL=http://config-server:8888
+      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=40.0 -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Kolkata -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
+      - PAYMENT_SERVICE_PORT=8086
+      - PAYMENT_DB_HOST=mysql
+      - PAYMENT_DB_NAME=skill_infinity_payment
+      - PAYMENT_DB_USERNAME=root
+      - PAYMENT_DB_PASSWORD=${MYSQL_ROOT_PASSWORD:?err}
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
+      - EUREKA_DEFAULT_ZONE=http://discovery-server:8761/eureka/
+      # Razorpay TEST MODE — secrets stay server-side only (docker/.env,
+      # gitignored). The frontend only ever receives the Key ID.
+      - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID:-}
+      - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET:-}
+      - RAZORPAY_WEBHOOK_SECRET=${RAZORPAY_WEBHOOK_SECRET:-}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8086/actuator/health/readiness"]
+      interval: 15s
+      timeout: 15s
+      retries: 30
+      start_period: 300s
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      # STARTUP WAVE 2: wait for wave 1 (mentor) so only a few JVMs cold-start
+      # at once on the 4-CPU/4.8GB Docker VM (avoids CPU starvation + OOM).
+      mentor-service:
+        condition: service_healthy
+    networks:
+      - skill-infinity-network
+
+  # ============================================================
+  # Admin Service
+  # ============================================================
+  admin-service:
+    build:
+      context: ../backend
+      dockerfile: admin-service/Dockerfile
+    container_name: skill-infinity-admin-service
+    restart: unless-stopped
+    mem_limit: 384m
+    cpus: 0.5
+    ports:
+      - "${ADMIN_SERVICE_PORT:-8090}:8090"
+    environment:
+      - CONFIG_SERVER_URL=http://config-server:8888
+      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=40.0 -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Kolkata -Dnetworkaddress.cache.ttl=60 -Dnetworkaddress.cache.negative.ttl=10
+      - ADMIN_SERVICE_PORT=8090
+      - ADMIN_DB_HOST=mysql
+      - ADMIN_DB_NAME=skill_infinity_admin
+      - ADMIN_DB_USERNAME=root
+      - ADMIN_DB_PASSWORD=${MYSQL_ROOT_PASSWORD:?err}
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
+      - EUREKA_DEFAULT_ZONE=http://discovery-server:8761/eureka/
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8090/actuator/health/readiness"]
+      interval: 15s
+      timeout: 15s
+      retries: 30
+      start_period: 300s
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      # STARTUP WAVE 3: wait for wave 2 (payment) so only a few JVMs cold-start
+      # at once on the 4-CPU/4.8GB Docker VM (avoids CPU starvation + OOM).
+      payment-service:
+        condition: service_healthy
+    networks:
+      - skill-infinity-network
+
+  # ============================================================
+  # Frontend
+  # ------------------------------------------------------------
+  # The frontend intentionally runs OUTSIDE Docker (npm run dev on the
+  # host) so its Vite dev server does not compete with the backend JVMs
+  # for the constrained 4-CPU/4.8GB Docker VM. The Vite proxy forwards
+  # /api to the gateway on localhost:8080, and the gateway CORS allow-list
+  # includes http://localhost:3000.
+  # ============================================================

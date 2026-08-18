@@ -1,0 +1,129 @@
+server:
+  port: ${SESSION_SERVICE_PORT:8084}
+
+spring:
+  application:
+    name: session-service
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
+  datasource:
+    url: jdbc:mysql://${SESSION_DB_HOST:localhost}:${SESSION_DB_PORT:3306}/${SESSION_DB_NAME:skill_infinity_session}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Kolkata
+    username: ${SESSION_DB_USERNAME:root}
+    password: ${SESSION_DB_PASSWORD:root123}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      idle-timeout: 30000
+      connection-timeout: 30000
+  jackson:
+    time-zone: Asia/Kolkata
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
+    open-in-view: false
+  data:
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    connection-timeout: 5000
+    template:
+      exchange: session.exchange
+    listener:
+      direct:
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 2000
+
+app:
+  services:
+    # Resolved by Docker DNS on the shared compose network; override for local runs.
+    mentor-service-url: ${MENTOR_SERVICE_URL:http://mentor-service:8083}
+    wallet-service-url: ${WALLET_SERVICE_URL:http://wallet-service:8085}
+  meeting:
+    # How many minutes before the session start the Join button becomes active.
+    join-window-minutes: ${JOIN_WINDOW_MINUTES:10}
+    discord:
+      # The REAL Discord meeting invite (full URL, e.g.
+      # https://discord.gg/AbCdEfGh) — a permanent invite to the actual
+      # Skill Infinity Discord server. Every session returns this SAME invite
+      # to both mentor and learner. The service NEVER fabricates a discord.gg
+      # code. Leave blank to store no meeting link — the UI shows
+      # "Meeting link is not available yet." instead of a fake URL.
+      url: ${DISCORD_MEETING_URL:}
+      # Legacy alias: a REAL invite code (the part after https://discord.gg/).
+      # Used only when url above is blank.
+      invite-code: ${DISCORD_INVITE_CODE:}
+
+community:
+  allowance:
+    per-month: ${COMMUNITY_ALLOWANCE_PER_MONTH:5}
+  # TRUE FREE sessions are community sessions costing 0 credits. Only those
+  # count toward the mentor's free-session benefits milestone.
+  session:
+    max-cost-credits: 3
+    max-learners: 20
+  recognition:
+    thresholds: 5,15,30,50
+    labels: Community Mentor,Active Contributor,Community Champion,Community Leader
+
+eureka:
+  instance:
+    prefer-ip-address: true
+    hostname: ${EUREKA_HOSTNAME:localhost}
+  client:
+    service-url:
+      defaultZone: ${EUREKA_DEFAULT_ZONE:http://localhost:8761/eureka/}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+  info:
+    env:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+info:
+  app:
+    name: ${spring.application.name}
+    description: Skill Infinity Session Service
+    version: "1.0.0-SNAPSHOT"
+
+logging:
+  level:
+    com.skillinfinity: INFO
+    org.springframework.amqp: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %highlight(%-5level) %logger{36} - %msg%n"
+  file:
+    name: ${SESSION_LOG_DIR:logs}/${spring.application.name}.log
+  logback:
+    rollingpolicy:
+      max-file-size: 10MB
+      max-history: 7
+
+session:
+  booking:
+    expiration-minutes: 30
+    max-sessions-per-day: 5
+  reminder:
+    24-hour-enabled: true
+    1-hour-enabled: true
+    15-min-enabled: true

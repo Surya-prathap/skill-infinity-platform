@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+    <Match>
+        <Or>
+            <!-- Lombok-generated code -->
+            <Class name="~.*\.builder.*"/>
+            <Class name="~.*\$\$.*"/>
+            <Class name="~.*\_.*"/>
+        </Or>
+    </Match>
+    <Match>
+        <!-- Exclude JPA entity classes from certain checks -->
+        <Or>
+            <Class name="~.*\.entity\..*"/>
+        </Or>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+    <Match>
+        <!-- Exclude DTO classes from serialization checks -->
+        <Or>
+            <Class name="~.*\.dto\..*"/>
+            <Class name="~.*\.request\..*"/>
+            <Class name="~.*\.response\..*"/>
+        </Or>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+    <Match>
+        <!-- Exclude configuration classes -->
+        <Or>
+            <Class name="~.*\.config\..*"/>
+        </Or>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+    <Match>
+        <!-- Test classes -->
+        <Class name="~.*\.*Test.*"/>
+    </Match>
+</FindBugsFilter>

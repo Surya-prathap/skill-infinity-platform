@@ -1,0 +1,115 @@
+# Identity Service Configuration (Config Server Managed)
+
+server:
+  port: ${IDENTITY_SERVICE_PORT:8081}
+
+spring:
+  datasource:
+    url: jdbc:mysql://${IDENTITY_DB_HOST:localhost}:${IDENTITY_DB_PORT:3306}/${IDENTITY_DB_NAME:skill_infinity_identity}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Kolkata
+    username: ${IDENTITY_DB_USERNAME:root}
+    password: ${IDENTITY_DB_PASSWORD:root123}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: ${HIKARI_MAX_POOL:20}
+      minimum-idle: ${HIKARI_MIN_IDLE:5}
+      idle-timeout: 300000
+      connection-timeout: 30000
+      max-lifetime: 600000
+      pool-name: IdentityServicePool
+      leak-detection-threshold: 60000
+  jackson:
+    time-zone: Asia/Kolkata
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: false
+    open-in-view: false
+
+  rabbitmq:
+    host: ${RABBITMQ_HOST:rabbitmq}
+    port: ${RABBITMQ_AMQP_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+
+  data:
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:?err}
+    access-token-expiration: ${JWT_ACCESS_EXPIRY:28800000}
+    refresh-token-expiration: ${JWT_REFRESH_EXPIRY:604800000}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000}
+  security:
+    password-policy:
+      min-length: 8
+      max-length: 128
+      require-uppercase: true
+      require-lowercase: true
+      require-digit: true
+      require-special-character: true
+      max-login-attempts: 5
+      lockout-duration-minutes: 15
+      password-history-count: 5
+      password-expiry-days: 90
+    rate-limit:
+      login-per-minute: 10
+      register-per-minute: 5
+      refresh-per-minute: 20
+
+eureka:
+  instance:
+    prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
+  client:
+    service-url:
+      defaultZone: ${EUREKA_DEFAULT_ZONE:http://localhost:8761/eureka/}
+    healthcheck:
+      enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+      group:
+        liveness:
+          include: livenessState
+        readiness:
+          include: readinessState,db,ping
+  info:
+    env:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    export:
+      prometheus:
+        enabled: true
+  tracing:
+    enabled: false
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+
+logging:
+  level:
+    com.skillinfinity: INFO
+    org.springframework.security: WARN
+    org.springframework.web: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %highlight(%-5level) %logger{36} [%X{correlationId:-no-cid}] - %msg%n"

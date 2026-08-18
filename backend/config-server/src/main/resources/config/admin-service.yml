@@ -1,0 +1,105 @@
+server:
+  port: 8090
+
+spring:
+  application:
+    name: admin-service
+  datasource:
+    url: jdbc:mysql://${ADMIN_DB_HOST:localhost}:${ADMIN_DB_PORT:3306}/${ADMIN_DB_NAME:skill_infinity_admin}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Kolkata
+    username: ${ADMIN_DB_USERNAME:root}
+    password: ${ADMIN_DB_PASSWORD:root123}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      idle-timeout: 30000
+      connection-timeout: 30000
+  jackson:
+    time-zone: Asia/Kolkata
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
+    open-in-view: false
+  data:
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    connection-timeout: 5000
+    template:
+      exchange: admin.exchange
+    listener:
+      simple:
+        auto-startup: true
+      direct:
+        auto-startup: true
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 2000
+
+eureka:
+  instance:
+    prefer-ip-address: true
+    hostname: ${EUREKA_HOSTNAME:localhost}
+  client:
+    service-url:
+      defaultZone: ${EUREKA_DEFAULT_ZONE:http://localhost:8761/eureka/}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+  info:
+    env:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  tracing:
+    enabled: false
+
+info:
+  app:
+    name: ${spring.application.name}
+    description: Skill Infinity Admin Service
+
+app:
+  services:
+    # Docker DNS names on the compose network; overridden to localhost by
+    # scripts/run-all.sh for host runs (mentor verification + user index
+    # backfill would otherwise fail silently).
+    mentor-service-url: ${MENTOR_SERVICE_URL:http://mentor-service:8083}
+    identity-service-url: ${IDENTITY_SERVICE_URL:http://identity-service:8081}
+
+logging:
+  level:
+    com.skillinfinity: INFO
+    org.springframework.amqp: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %highlight(%-5level) %logger{36} - %msg%n"
+  file:
+    name: ${ADMIN_LOG_DIR:logs}/${spring.application.name}.log
+  logback:
+    rollingpolicy:
+      max-file-size: 10MB
+      max-history: 7
+
+springdoc:
+  api-docs:
+    path: /admin-service/v3/api-docs
+  swagger-ui:
+    path: /admin-service/swagger-ui.html
+    enabled: true

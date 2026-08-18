@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: user-service
+  cloud:
+    config:
+      uri: ${CONFIG_SERVER_URL:http://localhost:8888}
+      fail-fast: ${CONFIG_SERVER_FAIL_FAST:false}
+      retry:
+        initial-interval: 1000
+        max-attempts: 3
+        multiplier: 1.5

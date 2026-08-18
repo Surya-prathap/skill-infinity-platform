@@ -1,0 +1,111 @@
+import { apiClient } from '@/api';
+import { API_ENDPOINTS } from '@/constants';
+import type {
+  ApiResponse,
+  CouponValidationRequest,
+  CreditPackage,
+  CreditPurchaseRequest,
+  Invoice,
+  MySubscription,
+  PageResponse,
+  Payment,
+  PaymentConfirmationRequest,
+  PaymentFailureRequest,
+  PaymentInitRequest,
+  RazorpayOrder,
+  RazorpaySubscriptionCheckout,
+  RazorpaySubscriptionVerifyRequest,
+  RazorpayVerifyRequest,
+  Receipt,
+  RefundRequest,
+  SubscriptionPlan,
+} from '@/types';
+
+const resolve = (template: string, params: Record<string, string>): string =>
+  Object.entries(params).reduce((url, [key, value]) => url.replace(`{${key}}`, value), template);
+
+/**
+ * payment-service endpoints. Identity is resolved by the API gateway from the
+ * JWT (X-User-ID header).
+ */
+export const paymentService = {
+  initiatePayment: (payload: PaymentInitRequest) =>
+    apiClient.post<ApiResponse<Payment>>(API_ENDPOINTS.PAYMENTS.INITIATE, payload),
+
+  confirmPayment: (payload: PaymentConfirmationRequest) =>
+    apiClient.post<ApiResponse<Payment>>(API_ENDPOINTS.PAYMENTS.CONFIRM, payload),
+
+  failPayment: (payload: PaymentFailureRequest) =>
+    apiClient.post<ApiResponse<Payment>>(API_ENDPOINTS.PAYMENTS.FAIL, payload),
+
+  retryPayment: (payload: PaymentInitRequest) =>
+    apiClient.post<ApiResponse<Payment>>(API_ENDPOINTS.PAYMENTS.RETRY, payload),
+
+  requestRefund: (payload: RefundRequest) =>
+    apiClient.post<ApiResponse<Payment>>(API_ENDPOINTS.PAYMENTS.REFUND, payload),
+
+  getHistory: (page = 0, size = 20) =>
+    apiClient.get<ApiResponse<PageResponse<Payment>>>(
+      `${API_ENDPOINTS.PAYMENTS.HISTORY}?page=${page}&size=${size}`,
+    ),
+
+  getPayment: (paymentId: string) =>
+    apiClient.get<ApiResponse<Payment>>(
+      resolve(API_ENDPOINTS.PAYMENTS.ITEM, { paymentId }),
+    ),
+
+  validateCoupon: (payload: CouponValidationRequest) =>
+    apiClient.post<ApiResponse<null>>(API_ENDPOINTS.PAYMENTS.COUPON, payload),
+
+  getInvoice: (invoiceId: string) =>
+    apiClient.get<ApiResponse<Invoice>>(
+      resolve(API_ENDPOINTS.PAYMENTS.INVOICE, { invoiceId }),
+    ),
+
+  getReceipt: (receiptId: string) =>
+    apiClient.get<ApiResponse<Receipt>>(
+      resolve(API_ENDPOINTS.PAYMENTS.RECEIPT, { receiptId }),
+    ),
+
+  /* ---------------- Subscriptions ---------------- */
+
+  getSubscriptionPlans: (type?: 'LEARNER' | 'MENTOR') =>
+    apiClient.get<ApiResponse<SubscriptionPlan[]>>(
+      type
+        ? `${API_ENDPOINTS.PAYMENTS.SUBSCRIPTION_PLANS}?type=${type}`
+        : API_ENDPOINTS.PAYMENTS.SUBSCRIPTION_PLANS,
+    ),
+
+  getMySubscription: () =>
+    apiClient.get<ApiResponse<MySubscription | null>>(API_ENDPOINTS.PAYMENTS.SUBSCRIPTION_MINE),
+
+  cancelSubscription: (subscriptionId: string) =>
+    apiClient.post<ApiResponse<null>>(
+      resolve(API_ENDPOINTS.PAYMENTS.SUBSCRIPTION_CANCEL, { subscriptionId }),
+    ),
+
+  /* ---------------- Razorpay (INR, test mode) ---------------- */
+
+  getCreditPackages: () =>
+    apiClient.get<ApiResponse<CreditPackage[]>>(API_ENDPOINTS.PAYMENTS.CREDIT_PACKAGES),
+
+  createRazorpayOrder: (payload: CreditPurchaseRequest) =>
+    apiClient.post<ApiResponse<RazorpayOrder>>(API_ENDPOINTS.PAYMENTS.ORDERS, payload),
+
+  verifyRazorpayPayment: (payload: RazorpayVerifyRequest) =>
+    apiClient.post<ApiResponse<Payment>>(API_ENDPOINTS.PAYMENTS.VERIFY, payload),
+
+  createSubscriptionCheckout: (planId: string) =>
+    apiClient.post<ApiResponse<RazorpaySubscriptionCheckout>>(
+      API_ENDPOINTS.PAYMENTS.SUBSCRIPTION_CHECKOUT,
+      { planId },
+    ),
+
+  verifySubscriptionPayment: (payload: RazorpaySubscriptionVerifyRequest) =>
+    apiClient.post<ApiResponse<MySubscription>>(
+      API_ENDPOINTS.PAYMENTS.SUBSCRIPTION_VERIFY,
+      payload,
+    ),
+};
+
+export default paymentService;
