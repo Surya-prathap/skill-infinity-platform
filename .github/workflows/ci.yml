@@ -294,7 +294,16 @@ jobs:
       - name: Show Docker Compose status
         if: always()
         run: |
-          docker compose --env-file .env -f docker/docker-compose.yml ps
+          echo "===== DOCKER COMPOSE STATUS ====="
+          docker compose --env-file .env -f docker/docker-compose.yml ps -a
+          
+          echo " "
+          echo "===== MENTOR SERVICE HEALTH ====="
+          docker inspect skill-infinity-service --format '{{json .State.Health}}' || true
+          
+          echo " "
+          echo "===== MENTOR SERVICE LOGS ====="
+          docker logs --tail 300 skill-infinity-mentor-service || true
 
       - name: Stop services
         if: always()
