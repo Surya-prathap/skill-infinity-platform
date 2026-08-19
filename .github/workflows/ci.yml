@@ -299,7 +299,7 @@ jobs:
           
           echo " "
           echo "===== MENTOR SERVICE HEALTH ====="
-          docker inspect skill-infinity-service --format '{{json .State.Health}}' || true
+          docker inspect skill-infinity-mentor-service --format '{{json .State.Health}}' || true
           
           echo " "
           echo "===== MENTOR SERVICE LOGS ====="
