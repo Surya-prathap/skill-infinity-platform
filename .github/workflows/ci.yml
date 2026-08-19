@@ -255,7 +255,7 @@ jobs:
 
       - name: Start services with Docker Compose
         run: |
-          docker compose --env-file .env -f docker/docker-compose.yml up -d
+          docker compose --env-file .env -f docker/docker-compose.yml up -d || true
           sleep 60
 
       - name: Check health endpoints
@@ -297,13 +297,21 @@ jobs:
           echo "===== DOCKER COMPOSE STATUS ====="
           docker compose --env-file .env -f docker/docker-compose.yml ps -a
           
-          echo " "
+          echo ""
+          echo "===== ALL CONTAINERS ====="
+          docker ps -a
+          
+          echo ""
           echo "===== MENTOR SERVICE HEALTH ====="
           docker inspect skill-infinity-mentor-service --format '{{json .State.Health}}' || true
           
-          echo " "
+          echo ""
           echo "===== MENTOR SERVICE LOGS ====="
           docker logs --tail 300 skill-infinity-mentor-service || true
+          
+          echo ""
+          echo "===== MYSQL LOGS ====="
+          docker logs --tail 100 skill-infinity-mysql || true
 
       - name: Stop services
         if: always()
